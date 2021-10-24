@@ -48,6 +48,10 @@ However it has some advantages:
 
 This project is just a work in progress. We are totally open mind. Nothing is fixed. Everything could be changed, from data structures to main programming language, tools, directions... We listen to you all and welcome any help, distribution. You may discuss here or in GibHub (discuss section). Feel free to push requests.
 
+## Sample databases
+There is a small sample database in the folder samples. A bigger one could be downloaded via below link:
+
+    https://drive.google.com/file/d/1qUNVBknC69gKmhlI3RafEa7tJcnIlJ9d/view?usp=sharing
 
 ## Working on
 - Understand, measure speeds, sizes, drawbacks, problems
@@ -56,13 +60,13 @@ This project is just a work in progress. We are totally open mind. Nothing is fi
 - Benchmark (to speed up later)
 - Improve speed/size
 
-In other words, we want to try and push the boundary as far as we could.
+In other words, we want to try and push all boundaries as far as we could.
 
 
 ## Data and code
 
 ### Sample
-There is a sample database in the folder samples, named games.ocgdc.db3 with over 50000 games. It could be open by any SQLite browser. You can download, open it and make some query to understand its structures, speed, advantages and disadvantages.
+There is a sample database in the folder samples, named carlsen.ocgdc.db3 with over 2000 games. It could be open by any SQLite browser. You can download, open it and make some query to understand its structures, speed, advantages and disadvantages.
 
 ### Code
 
@@ -70,7 +74,7 @@ There is a sample database in the folder samples, named games.ocgdc.db3 with ove
 The file SqlCmd.md contain some SQL commands to create databases and tables, examples to insert and query tables.
 
 #### Cpp code
-All same, tools will be developed and released in C++ 17.
+All same, tools are C++ 17.
 
 ## License
 MIT: Almost totally free (requires just fair use). All documents, codes, data samples in this project are ready and free to integrate into other apps without worrying about license compatibility.
