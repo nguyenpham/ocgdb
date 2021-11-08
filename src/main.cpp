@@ -16,24 +16,56 @@
 
 int main(int argc, const char * argv[]) {
     std::cout << "Open Chess Game Database Standard, (C) 2021\n";
+    ocgdb::Builder oc;
 
-    if (argc >= 5 && std::string(argv[1]) == "-pgn" && std::string(argv[3]) == "-db") {
-        auto pgnPath = std::string(argv[2]), dbPath = std::string(argv[4]);
-        ocgdb::Builder oc;
-        oc.convertPgn2Sql(pgnPath, dbPath);
-        return 0;
+    auto bench = false, moveVerify = true;
+    std::string pgnPath, dbPath;
+    for(auto i = 1; i < argc; i++) {
+        auto str = std::string(argv[i]);
+        if (str == "-bench") {
+            bench = true;
+            continue;
+        }
+        if (str == "-noverify") {
+            moveVerify = false;
+            continue;
+        }
+
+        if (i + 1 >= argc) continue;;
+
+        if (str == "-pgn") {
+            pgnPath = std::string(argv[i + 1]);
+            continue;
+        }
+        if (str == "-db") {
+            dbPath = std::string(argv[i + 1]);
+            continue;
+        }
+    }
+    
+    auto ok = true;
+    
+    if (bench) {
+        if (dbPath.empty()) {
+            ok = false;
+        } else {
+            oc.bench(dbPath);
+        }
+    } else {
+        if (pgnPath.empty() || dbPath.empty()) {
+            ok = false;
+        } else {
+            oc.convertPgn2Sql(pgnPath, dbPath, moveVerify);
+        }
     }
 
-    if (argc >= 3 && std::string(argv[1]) == "-bench" && std::string(argv[2]) == "-db") {
-        auto dbPath = std::string(argv[3]);
-        ocgdb::Builder oc;
-        oc.bench(dbPath);
-        return 0;
+    if (!ok) {
+        std::cerr << "Usage:" << std::endl;
+        std::cerr << "       ocgdb -pgn PGNPATH -db DBPATH" << std::endl;
+        std::cerr << "       ocgdb -pgn PGNPATH -db DBPATH -noverify" << std::endl;
+        std::cerr << "       ocgdb -pgn PGNPATH -db :memory: -noverify" << std::endl;
+        std::cerr << "       ocgdb -bench -db DBPATH" << std::endl;
+        std::cerr << " e.g.: ocgdb -pgn c:\\games\\big.png -db c:\\db\\big.ocgdb.db3" << std::endl;
     }
-
-
-    std::cerr << "Usage: ocgdb -pgn PGNPATH -db DBPATH" << std::endl;
-    std::cerr << "       ocgdb -bench -db DBPATH" << std::endl;
-    std::cerr << " e.g.: ocgdb -pgn c:\\games\\big.png -db c:\\db\\big.ocgdb.db3" << std::endl;
     return 1;
 }

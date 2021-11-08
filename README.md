@@ -5,6 +5,7 @@
 Almost all popular/published chess game databases are in binary formats. Those formats have some advantages such as fast and compact. However, they also have some drawbacks:
  
 - Hard to understand: each format requires a long list of descriptions and explanations why this but not that
+- Hard to change strutures: adding, removing, changing data types... usually hard and headach tasks, require change seriously both data and code
 - Hard to support by other apps: other programs may get many problems to support since they can use different programming languages, data structures…
 - Hard to support by web apps: processing large binary files is not strong points of scripting languages/web apps
 - License compatibility: code for those binary formats are mostly from GPL to more restricted, thus some programs will get hard to adapt. 
@@ -19,8 +20,8 @@ On the other hand, we have the PGN format for chess games, which could be used f
 - So simple to understand and support
 
 
-However, there are many drawbacks for using PGN as chess databases. 
-- It doesn’t have structures at all, there is no relationship between games, players, events. They are independent to each other. In other words, they are just a collection of games, not databases.
+However, there are many drawbacks for using PGN as chess databases:
+- It doesn’t have structures at all, there is no relationship between games, players, events. They are independent to each other. In other words, they are just a collection of games, not databases
 - The data may be heavily redundant and inconsistent: names of events, players may be repeated multi times. Same events, players may be different in some games
 - Processing speed is so low (compared with binary databases), especially when the number of games large. Even some simple queries such as count numbers of games, players,… may take long and unacceptable periods in modern computers
 - Text size is typically large
@@ -35,7 +36,7 @@ Thus we think we need a new format which could be used to exchange databases bet
 
 ## SQL/SQLite
 For starting, we have picked up SQL/SQLite as the main tools/direction to develop the new database. Using SQL for chess game database is not new, someone have tried already (and gave up). We have known it has some drawbacks such as:
-- Slow
+- Maybe slow
 - Large on size
 
 However it has some advantages:
@@ -44,6 +45,8 @@ However it has some advantages:
 - Easy to understand structures. They all are almost described themselves 
 - Easy to write tools, converters
 - Users can query directly
+- SQL: is a very strong and flexible way to make queries
+- Come with many strong, matual SQL engines and libraries
 
 
 This project is just a work in progress. We are totally open mind. Nothing is fixed. Everything could be changed, from data structures to main programming language, tools, directions... We listen to you all and welcome any help, distribution. You may discuss here or in GibHub (discuss section). Feel free to push requests.
@@ -74,7 +77,12 @@ There is a sample database in the folder samples, named carlsen.ocgdc.db3 with o
 The file SqlCmd.md contain some SQL commands to create databases and tables, examples to insert and query tables.
 
 #### Cpp code
-All same, tools are C++ 17.
+All samples, tools are C++ 17.
+
+## History
+* 8/11/2021: Improve speed for converter, from 6 to over 247 times faster
+* 24/10/2021: first release of source-code
+* 20/10/2021: project created with a sample database
 
 ## License
 MIT: Almost totally free (requires just fair use). All documents, codes, data samples in this project are ready and free to integrate into other apps without worrying about license compatibility.

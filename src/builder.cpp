@@ -31,11 +31,7 @@ Builder::Builder()
 
 Builder::~Builder()
 {
-    if (mDb) {
-        delete mDb;
-        mDb = nullptr;
-    }
-
+    if (mDb) delete mDb;
     if (board) delete board;
 }
 
@@ -61,16 +57,18 @@ void Builder::printStats() const
 }
 
 
-
-void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath)
+void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath, bool _moveVerify)
 {
     // Prepare
+    moveVerify = _moveVerify;
     board = createBoard(chessVariant);
     setDatabasePath(sqlitePath);
     
     // Create database
-    createDb(sqlitePath);
-    openDbToWrite();
+    mDb = createDb(sqlitePath);
+    if (!mDb) {
+        return;
+    }
 
     processPgnFile(pgnPath);
 
@@ -93,6 +91,23 @@ uint64_t Builder::processPgnFile(const std::string& path)
         return false;
     }
 
+    // Begin transaction
+    SQLite::Transaction transaction(*mDb);
+
+    // prepared statements
+    {
+        const std::string sql = "INSERT INTO game(event_id, white_id, white_elo, black_id, black_elo, timer, result, date, eco, length, fen, moves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        insertGameStatement = new SQLite::Statement(*mDb, sql);
+        
+        playerGetIdStatement = new SQLite::Statement(*mDb, "SELECT id FROM player WHERE name=?");
+        playerInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO player(name, elo) VALUES (?, ?) RETURNING id");
+
+        eventGetIdStatement = new SQLite::Statement(*mDb, "SELECT id FROM event WHERE name=?");
+        eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO event(name) VALUES (?) RETURNING id");
+
+    }
+    
     std::vector<std::string> lines;
     std::string str;
     while (getline(inFile, str)) {
@@ -125,6 +140,18 @@ uint64_t Builder::processPgnFile(const std::string& path)
         mDb->exec(str);
     }
 
+    // Commit transaction
+    transaction.commit();
+
+    {
+        delete insertGameStatement;
+        delete playerGetIdStatement;
+        delete playerInsertStatement;
+
+        delete eventGetIdStatement;
+        delete eventInsertStatement;
+    }
+
     printStats();
 
     std::cout << "Completed! " << std::endl;
@@ -143,7 +170,7 @@ bool Builder::parseAGame(const std::vector<std::string>& lines)
 
     for(auto && s : lines) {
         auto p = s.find("[");
-        if (p == 0) {
+        if (p == 0 && moveText.length() < 10) {
             p++;
             std::string key;
             for(auto q = p + 1; q < s.length(); q++) {
@@ -243,7 +270,7 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
     }
 
     // Open game to verify and count the number of half-moves
-    {
+    if (moveVerify) {
         auto it = itemMap.find("fen");
         if (it != itemMap.end()) {
             r.fen = it->second;
@@ -270,46 +297,54 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
         r.moveString = board->toMoveListString(Notation::san,
                                                10000000, false,
                                                CommentComputerInfoType::standard);
-        assert(!r.moveString.empty());
+    } else {
+        r.moveString = moveText;
     }
 
-    return addGame(r);
+    assert(!r.moveString.empty());
+
+    // old way
+    //return addGame(r);
+    
+    // new way
+    return addGameWithPreparedStatement(r);
 }
 
 
-bool Builder::createDb(const std::string& path)
+SQLite::Database* Builder::createDb(const std::string& path)
 {
     assert(!path.empty());
 
     try
     {
         // Open a database file in create/write mode
-        SQLite::Database db(path, SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE);
-        std::cout << "SQLite database file '" << db.getFilename() << "' opened successfully\n";
+        auto mDb = new SQLite::Database(path, SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE);
+        std::cout << "SQLite database file '" << mDb->getFilename() << "' opened successfully\n";
 
-        db.exec("DROP TABLE IF EXISTS info");
-        db.exec("CREATE TABLE info (name TEXT UNIQUE NOT NULL, value TEXT)");
-        db.exec("INSERT INTO info(name, value) VALUES ('version', '0.1')");
-        db.exec("INSERT INTO info(name, value) VALUES ('variant', 'standard')");
-        db.exec("INSERT INTO info(name, value) VALUES ('license', 'free')");
+        mDb->exec("DROP TABLE IF EXISTS info");
+        mDb->exec("CREATE TABLE info (name TEXT UNIQUE NOT NULL, value TEXT)");
+        mDb->exec("INSERT INTO info(name, value) VALUES ('version', '0.1')");
+        mDb->exec("INSERT INTO info(name, value) VALUES ('variant', 'standard')");
+        mDb->exec("INSERT INTO info(name, value) VALUES ('license', 'free')");
 
-        db.exec("DROP TABLE IF EXISTS event");
-        db.exec("CREATE TABLE event (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
-        db.exec("INSERT INTO event(name) VALUES (\"\")"); // default empty
+        mDb->exec("DROP TABLE IF EXISTS event");
+        mDb->exec("CREATE TABLE event (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
+        mDb->exec("INSERT INTO event(name) VALUES (\"\")"); // default empty
 
-        db.exec("DROP TABLE IF EXISTS player");
-        db.exec("CREATE TABLE player (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, elo INTEGER)");
+        mDb->exec("DROP TABLE IF EXISTS player");
+        mDb->exec("CREATE TABLE player (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, elo INTEGER)");
 
-        db.exec("DROP TABLE IF EXISTS game");
-        db.exec("CREATE TABLE game(id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER, white_id INTEGER, white_elo INTEGER, black_id INTEGER, black_elo INTEGER, timer TEXT, date TEXT, eco TEXT, result INTEGER, length INTEGER, fen TEXT, moves TEXT, FOREIGN KEY(event_id) REFERENCES event, FOREIGN KEY(white_id) REFERENCES player, FOREIGN KEY(black_id) REFERENCES player)");
+        mDb->exec("DROP TABLE IF EXISTS game");
+        mDb->exec("CREATE TABLE game(id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER, white_id INTEGER, white_elo INTEGER, black_id INTEGER, black_elo INTEGER, timer TEXT, date TEXT, eco TEXT, result INTEGER, length INTEGER, fen TEXT, moves TEXT, FOREIGN KEY(event_id) REFERENCES event, FOREIGN KEY(white_id) REFERENCES player, FOREIGN KEY(black_id) REFERENCES player)");
+        
+        return mDb;
     }
     catch (std::exception& e)
     {
         std::cout << "SQLite exception: " << e.what() << std::endl;
-        return false;
     }
 
-    return true;
+    return nullptr;
 }
 
 void Builder::setDatabasePath(const std::string& path)
@@ -378,6 +413,8 @@ int Builder::getPlayerNameId(const std::string& name, int elo)
     assert(nameId >= 0);
     return nameId;
 }
+
+
 
 bool Builder::addGame(const GameRecord& r)
 {
@@ -494,4 +531,185 @@ void Builder::bench(const std::string& path)
     }
 
     std::cout << "Test DONE." << std::endl;
+}
+
+
+int Builder::getPlayerNameIdWithPreparedStatements(const std::string& name, int elo)
+{
+    if (name.empty()) {
+        return -1;
+    }
+    playerGetIdStatement->bind(1, name);
+    int playerId = -1;
+    
+    if (playerGetIdStatement->executeStep()) {
+        playerId = playerGetIdStatement->getColumn(0);
+    }
+    playerGetIdStatement->reset();
+    
+    if (playerId < 0) {
+        playerInsertStatement->bind(1, name);
+        playerInsertStatement->bind(2, elo);
+        if (playerInsertStatement->executeStep()) {
+            playerId = playerInsertStatement->getColumn(0).getInt();
+        }
+        playerInsertStatement->reset();
+    }
+
+    assert(playerId >= 0);
+    return playerId;
+}
+
+int Builder::getEventNameIdWithPreparedStatements(const std::string& name)
+{
+    if (name.empty()) {
+        return 0;
+    }
+    eventGetIdStatement->bind(1, name);
+    int eventId = -1;
+    
+    if (eventGetIdStatement->executeStep()) {
+        eventId = eventGetIdStatement->getColumn(0);
+    }
+    eventGetIdStatement->reset();
+    
+    if (eventId < 0) {
+        eventInsertStatement->bind(1, name);
+        if (eventInsertStatement->executeStep()) {
+            eventId = eventInsertStatement->getColumn(0).getInt();
+        }
+        eventInsertStatement->reset();
+    }
+
+    assert(eventId >= 0);
+    return eventId;
+}
+
+bool Builder::addGameWithPreparedStatement(const GameRecord& r)
+{
+    try
+    {
+        assert(mDb);
+
+        auto eventId = getEventNameIdWithPreparedStatements(r.eventName);
+        auto whiteId = getPlayerNameIdWithPreparedStatements(r.whiteName, r.whiteElo);
+        auto blackId = getPlayerNameIdWithPreparedStatements(r.blackName, r.blackElo);
+
+        std::string whiteElo = r.whiteElo > 0 ? std::to_string(r.whiteElo) : "NULL";
+        std::string blackElo = r.blackElo > 0 ? std::to_string(r.blackElo) : "NULL";
+
+        insertGameStatement->bind(1, eventId);
+        insertGameStatement->bind(2, whiteId);
+        insertGameStatement->bind(3, whiteElo);
+
+        insertGameStatement->bind(4, blackId);
+        insertGameStatement->bind(5, blackElo);
+
+        insertGameStatement->bind(6, r.timer);
+        insertGameStatement->bind(7, Funcs::resultType2String(r.resultType, false));
+
+        insertGameStatement->bind(8, r.dateString);
+        insertGameStatement->bind(9, r.eco);
+        insertGameStatement->bind(10, r.moveCnt);
+        insertGameStatement->bind(11, r.fen);
+        insertGameStatement->bind(12, r.moveString);
+
+        insertGameStatement->executeStep();
+        insertGameStatement->reset();
+    }
+    catch (std::exception& e)
+    {
+        std::cout << "SQLite exception: " << e.what() << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+void Builder::testInsertingSpeed(const std::string& dbPath)
+{
+    std::vector<std::string> gameBodyVec {
+"1.d4 Nf6 2.Nf3 d5 3.e3 Bf5 4.c4 c6 5.Nc3 e6 6.Bd3 Bxd3 7.Qxd3 Nbd7 8.b3 Bd6 \
+9.O-O O-O 10.Bb2 Qe7 11.Rad1 Rad8 12.Rfe1 dxc4 13.bxc4 e5 14.dxe5 Nxe5 15.Nxe5 Bxe5 \
+16.Qe2 Rxd1 17.Rxd1 Rd8 18.Rxd8+ Qxd8 19.Qd1 Qxd1+ 20.Nxd1 Bxb2 21.Nxb2 b5 \
+22.f3 Kf8 23.Kf2 Ke7  1/2-1/2",
+
+"1.e4 e5 2.Nf3 Nf6 3.d3 d6 4.c3 g6 5.Bg5 Bg7 6.Be2 O-O 7.d4 h6 8.Bxf6 Qxf6 \
+9.dxe5 dxe5 10.O-O Nd7 11.Nbd2 Nc5 12.Qc2 Bg4 13.Rfe1 Rfe8 14.b4 Ne6 15.h3 Bxf3 \
+16.Nxf3 Nf4 17.Bc4 Nxh3+ 18.gxh3 Qxf3 19.Re3 Qh5 20.Qb3 Rf8 21.Rd1 Qg5+ 22.Rg3 Qf6 \
+23.Rdd3 g5 24.Rgf3 Qe7 25.Rf5 Kh8 26.Bxf7 Rad8 27.Rdf3 Rd6 28.Kf1 Qd8 29.Bh5 Rxf5 \
+30.Rxf5 Rc6 31.Rf3 Rd6 32.Rf5 Rd2 33.Rf7 Qd3+ 34.Kg2 Qxe4+ 35.Bf3 Qh4 36.Bxb7 g4 \
+37.Qe6 Qxh3+ 38.Kg1 Rd1+  0-1",
+
+"1.e4 e5 2.Nf3 Nf6 3.Nc3 Nc6 4.Bc4 Bb4 5.d3 d5 6.exd5 Nxd5 7.Bd2 Nxc3 8.bxc3 Be7 \
+9.Qe2 Bf6 10.O-O O-O 11.Rfe1 Re8 12.Qe4 g6 13.g4 Na5 14.Bb3 Nxb3 15.axb3 Bd7 \
+16.g5 Bc6 17.Qh4 Bg7 18.Qg4 Qd6 19.Re2 Re6 20.Rae1 Rae8 21.c4 b6 22.Bc1 Ba8 \
+23.Nd2 Bc6 24.Ne4 Qe7 25.Re3 h5 26.Qg3 Bd7 27.Bb2 Bc6 28.Nf6+ Bxf6 29.gxf6 Qxf6 \
+30.Rxe5 Rxe5 31.Rxe5 Rd8 32.Qe3 Qh4 33.Qg5 Qxg5+ 34.Rxg5 Re8 35.Kf1 Bf3 36.Re5 Rd8 \
+37.Ke1 Kf8 38.Ba3+ Kg8 39.Re7 Rc8 40.Kd2 h4 41.Ke3 Bh5 42.Kd2 g5 43.Rd7 g4 \
+44.Re7 Kg7 45.Ke3 Kf6 46.d4 c5 47.Rxa7 Re8+ 48.Kd2 cxd4 49.Rd7 g3 50.fxg3 Re2+ \
+51.Kd3 Rxh2 52.gxh4 Bg6+ 53.Kxd4 Rd2+  0-1 ",
+
+"1.c4 c5 2.g3 Nc6 3.Bg2 g6 4.Nc3 Bg7 5.a3 d6 6.Rb1 a5 7.Nf3 Nf6 8.O-O O-O \
+9.Ne1 Bd7 10.Nc2 Rb8 11.d3 Ne8 12.Bd2  1/2-1/2"
+    };
+
+    setDatabasePath(dbPath);
+    
+    // Create database
+    createDb(dbPath);
+    openDbToWrite();
+
+    std::cout << "testInsertingSpeed, dbPath: '" << dbPath << "'" << std::endl;
+
+    startTime = getNow();
+    gameCnt = errCnt = 0;
+
+    // Begin transaction
+    SQLite::Transaction transaction(*mDb);
+
+    const std::string sql = "INSERT INTO game(event_id, white_id, white_elo, black_id, black_elo, timer, result, date, eco, length, fen, moves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    insertGameStatement = new SQLite::Statement(*mDb, sql);
+    
+    playerGetIdStatement = new SQLite::Statement(*mDb, "SELECT id FROM player WHERE name=?");
+    playerInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO player(name, elo) VALUES (?, ?) RETURNING id");
+
+    eventGetIdStatement = new SQLite::Statement(*mDb, "SELECT id FROM event WHERE name=?");
+    eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO event(name) VALUES (?) RETURNING id");
+
+    for(gameCnt = 0; gameCnt < 3450777; gameCnt++) {
+        GameRecord r;
+        auto  eIdx = rand() % 31049, wIdx = rand() % 284442, bIdx = rand() % 284442;
+        r.eventName = "event" + std::to_string(eIdx);
+        r.whiteName = "player" + std::to_string(wIdx);
+        r.blackName = "player" + std::to_string(bIdx);
+        
+        r.whiteElo = rand() % 3000;
+        r.blackElo = rand() % 3000;
+        
+        auto k = rand() % gameBodyVec.size();
+        r.moveString = gameBodyVec.at(k);
+        if (!addGameWithPreparedStatement(r)) {
+            errCnt++;
+        }
+
+        // Frequently update info
+        if (gameCnt && (gameCnt & 0xfff) == 0) {
+            printStats();
+        }
+    }
+
+    // Commit transaction
+    transaction.commit();
+
+    delete insertGameStatement;
+    delete playerGetIdStatement;
+    delete playerInsertStatement;
+
+    delete eventGetIdStatement;
+    delete eventInsertStatement;
+
+    printStats();
+    std::cout << "Completed! " << std::endl;
 }

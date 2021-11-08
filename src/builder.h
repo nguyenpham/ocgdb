@@ -34,10 +34,12 @@ public:
     Builder();
     virtual ~Builder();
 
-    void convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath);
+    void convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath, bool moveVerify);
 
     void bench(const std::string& path);
 
+    void testInsertingSpeed(const std::string& dbPath);
+    
 private:
     void setDatabasePath(const std::string& path);
     bool addGame(const GameRecord& r);
@@ -45,24 +47,39 @@ private:
     bool parseAGame(const std::vector<std::string>& lines);
     bool addGame(const std::unordered_map<std::string, std::string>& itemMap, const std::string& moveText);
 
+    bool addGameWithPreparedStatement(const GameRecord& r);
+
     SQLite::Database* openDbToWrite();
     int getNameId(const std::string& tableName, const std::string& name);
     int getPlayerNameId(const std::string& name, int elo);
     int getEventNameId(const std::string& name);
 
-    static bool createDb(const std::string& path);
+    static SQLite::Database* createDb(const std::string& path);
     static std::string encodeString(const std::string& name);
     static BoardCore* createBoard(ChessVariant variant);
     void printStats() const;
 
     void queryGameData(SQLite::Database& db, int gameIdx);
 
-private:
-    BoardCore* board = nullptr; /// For verifying games, count moves
-    std::string dbPath;
-    SQLite::Database* mDb = nullptr;    ///< Database connection
+    int getPlayerNameIdWithPreparedStatements(const std::string& name, int elo);
+    int getEventNameIdWithPreparedStatements(const std::string& name);
 
+private:
+    bool moveVerify = true;
+    BoardCore* board = nullptr; /// For verifying games, count moves
     ChessVariant chessVariant = ChessVariant::standard;
+
+    std::string dbPath;
+    SQLite::Database* mDb = nullptr;
+
+    // Prepared statements
+    SQLite::Statement* insertGameStatement = nullptr;
+    SQLite::Statement* playerGetIdStatement = nullptr;
+    SQLite::Statement* playerInsertStatement = nullptr;
+
+    SQLite::Statement* eventGetIdStatement = nullptr;
+    SQLite::Statement* eventInsertStatement = nullptr;
+
     
     /// For stats
     std::chrono::steady_clock::time_point startTime;
