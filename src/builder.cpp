@@ -15,6 +15,20 @@
 #include <set>
 #include <fstream>
 
+// for mmap:
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <errno.h>
+
+
 #include "3rdparty/SQLiteCpp/VariadicBind.h"
 #include "3rdparty/sqlite3/sqlite3.h"
 
@@ -59,6 +73,9 @@ void Builder::printStats() const
 
 void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath, bool _moveVerify)
 {
+    testReadTextFile(pgnPath);
+    return;
+    
     // Prepare
     moveVerify = _moveVerify;
     board = createBoard(chessVariant);
@@ -77,6 +94,201 @@ void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqli
     board = nullptr;
 }
 
+void handle_error(const char* msg) {
+    perror(msg);
+    exit(255);
+}
+
+const char* map_file(const char* fname, size_t& length)
+{
+    int fd = open(fname, O_RDONLY);
+    if (fd == -1)
+        handle_error("open");
+
+    // obtain file size
+    struct stat sb;
+    if (fstat(fd, &sb) == -1)
+        handle_error("fstat");
+
+    length = sb.st_size;
+
+    const char* addr = static_cast<const char*>(mmap(NULL, length, PROT_READ, MAP_PRIVATE, fd, 0u));
+    if (addr == MAP_FAILED)
+        handle_error("mmap");
+
+    // TODO close fd at some point in time, call munmap(...)
+    return addr;
+}
+
+void Builder::testReadTextFile(const std::string& path)
+{
+    std::cout << "testReadTextFile PGN file: '" << path << "'" << std::endl;
+
+    for(auto method = 0; method <= 6; method++) {
+        testReadTextFile(path, method);
+    }
+    std::cout << "Completed! " << std::endl;
+}
+
+void Builder::testReadTextFile(const std::string& path, int method)
+{
+    startTime = getNow();
+
+    int64_t lineCnt = 0;
+    
+    std::string methodName;
+    
+    switch (method) {
+        case 0:
+        {
+            methodName = "C++ simple";
+            std::string str;
+            std::ifstream inFile(path);
+            while (getline(inFile, str)) {
+                lineCnt++;
+            }
+            inFile.close();
+            break;
+        }
+        case 1:
+        {
+            methodName = "C way";
+            std::ifstream inFile(path);
+            const int MAX_LENGTH = 1024 * 16;
+            char* line = new char[MAX_LENGTH];
+            while (inFile.getline(line, MAX_LENGTH) && strlen(line) > 0) {
+                lineCnt++;
+            }
+            delete[] line;
+            inFile.close();
+            break;
+        }
+        case 2:
+        {
+            methodName = "mmap (memory mapped files)";
+            size_t length;
+            auto f = map_file(path.c_str(), length);
+            auto l = f + length;
+
+            while (f && f != l) {
+                if ((f = static_cast<const char*>(memchr(f, '\n', l - f)))) {
+                    lineCnt++;
+                    f++;
+                }
+            }
+            break;
+        }
+
+        case 3:
+        {
+            methodName = "all to one block, C++ way";
+            std::ifstream file(path, std::ios::binary | std::ios::ate);
+            std::streamsize size = file.tellg();
+            file.seekg(0, std::ios::beg);
+
+            std::vector<char> buffer(size);
+            if (file.read(buffer.data(), size)) {
+                for(auto && ch : buffer) {
+                    if (ch == '\n') lineCnt++;
+                }
+            }
+            break;
+        }
+            
+        case 4:
+        {
+            methodName = "all to one block, C way";
+            FILE *stream = fopen(path.c_str(), "r");
+            assert(stream != NULL);
+            fseek(stream, 0, SEEK_END);
+            long stream_size = ftell(stream);
+            fseek(stream, 0, SEEK_SET);
+            char *buffer = (char*)malloc(stream_size);
+            fread(buffer, stream_size, 1, stream);
+            assert(ferror(stream) == 0);
+            fclose(stream);
+            
+            for(long i = 0; i < stream_size; i++) {
+                if (buffer[i] == '\n') lineCnt++;
+            }
+
+            free((void *)buffer);
+            break;
+        }
+
+        case 5:
+        {
+            methodName = "blocks of 4 MB, C++ way";
+            const size_t blockSz = 4 * 1024 * 1024;
+
+            std::ifstream file(path, std::ios::binary | std::ios::ate);
+            size_t size = file.tellg();
+            file.seekg(0, std::ios::beg);
+
+            size_t sz = 0;
+            
+            std::vector<char> buffer(blockSz);
+            while (sz < size) {
+                auto k = std::min(blockSz, size - sz);
+                if (k == 0) {
+                    break;
+                }
+                if (file.read(buffer.data(), k)) {
+                    for(size_t i = 0; i < k; i++) {
+                        if (buffer[i] == '\n') lineCnt++;
+                    }
+                }
+                
+                sz += k;
+            }
+            break;
+        }
+        case 6:
+        {
+            methodName = "blocks of 4 MB, C way";
+            const size_t blockSz = 4 * 1024 * 1024;
+            char *buffer = (char*)malloc(blockSz + 16);
+
+            FILE *stream = fopen(path.c_str(), "r");
+            assert(stream != NULL);
+            fseek(stream, 0, SEEK_END);
+            size_t size = ftell(stream);
+            fseek(stream, 0, SEEK_SET);
+
+            
+            size_t sz = 0;
+            
+            while (sz < size) {
+                auto k = std::min(blockSz, size - sz);
+                if (k == 0) {
+                    break;
+                }
+                if (fread(buffer, k, 1, stream)) {
+                    for(size_t i = 0; i < k; i++) {
+                        if (buffer[i] == '\n') lineCnt++;
+                    }
+                }
+                sz += k;
+            }
+
+            free(buffer);
+            break;
+        }
+
+        default:
+            break;
+    }
+    
+    int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+
+    std::cout << "Method: " << method << ", " << methodName
+              << ", #lineCnt: " << lineCnt
+              << ", elapsed: " << elapsed << " ms"
+              << ", speed: " << lineCnt * 1000 / elapsed << " lines/s"
+              << std::endl;
+
+}
+
 uint64_t Builder::processPgnFile(const std::string& path)
 {
     std::cout << "Processing PGN file: '" << path << "'" << std::endl;
@@ -88,7 +300,7 @@ uint64_t Builder::processPgnFile(const std::string& path)
     if (inFile.fail()) {
         std::cerr << "Error opeing the PGN file" << std::endl;
         inFile.close();
-        return false;
+        return 0;
     }
 
     // Begin transaction

@@ -1,0 +1,55 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*.exp
+*.pdb
+*.ilk
+*.dSYM/*.*
+
+src/ocgdb
+
+# CMake build files
+build/
+
+# Emacs auto save files
+*~
+
+# Others
+*/x64*
+*/.vs*
+*/Debug*
+.DS_Store
+*.DS_Store
+*.user
+*.filters
+*.zip
+*.xcuserstate
+
+
+
+

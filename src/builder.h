@@ -41,6 +41,9 @@ public:
     void testInsertingSpeed(const std::string& dbPath);
     
 private:
+    void testReadTextFile(const std::string& path);
+    void testReadTextFile(const std::string& path, int method);
+
     void setDatabasePath(const std::string& path);
     bool addGame(const GameRecord& r);
     uint64_t processPgnFile(const std::string& path);
