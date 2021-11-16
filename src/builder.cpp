@@ -24,7 +24,6 @@
 
 using namespace ocgdb;
 
-
 Builder::Builder()
 {
 }
@@ -32,12 +31,6 @@ Builder::Builder()
 Builder::~Builder()
 {
     if (mDb) delete mDb;
-    if (board) delete board;
-}
-
-BoardCore* Builder::createBoard(ChessVariant variant)
-{
-    return variant == ChessVariant::standard ? new ChessBoard() : nullptr;
 }
 
 std::chrono::steady_clock::time_point getNow()
@@ -57,11 +50,9 @@ void Builder::printStats() const
 }
 
 
-void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath, bool _moveVerify)
+void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath)
 {
     // Prepare
-    moveVerify = _moveVerify;
-    board = createBoard(chessVariant);
     setDatabasePath(sqlitePath);
     
     // Create database
@@ -71,10 +62,156 @@ void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqli
     }
 
     processPgnFile(pgnPath);
+}
 
-    // Clean up
-    delete board;
-    board = nullptr;
+// the game between two blocks, first half
+void Builder::processHalfBegin(char* buffer, long len)
+{
+    halfBufSz = 0;
+    if (!buffer || len <= 0 || len >= halfBlockSz) {
+        return;
+    }
+    
+    if (!halfBuf) {
+        halfBuf = (char*)malloc(halfBlockSz + 16);
+    }
+    
+    memcpy(halfBuf, buffer, len);
+    halfBufSz = len;
+}
+
+// the game between two blocks, second half
+void Builder::processHalfEnd(char* buffer, long len)
+{
+    if (!buffer || !halfBuf) {
+        return;
+    }
+    
+    if (len > 0 && len + halfBufSz > halfBlockSz) {
+        halfBufSz = 0;
+        return;
+    }
+    
+    if (len > 0) {
+        memcpy(halfBuf + halfBufSz, buffer, len);
+        halfBufSz += len;
+    }
+    
+    halfBuf[halfBufSz] = 0;
+    
+    processDataBlock(halfBuf, halfBufSz, false);
+    halfBufSz = 0;
+}
+
+void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
+{
+    assert(buffer && sz > 0);
+    
+    std::unordered_map<std::string, const char*> tagMap;
+    
+    auto st = 0, eventCnt = 0;
+    auto hasEvent = false;
+    char *tagName = nullptr, *tagContent = nullptr, *event = nullptr, *moves = nullptr;
+
+    for(char *p = buffer, *end = buffer + sz; p < end; p++) {
+        char ch = *p;
+        
+        switch (st) {
+            case 0:
+            {
+                if (ch == '[') {
+                    p++;
+                    if (!isalpha(*p)) {
+                        continue;
+                    }
+                    
+                    // has a tag
+                    if (moves) {
+                        if (hasEvent && p - buffer > 2) {
+                            *(p - 2) = 0;
+
+                            if (!addGame(tagMap, moves)) {
+                                errCnt++;
+                            }
+                        }
+
+                        tagMap.clear();
+                        hasEvent = false;
+                        moves = nullptr;
+                    }
+
+                    tagName = p;
+                    st = 1;
+                } else if (ch > ' ') {
+                    if (!moves && hasEvent) {
+                        moves = p;
+                    }
+                }
+                break;
+            }
+            case 1: // name tag
+            {
+                assert(tagName);
+                if (!isalpha(ch)) {
+                    if (ch <= ' ') {
+                        *p = 0; // end of the tag name
+                        st = 2;
+                    } else { // something wrong
+                        st = 0;
+                    }
+                }
+                break;
+            }
+            case 2: // between name and content of a tag
+            {
+                if (ch == '"') {
+                    st = 3;
+                    tagContent = p + 1;
+                }
+                break;
+            }
+            case 3:
+            {
+                if (ch == '"' || ch == 0) { // == 0 trick to process half begin+end
+                    *p = 0;
+                    
+                    if (strcmp(tagName, "Event") == 0) {
+                        event = tagName - 1;
+                        if (eventCnt == 0 && connectBlock) {
+                            long len =  (event - buffer) - 1;
+                            processHalfEnd(buffer, len);
+                        }
+                        hasEvent = true;
+                        eventCnt++;
+                        gameCnt++;
+                    }
+
+                    if (hasEvent) {
+                        tagMap[tagName] = tagContent;
+                    }
+
+                    tagName = tagContent = nullptr;
+                    st = 4;
+                }
+                break;
+            }
+            default: // the rest of the tag
+            {
+                if (ch == '\n' || ch == 0) {
+                    st = 0;
+                }
+                break;
+            }
+        }
+    }
+    
+    if (connectBlock) {
+        processHalfBegin(event, (long)sz - (event - buffer));
+    } else if (moves) {
+        if (!addGame(tagMap, moves)) {
+            errCnt++;
+        }
+    }
 }
 
 uint64_t Builder::processPgnFile(const std::string& path)
@@ -84,19 +221,12 @@ uint64_t Builder::processPgnFile(const std::string& path)
     startTime = getNow();
     gameCnt = errCnt = 0;
 
-    std::ifstream inFile(path);
-    if (inFile.fail()) {
-        std::cerr << "Error opeing the PGN file" << std::endl;
-        inFile.close();
-        return false;
-    }
-
     // Begin transaction
     SQLite::Transaction transaction(*mDb);
 
     // prepared statements
     {
-        const std::string sql = "INSERT INTO game(event_id, white_id, white_elo, black_id, black_elo, timer, result, date, eco, length, fen, moves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        const std::string sql = "INSERT INTO game(Event_id, White_id, WhiteElo, Black_id, BlackElo, Timer, Result, Date, ECO, PlyCount, FEN, Moves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         insertGameStatement = new SQLite::Statement(*mDb, sql);
         
@@ -108,35 +238,55 @@ uint64_t Builder::processPgnFile(const std::string& path)
 
     }
     
-    std::vector<std::string> lines;
-    std::string str;
-    while (getline(inFile, str)) {
-        auto p = str.find("[Event");
-        if (p != std::string::npos && p + 6 < str.length() && !std::isalnum(str.at(p + 6))) {
-            parseAGame(lines);
-            lines.clear();
-            
-            // Frequently update info
-            if (gameCnt && (gameCnt & 0xffff) == 0) {
-                printStats();
-            }
-        }
-        lines.push_back(str);
-    }
-
-    parseAGame(lines);
-    inFile.close();
-
     {
-        mDb->exec("DELETE FROM info WHERE name = 'games'");
-        mDb->exec("DELETE FROM info WHERE name = 'players'");
+        char *buffer = (char*)malloc(blockSz + 16);
+
+        FILE *stream = fopen(path.c_str(), "r");
+        assert(stream != NULL);
+        fseek(stream, 0, SEEK_END);
+        size_t size = ftell(stream);
+        fseek(stream, 0, SEEK_SET);
         
-        int gameCnt = mDb->execAndGet("SELECT COUNT(*) FROM game");
+        for (size_t sz = 0, idx = 0; sz < size; idx++) {
+            auto k = std::min(blockSz, size - sz);
+            if (k == 0) {
+                break;
+            }
+            
+            buffer[k] = 0;
+            if (fread(buffer, k, 1, stream)) {
+                processDataBlock(buffer, k, true);
+                if (idx && (idx & 0xf) == 0) {
+                    printStats();
+                }
+            }
+            sz += k;
+        }
+
+        fclose(stream);
+        free(buffer);
+
+        if (halfBuf) {
+            if (halfBufSz > 0) {
+                processDataBlock(halfBuf, halfBufSz, false);
+            }
+            
+            free(halfBuf);
+            halfBuf = 0;
+        }
+    }
+    
+    {
+        // int gameCnt = mDb->execAndGet("SELECT COUNT(*) FROM game");
         auto str = std::string("INSERT INTO info(name, value) VALUES ('games', '") + std::to_string(gameCnt) + "')";
         mDb->exec(str);
 
         int playerCnt = mDb->execAndGet("SELECT COUNT(*) FROM player");
         str = std::string("INSERT INTO info(name, value) VALUES ('players', '") + std::to_string(playerCnt) + "')";
+        mDb->exec(str);
+
+        int eventCnt = mDb->execAndGet("SELECT COUNT(*) FROM event");
+        str = std::string("INSERT INTO info(name, value) VALUES ('events', '") + std::to_string(eventCnt) + "')";
         mDb->exec(str);
     }
 
@@ -156,158 +306,6 @@ uint64_t Builder::processPgnFile(const std::string& path)
 
     std::cout << "Completed! " << std::endl;
     return gameCnt;
-}
-
-bool Builder::parseAGame(const std::vector<std::string>& lines)
-{
-    if (lines.size() < 4) {
-        return false;
-    }
-
-    gameCnt++;
-    std::unordered_map<std::string, std::string> itemMap;
-    std::string moveText;
-
-    for(auto && s : lines) {
-        auto p = s.find("[");
-        if (p == 0 && moveText.length() < 10) {
-            p++;
-            std::string key;
-            for(auto q = p + 1; q < s.length(); q++) {
-                if (s.at(q) <= ' ') {
-                    key = s.substr(p, q - p);
-                    break;
-                }
-            }
-            if (key.empty()) continue;
-            p = s.find("\"");
-            if (p == std::string::npos) continue;
-            p++;
-            auto q = s.find("\"", p);
-            if (q == std::string::npos) continue;
-            auto str = s.substr(p, q - p);
-            if (str.empty()) continue;
-
-            Funcs::toLower(key);
-            itemMap[key] = str;
-            continue;
-        }
-        moveText += " " + s;
-    }
-
-    // at the moment, support only standard one
-    auto p = itemMap.find("variant");
-    if (p != itemMap.end()) {
-        auto variant = Funcs::string2ChessVariant(p->second);
-
-        if (board->variant != variant) {
-            std::cerr << "Error: variant " << p->second << " is not supported." << std::endl;
-            errCnt++;
-            return false;
-        }
-    }
-
-    if (addGame(itemMap, moveText)) {
-        return true;
-    }
-
-    errCnt++;
-    return false;
-}
-
-bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMap, const std::string& moveText)
-{
-    GameRecord r;
-
-    auto it = itemMap.find("event");
-    if (it == itemMap.end())
-        return false;
-    r.eventName = it->second;
-
-    it = itemMap.find("white");
-    if (it == itemMap.end())
-        return false;
-    r.whiteName = it->second;
-
-    it = itemMap.find("whiteelo");
-    if (it != itemMap.end()) {
-        r.whiteElo = std::atoi(it->second.c_str());
-    }
-
-    it = itemMap.find("black");
-    if (it == itemMap.end())
-        return false;
-    r.blackName = it->second;
-
-    it = itemMap.find("blackelo");
-    if (it != itemMap.end()) {
-        r.blackElo = std::atoi(it->second.c_str());
-    }
-
-    it = itemMap.find("date");
-    if (it != itemMap.end()) {
-        r.dateString = it->second;
-    }
-
-    it = itemMap.find("utcdate");
-    if (it != itemMap.end()) {
-        r.dateString = it->second;
-    }
-
-    it = itemMap.find("timecontrol");
-    if (it != itemMap.end()) {
-        r.timer = it->second;
-    }
-
-    it = itemMap.find("eco");
-    if (it != itemMap.end()) {
-        r.eco = it->second;
-    }
-
-    it = itemMap.find("result");
-    if (it != itemMap.end()) {
-        r.resultType = Funcs::string2ResultType(it->second);
-    }
-
-    // Open game to verify and count the number of half-moves
-    if (moveVerify) {
-        auto it = itemMap.find("fen");
-        if (it != itemMap.end()) {
-            r.fen = it->second;
-            Funcs::trim(r.fen);
-        }
-
-        if (r.fen.empty() && moveText.empty()) {
-            return false;
-        }
-
-        assert(board);
-        board->newGame(r.fen);
-
-        if (!board->isValid()) {
-            return false;
-        }
-
-        board->fromMoveList(moveText, Notation::san);
-
-        r.moveCnt = board->getHistListSize();
-        if (r.moveCnt == 0 && r.fen.empty()) {
-            return false;
-        }
-        r.moveString = board->toMoveListString(Notation::san,
-                                               10000000, false,
-                                               CommentComputerInfoType::standard);
-    } else {
-        r.moveString = moveText;
-    }
-
-    assert(!r.moveString.empty());
-
-    // old way
-    //return addGame(r);
-    
-    // new way
-    return addGameWithPreparedStatement(r);
 }
 
 
@@ -335,7 +333,7 @@ SQLite::Database* Builder::createDb(const std::string& path)
         mDb->exec("CREATE TABLE player (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, elo INTEGER)");
 
         mDb->exec("DROP TABLE IF EXISTS game");
-        mDb->exec("CREATE TABLE game(id INTEGER PRIMARY KEY AUTOINCREMENT, event_id INTEGER, white_id INTEGER, white_elo INTEGER, black_id INTEGER, black_elo INTEGER, timer TEXT, date TEXT, eco TEXT, result INTEGER, length INTEGER, fen TEXT, moves TEXT, FOREIGN KEY(event_id) REFERENCES event, FOREIGN KEY(white_id) REFERENCES player, FOREIGN KEY(black_id) REFERENCES player)");
+        mDb->exec("CREATE TABLE game(id INTEGER PRIMARY KEY AUTOINCREMENT, Event_id INTEGER, White_id INTEGER, WhiteElo INTEGER, Black_id INTEGER, BlackElo INTEGER, Timer TEXT, Date TEXT, ECO TEXT, Result INTEGER, PlyCount INTEGER, FEN TEXT, Moves TEXT, FOREIGN KEY(Event_id) REFERENCES event, FOREIGN KEY(White_id) REFERENCES player, FOREIGN KEY(Black_id) REFERENCES player)");
         
         return mDb;
     }
@@ -376,100 +374,13 @@ std::string Builder::encodeString(const std::string& str)
     return Funcs::replaceString(str, "\"", "\\\"");
 }
 
-int Builder::getNameId(const std::string& tableName, const std::string& name)
-{
-    std::string sQuery = "SELECT id FROM " + tableName + " WHERE name=\"" + encodeString(name) + "\"";
-    SQLite::Statement query(*mDb, sQuery.c_str());
-    return query.executeStep() ? query.getColumn(0) : -1;
-}
-
-int Builder::getEventNameId(const std::string& name)
-{
-    if (name.empty()) {
-        return 0;
-    }
-
-    auto nameId = getNameId("event", name);
-    if (nameId < 0) {
-        nameId = mDb->execAndGet("INSERT INTO event(name) VALUES (\"" + name + "\") RETURNING id");
-    }
-
-    assert(nameId >= 0);
-    return nameId;
-}
-
-int Builder::getPlayerNameId(const std::string& name, int elo)
-{
-    if (name.empty()) {
-        return -1;
-    }
-
-    auto nameId = getNameId("player", name);
-    if (nameId < 0) {
-        std::string eloString = elo > 0 ? std::to_string(elo) : "NULL";
-        nameId = mDb->execAndGet("INSERT INTO player(name, elo) VALUES (\"" + name + "\", " + eloString + ") RETURNING id");
-    }
-
-    assert(nameId >= 0);
-    return nameId;
-}
-
-
-
-bool Builder::addGame(const GameRecord& r)
-{
-    std::string mQuery, gQuery;
-    try
-    {
-        assert(mDb);
-        // Begin transaction
-        // SQLite::Transaction transaction(*mDb);
-
-        auto eventId = getEventNameId(r.eventName);
-        auto whiteId = getPlayerNameId(r.whiteName, r.whiteElo);
-        auto blackId = getPlayerNameId(r.blackName, r.blackElo);
-
-        std::string witeElo = r.whiteElo > 0 ? std::to_string(r.whiteElo) : "NULL";
-        std::string blackElo = r.blackElo > 0 ? std::to_string(r.blackElo) : "NULL";
-
-        gQuery = "INSERT INTO game(event_id, white_id, white_elo, black_id, black_elo, timer, result, date, eco, length, fen, moves) VALUES ("
-                                           + std::to_string(eventId) + ","
-                                           + std::to_string(whiteId) + ","
-                                           + witeElo + ","
-                                           + std::to_string(blackId) + ","
-                                           + blackElo + ",'"
-                                           + r.timer + "','"
-                                           + Funcs::resultType2String(r.resultType, false) + "', '"
-                                           + r.dateString + "', '"
-                                           + r.eco + "',"
-                                           + std::to_string(r.moveCnt) + ", '"
-                                           + r.fen + "',\""
-                                           + encodeString(r.moveString)
-                                           + "\")";
-        int nb = mDb->exec(gQuery);
-
-        if (nb > 0) {
-            // Commit transaction
-            // transaction.commit();
-            return true;
-        }
-    }
-    catch (std::exception& e)
-    {
-        std::cout << "SQLite exception: " << e.what() << ", mQuery: " << mQuery << ", gQuery: " << gQuery << std::endl;
-    }
-
-    return false;
-}
-
-
 void Builder::queryGameData(SQLite::Database& db, int gameIdx)
 {
     std::string str =
-    "SELECT g.id, w.name white, white_elo, b.name black, black_elo, timer, date, result, eco, length, fen, moves " \
+    "SELECT g.id, w.name White, WhiteElo, b.name Black, BlackElo, Timer, Date, Result, ECO, PlyCount, FEN, Moves " \
     "FROM game g " \
-    "INNER JOIN player w ON white_id = w.id " \
-    "INNER JOIN player b ON black_id = b.id " \
+    "INNER JOIN player w ON White_id = w.id " \
+    "INNER JOIN player b ON Black_id = b.id " \
     "WHERE g.id = " + std::to_string(gameIdx);
     
     SQLite::Statement query(db, str);
@@ -477,15 +388,15 @@ void Builder::queryGameData(SQLite::Database& db, int gameIdx)
     auto ok = false;
     if (query.executeStep()) {
         const int         id     = query.getColumn("id");
-        const std::string white  = query.getColumn("white");
-        const std::string black  = query.getColumn("black");
-        const std::string fen  = query.getColumn("fen");
-        const std::string moves  = query.getColumn("moves");
-        const int length  = query.getColumn("length");
+        const std::string white  = query.getColumn("White");
+        const std::string black  = query.getColumn("Black");
+        const std::string fen  = query.getColumn("FEN");
+        const std::string moves  = query.getColumn("Moves");
+        const int plyCount  = query.getColumn("PlyCount");
 
         ok = id == gameIdx && !white.empty() && !black.empty()
             && (!fen.empty() || !moves.empty())
-            && ((length == 0 && moves.empty()) || (length > 0 && !moves.empty()));
+            && ((plyCount == 0 && moves.empty()) || (plyCount > 0 && !moves.empty()));
         
         if (!ok) {
             std::cerr << "IMHERE" << std::endl;
@@ -534,7 +445,7 @@ void Builder::bench(const std::string& path)
 }
 
 
-int Builder::getPlayerNameIdWithPreparedStatements(const std::string& name, int elo)
+int Builder::getPlayerNameId(const std::string& name, int elo)
 {
     if (name.empty()) {
         return -1;
@@ -560,7 +471,7 @@ int Builder::getPlayerNameIdWithPreparedStatements(const std::string& name, int 
     return playerId;
 }
 
-int Builder::getEventNameIdWithPreparedStatements(const std::string& name)
+int Builder::getEventNameId(const std::string& name)
 {
     if (name.empty()) {
         return 0;
@@ -585,33 +496,129 @@ int Builder::getEventNameIdWithPreparedStatements(const std::string& name)
     return eventId;
 }
 
-bool Builder::addGameWithPreparedStatement(const GameRecord& r)
+bool Builder::addGame(const std::unordered_map<std::string, const char*>& itemMap, const char* moveText)
+{
+    assert(strlen(moveText) < 32 * 1024); // hard coding, just for quickly detecting incorrect data
+
+    if (itemMap.size() < 3) {
+        return false;
+    }
+
+    GameRecord r;
+
+    auto it = itemMap.find("Event");
+    if (it == itemMap.end())
+        return false;
+    r.eventName = it->second;
+
+    it = itemMap.find("Variant");
+    if (it != itemMap.end()) {
+        auto variant = Funcs::string2ChessVariant(it->second);
+        // at this moment, support only the standard variant
+        if (variant != ChessVariant::standard) {
+            return false;
+        }
+    }
+
+    it = itemMap.find("White");
+    if (it == itemMap.end())
+        return false;
+    r.whiteName = it->second;
+
+    it = itemMap.find("WhiteElo");
+    if (it != itemMap.end()) {
+        r.whiteElo = std::atoi(it->second);
+    }
+
+    it = itemMap.find("Black");
+    if (it == itemMap.end())
+        return false;
+    r.blackName = it->second;
+
+    it = itemMap.find("BlackElo");
+    if (it != itemMap.end()) {
+        r.blackElo = std::atoi(it->second);
+    }
+
+    it = itemMap.find("Date");
+    if (it != itemMap.end()) {
+        r.dateString = it->second;
+    }
+
+    it = itemMap.find("UTCDate");
+    if (it != itemMap.end()) {
+        r.dateString = it->second;
+    }
+
+    it = itemMap.find("TimeControl");
+    if (it != itemMap.end()) {
+        r.timer = it->second;
+    }
+
+    it = itemMap.find("ECO");
+    if (it != itemMap.end()) {
+        r.eco = it->second;
+    }
+
+    it = itemMap.find("Result");
+    if (it != itemMap.end()) {
+        r.resultType = Funcs::string2ResultType(it->second);
+    }
+
+    r.moveString = moveText;
+
+    it = itemMap.find("PlyCount");
+    if (it != itemMap.end()) {
+        r.plyCount = std::atoi(it->second);
+    }
+
+    return addGame(r);
+}
+
+bool Builder::addGame(const GameRecord& r)
 {
     try
     {
         assert(mDb);
 
-        auto eventId = getEventNameIdWithPreparedStatements(r.eventName);
-        auto whiteId = getPlayerNameIdWithPreparedStatements(r.whiteName, r.whiteElo);
-        auto blackId = getPlayerNameIdWithPreparedStatements(r.blackName, r.blackElo);
-
-        std::string whiteElo = r.whiteElo > 0 ? std::to_string(r.whiteElo) : "NULL";
-        std::string blackElo = r.blackElo > 0 ? std::to_string(r.blackElo) : "NULL";
+        auto eventId = getEventNameId(r.eventName);
+        auto whiteId = getPlayerNameId(r.whiteName, r.whiteElo);
+        auto blackId = getPlayerNameId(r.blackName, r.blackElo);
 
         insertGameStatement->bind(1, eventId);
         insertGameStatement->bind(2, whiteId);
-        insertGameStatement->bind(3, whiteElo);
+        
+        // use null if it is zero
+        if (r.whiteElo > 0) {
+            insertGameStatement->bind(3, r.whiteElo);
+        }
 
         insertGameStatement->bind(4, blackId);
-        insertGameStatement->bind(5, blackElo);
+        
+        if (r.blackElo > 0) {
+            insertGameStatement->bind(5, r.blackElo);
+        }
 
-        insertGameStatement->bind(6, r.timer);
+        if (r.timer) {
+            insertGameStatement->bind(6, r.timer);
+        }
         insertGameStatement->bind(7, Funcs::resultType2String(r.resultType, false));
 
-        insertGameStatement->bind(8, r.dateString);
-        insertGameStatement->bind(9, r.eco);
-        insertGameStatement->bind(10, r.moveCnt);
-        insertGameStatement->bind(11, r.fen);
+        if (r.dateString) {
+            insertGameStatement->bind(8, r.dateString);
+        }
+        
+        if (r.eco) {
+            insertGameStatement->bind(9, r.eco);
+        }
+        
+        if (r.plyCount > 0) {
+            insertGameStatement->bind(10, r.plyCount);
+        }
+        
+        if (r.fen) {
+            insertGameStatement->bind(11, r.fen);
+        }
         insertGameStatement->bind(12, r.moveString);
 
         insertGameStatement->executeStep();
@@ -624,92 +631,4 @@ bool Builder::addGameWithPreparedStatement(const GameRecord& r)
     }
 
     return true;
-}
-
-void Builder::testInsertingSpeed(const std::string& dbPath)
-{
-    std::vector<std::string> gameBodyVec {
-"1.d4 Nf6 2.Nf3 d5 3.e3 Bf5 4.c4 c6 5.Nc3 e6 6.Bd3 Bxd3 7.Qxd3 Nbd7 8.b3 Bd6 \
-9.O-O O-O 10.Bb2 Qe7 11.Rad1 Rad8 12.Rfe1 dxc4 13.bxc4 e5 14.dxe5 Nxe5 15.Nxe5 Bxe5 \
-16.Qe2 Rxd1 17.Rxd1 Rd8 18.Rxd8+ Qxd8 19.Qd1 Qxd1+ 20.Nxd1 Bxb2 21.Nxb2 b5 \
-22.f3 Kf8 23.Kf2 Ke7  1/2-1/2",
-
-"1.e4 e5 2.Nf3 Nf6 3.d3 d6 4.c3 g6 5.Bg5 Bg7 6.Be2 O-O 7.d4 h6 8.Bxf6 Qxf6 \
-9.dxe5 dxe5 10.O-O Nd7 11.Nbd2 Nc5 12.Qc2 Bg4 13.Rfe1 Rfe8 14.b4 Ne6 15.h3 Bxf3 \
-16.Nxf3 Nf4 17.Bc4 Nxh3+ 18.gxh3 Qxf3 19.Re3 Qh5 20.Qb3 Rf8 21.Rd1 Qg5+ 22.Rg3 Qf6 \
-23.Rdd3 g5 24.Rgf3 Qe7 25.Rf5 Kh8 26.Bxf7 Rad8 27.Rdf3 Rd6 28.Kf1 Qd8 29.Bh5 Rxf5 \
-30.Rxf5 Rc6 31.Rf3 Rd6 32.Rf5 Rd2 33.Rf7 Qd3+ 34.Kg2 Qxe4+ 35.Bf3 Qh4 36.Bxb7 g4 \
-37.Qe6 Qxh3+ 38.Kg1 Rd1+  0-1",
-
-"1.e4 e5 2.Nf3 Nf6 3.Nc3 Nc6 4.Bc4 Bb4 5.d3 d5 6.exd5 Nxd5 7.Bd2 Nxc3 8.bxc3 Be7 \
-9.Qe2 Bf6 10.O-O O-O 11.Rfe1 Re8 12.Qe4 g6 13.g4 Na5 14.Bb3 Nxb3 15.axb3 Bd7 \
-16.g5 Bc6 17.Qh4 Bg7 18.Qg4 Qd6 19.Re2 Re6 20.Rae1 Rae8 21.c4 b6 22.Bc1 Ba8 \
-23.Nd2 Bc6 24.Ne4 Qe7 25.Re3 h5 26.Qg3 Bd7 27.Bb2 Bc6 28.Nf6+ Bxf6 29.gxf6 Qxf6 \
-30.Rxe5 Rxe5 31.Rxe5 Rd8 32.Qe3 Qh4 33.Qg5 Qxg5+ 34.Rxg5 Re8 35.Kf1 Bf3 36.Re5 Rd8 \
-37.Ke1 Kf8 38.Ba3+ Kg8 39.Re7 Rc8 40.Kd2 h4 41.Ke3 Bh5 42.Kd2 g5 43.Rd7 g4 \
-44.Re7 Kg7 45.Ke3 Kf6 46.d4 c5 47.Rxa7 Re8+ 48.Kd2 cxd4 49.Rd7 g3 50.fxg3 Re2+ \
-51.Kd3 Rxh2 52.gxh4 Bg6+ 53.Kxd4 Rd2+  0-1 ",
-
-"1.c4 c5 2.g3 Nc6 3.Bg2 g6 4.Nc3 Bg7 5.a3 d6 6.Rb1 a5 7.Nf3 Nf6 8.O-O O-O \
-9.Ne1 Bd7 10.Nc2 Rb8 11.d3 Ne8 12.Bd2  1/2-1/2"
-    };
-
-    setDatabasePath(dbPath);
-    
-    // Create database
-    createDb(dbPath);
-    openDbToWrite();
-
-    std::cout << "testInsertingSpeed, dbPath: '" << dbPath << "'" << std::endl;
-
-    startTime = getNow();
-    gameCnt = errCnt = 0;
-
-    // Begin transaction
-    SQLite::Transaction transaction(*mDb);
-
-    const std::string sql = "INSERT INTO game(event_id, white_id, white_elo, black_id, black_elo, timer, result, date, eco, length, fen, moves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-    insertGameStatement = new SQLite::Statement(*mDb, sql);
-    
-    playerGetIdStatement = new SQLite::Statement(*mDb, "SELECT id FROM player WHERE name=?");
-    playerInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO player(name, elo) VALUES (?, ?) RETURNING id");
-
-    eventGetIdStatement = new SQLite::Statement(*mDb, "SELECT id FROM event WHERE name=?");
-    eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO event(name) VALUES (?) RETURNING id");
-
-    for(gameCnt = 0; gameCnt < 3450777; gameCnt++) {
-        GameRecord r;
-        auto  eIdx = rand() % 31049, wIdx = rand() % 284442, bIdx = rand() % 284442;
-        r.eventName = "event" + std::to_string(eIdx);
-        r.whiteName = "player" + std::to_string(wIdx);
-        r.blackName = "player" + std::to_string(bIdx);
-        
-        r.whiteElo = rand() % 3000;
-        r.blackElo = rand() % 3000;
-        
-        auto k = rand() % gameBodyVec.size();
-        r.moveString = gameBodyVec.at(k);
-        if (!addGameWithPreparedStatement(r)) {
-            errCnt++;
-        }
-
-        // Frequently update info
-        if (gameCnt && (gameCnt & 0xfff) == 0) {
-            printStats();
-        }
-    }
-
-    // Commit transaction
-    transaction.commit();
-
-    delete insertGameStatement;
-    delete playerGetIdStatement;
-    delete playerInsertStatement;
-
-    delete eventGetIdStatement;
-    delete eventInsertStatement;
-
-    printStats();
-    std::cout << "Completed! " << std::endl;
 }

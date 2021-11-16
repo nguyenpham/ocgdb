@@ -22,10 +22,11 @@ namespace ocgdb {
 
 class GameRecord {
 public:
-    int moveCnt = 0, whiteElo = 0, blackElo = 0;
+    int plyCount = 0, whiteElo = 0, blackElo = 0;
     ResultType resultType = ResultType::noresult;
-    std::string whiteName, blackName, sName, eventName, timer, dateString, eco;
-    std::string fen, moveString;
+    const char* whiteName, *blackName, *eventName;
+    const char *timer = nullptr, *dateString = nullptr, *eco = nullptr;
+    const char* fen = nullptr, *moveString;
 };
 
 class Builder
@@ -34,39 +35,43 @@ public:
     Builder();
     virtual ~Builder();
 
-    void convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath, bool moveVerify);
+    void convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath);
 
     void bench(const std::string& path);
 
-    void testInsertingSpeed(const std::string& dbPath);
-    
 private:
+    static SQLite::Database* createDb(const std::string& path);
+    static std::string encodeString(const std::string& name);
+//    static BoardCore* createBoard(ChessVariant variant);
+
     void setDatabasePath(const std::string& path);
-    bool addGame(const GameRecord& r);
-    uint64_t processPgnFile(const std::string& path);
-    bool parseAGame(const std::vector<std::string>& lines);
-    bool addGame(const std::unordered_map<std::string, std::string>& itemMap, const std::string& moveText);
-
-    bool addGameWithPreparedStatement(const GameRecord& r);
-
     SQLite::Database* openDbToWrite();
-    int getNameId(const std::string& tableName, const std::string& name);
+
+    uint64_t processPgnFile(const std::string& path);
+
+    bool addGame(const GameRecord& r);
+    bool addGame(const std::unordered_map<std::string, const char*>& itemMap, const char* moveText);
+
     int getPlayerNameId(const std::string& name, int elo);
     int getEventNameId(const std::string& name);
 
-    static SQLite::Database* createDb(const std::string& path);
-    static std::string encodeString(const std::string& name);
-    static BoardCore* createBoard(ChessVariant variant);
     void printStats() const;
 
+    void processDataBlock(char* buffer, long sz, bool);
+    void processHalfBegin(char* buffer, long len);
+    void processHalfEnd(char* buffer, long len);
+    
+private:
     void queryGameData(SQLite::Database& db, int gameIdx);
 
-    int getPlayerNameIdWithPreparedStatements(const std::string& name, int elo);
-    int getEventNameIdWithPreparedStatements(const std::string& name);
-
 private:
-    bool moveVerify = true;
-    BoardCore* board = nullptr; /// For verifying games, count moves
+    const size_t blockSz = 8 * 1024 * 1024;
+    const int halfBlockSz = 16 * 1024;
+    char* halfBuf = nullptr;
+    long halfBufSz = 0;
+
+
+//    BoardCore* board = nullptr; /// For verifying games, count moves
     ChessVariant chessVariant = ChessVariant::standard;
 
     std::string dbPath;

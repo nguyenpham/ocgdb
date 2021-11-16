@@ -56,10 +56,6 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/Carlsen.ocgdb.db3"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
             argument = "-bench"
             isEnabled = "NO">
          </CommandLineArgument>
@@ -77,10 +73,6 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db :memory:"
-            isEnabled = "YES">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-noverify"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

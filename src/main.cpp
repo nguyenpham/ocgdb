@@ -18,16 +18,12 @@ int main(int argc, const char * argv[]) {
     std::cout << "Open Chess Game Database Standard, (C) 2021\n";
     ocgdb::Builder oc;
 
-    auto bench = false, moveVerify = true;
+    auto bench = false;
     std::string pgnPath, dbPath;
     for(auto i = 1; i < argc; i++) {
         auto str = std::string(argv[i]);
         if (str == "-bench") {
             bench = true;
-            continue;
-        }
-        if (str == "-noverify") {
-            moveVerify = false;
             continue;
         }
 
@@ -55,15 +51,14 @@ int main(int argc, const char * argv[]) {
         if (pgnPath.empty() || dbPath.empty()) {
             ok = false;
         } else {
-            oc.convertPgn2Sql(pgnPath, dbPath, moveVerify);
+            oc.convertPgn2Sql(pgnPath, dbPath);
         }
     }
 
     if (!ok) {
         std::cerr << "Usage:" << std::endl;
         std::cerr << "       ocgdb -pgn PGNPATH -db DBPATH" << std::endl;
-        std::cerr << "       ocgdb -pgn PGNPATH -db DBPATH -noverify" << std::endl;
-        std::cerr << "       ocgdb -pgn PGNPATH -db :memory: -noverify" << std::endl;
+        std::cerr << "       ocgdb -pgn PGNPATH -db :memory:" << std::endl;
         std::cerr << "       ocgdb -bench -db DBPATH" << std::endl;
         std::cerr << " e.g.: ocgdb -pgn c:\\games\\big.png -db c:\\db\\big.ocgdb.db3" << std::endl;
     }

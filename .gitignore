@@ -1,0 +1,64 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*.exp
+*.pdb
+*.ilk
+*.dSYM/*.*
+src/ocgdb
+
+*/x64*
+*/.vs*
+*/Debug*
+.DS_Store
+*.DS_Store
+*.user
+*.filters
+
+*.pro.user
+*.pro.user.*
+*.pro.user*
+*.zip
+
+
+# CMake build files
+build/
+
+# Emacs auto save files
+*~
+
+# Eclipse project files
+/.cproject
+/.project
+/.settings
+
+
