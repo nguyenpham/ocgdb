@@ -74,17 +74,19 @@ Convert into a memory database (output path is :memory:) on the RAM, required 29
 It should keep normal extension of a database. For example, the one for SQLite should have the extension .db3. It should have upper/extra extension .ocgdb to distinguide from other database.
 For examples of file names:
 
+```
   mb345.ocgdb.db3
   carlsen.ocgdb.db3
+```
 
 ## Names
 Names should be Camel style, less space and closed to PGN tag names as much as posible. 
-For examples: White, BlackElo, PlyCount, GameCount, FEN...
+For examples: ```White, BlackElo, PlyCount, GameCount, FEN```
 
 ### Some important Table names
-- Events: for event name
-- Sites: for site name
-- Players: for player name
+- Events: for event names
+- Sites: for site names
+- Players: for player names
 - Games: for game info, FEN and Moves
 
 ### Field names
@@ -92,7 +94,7 @@ PGN standard requires some name tags, the database should have those fields too.
 An important field is Moves to keep all moves in text form.
 
 For examples of field names:
- EventID, WhiteID, BlackElo, Result, Date, FEN
+```EventID, WhiteID, BlackElo, Round, Result, Date, FEN, Moves```
 
 ### Field values
 Except for field EventID, WhiteID, BlackID, values of other fields could be NULL.

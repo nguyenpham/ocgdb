@@ -107,7 +107,6 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
 {
     assert(buffer && sz > 0);
     
-//    std::unordered_map<std::string, const char*> tagMap;
     std::unordered_map<const char*, const char*> tagMap;
 
     auto st = 0, eventCnt = 0;
@@ -345,6 +344,7 @@ SQLite::Database* Builder::createDb(const std::string& path)
 
         mDb->exec("DROP TABLE IF EXISTS Players");
         mDb->exec("CREATE TABLE Players (ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT UNIQUE, Elo INTEGER)");
+        mDb->exec("INSERT INTO Players (Name) VALUES (\"\")"); // default empty
 
         mDb->exec("DROP TABLE IF EXISTS Games");
         mDb->exec("CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT, EventID INTEGER, SiteID INTEGER, Date TEXT, Round INTEGER, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, Result INTEGER, Timer TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT, Moves TEXT, FOREIGN KEY(EventID) REFERENCES Events, FOREIGN KEY(SiteID) REFERENCES Sites, FOREIGN KEY(WhiteID) REFERENCES Players, FOREIGN KEY(BlackID) REFERENCES Players)");
@@ -391,17 +391,17 @@ std::string Builder::encodeString(const std::string& str)
 int Builder::getPlayerNameId(const char* name, int elo)
 {
     if (!name) {
-        return -1;
+        return 1;
     }
     
     // trim left
     while(*name && *name <= ' ') name++;
 
     // empty
-    if (*name == 0) return -1;
+    if (*name == 0) return 1;
 
     playerGetIdStatement->bind(1, name);
-    int playerId = -1;
+    auto playerId = -1;
     
     if (playerGetIdStatement->executeStep()) {
         playerId = playerGetIdStatement->getColumn(0);
@@ -410,14 +410,17 @@ int Builder::getPlayerNameId(const char* name, int elo)
     
     if (playerId < 0) {
         playerInsertStatement->bind(1, name);
-        playerInsertStatement->bind(2, elo);
+        
+        if (elo > 0) {
+            playerInsertStatement->bind(2, elo);
+        }
         if (playerInsertStatement->executeStep()) {
             playerId = playerInsertStatement->getColumn(0).getInt();
         }
         playerInsertStatement->reset();
     }
 
-    assert(playerId >= 0);
+    assert(playerId > 1);
     return playerId;
 }
 
@@ -430,11 +433,11 @@ int Builder::getEventNameId(const char* name)
     // trim left
     while(*name && *name <= ' ') name++;
 
-    // empty
-    if (*name == 0) return 1;
+    // empty or ?
+    if (*name == 0 || name[0] == '?') return 1;
 
     eventGetIdStatement->bind(1, name);
-    int eventId = -1;
+    auto eventId = -1;
     
     if (eventGetIdStatement->executeStep()) {
         eventId = eventGetIdStatement->getColumn(0);
@@ -449,7 +452,7 @@ int Builder::getEventNameId(const char* name)
         eventInsertStatement->reset();
     }
 
-    assert(eventId >= 0);
+    assert(eventId > 1);
     return eventId;
 }
 
@@ -462,11 +465,11 @@ int Builder::getSiteNameId(const char* name)
     // trim left
     while(*name && *name <= ' ') name++;
 
-    // empty
-    if (*name == 0) return 1;
-    
+    // empty or ?
+    if (*name == 0 || name[0] == '?') return 1;
+
     siteGetIdStatement->bind(1, name);
-    int siteId = -1;
+    auto siteId = -1;
     
     if (siteGetIdStatement->executeStep()) {
         siteId = siteGetIdStatement->getColumn(0);
@@ -481,7 +484,7 @@ int Builder::getSiteNameId(const char* name)
         siteInsertStatement->reset();
     }
 
-    assert(siteId >= 0);
+    assert(siteId > 1);
     return siteId;
 }
 
@@ -509,7 +512,7 @@ bool Builder::addGame(const std::unordered_map<const char*, const char*>& itemMa
     try {
         insertGameStatement->reset();
 
-        auto eventId = -1, whiteElo = 0, blackElo = 0;
+        auto eventId = 1, whiteElo = 0, blackElo = 0;
         const char* whiteName = nullptr, *blackName = nullptr, *date = nullptr;
         
         for(auto && it : itemMap) {
@@ -528,33 +531,35 @@ bool Builder::addGame(const std::unordered_map<const char*, const char*>& itemMa
                     continue;
                 }
 
+                auto s = it.second;
+                while(*s <= ' ') s++; // trim left
+                
                 switch (i) {
                     case TagIdx_Event:
                     {
-                        eventId = getEventNameId(it.second);
-                        insertGameStatement->bind(i + 1, eventId);
+                        eventId = getEventNameId(s);
                         break;
                     }
                     case TagIdx_Site:
                     {
-                        auto siteId = getSiteNameId(it.second);
+                        auto siteId = getSiteNameId(s);
                         insertGameStatement->bind(i + 1, siteId);
                         break;
                     }
                     case TagIdx_White:
                     {
-                        whiteName = it.second;
+                        whiteName = s;
                         break;
                     }
                     case TagIdx_Black:
                     {
-                        blackName = it.second;
+                        blackName = s;
                         break;
                     }
 
                     case TagIdx_Date:
                     {
-                        date = it.second;
+                        date = s;
                         break;
                     }
                     case TagIdx_Result:
@@ -562,25 +567,31 @@ bool Builder::addGame(const std::unordered_map<const char*, const char*>& itemMa
                     case TagIdx_ECO:
                     case TagIdx_FEN:
                     {
-                        insertGameStatement->bind(i + 1, it.second);
+                        if (s[0]) { // ignored empty, use NULL instead
+                            insertGameStatement->bind(i + 1, s);
+                        }
                         break;
                     }
                     case TagIdx_WhiteElo:
                     {
-                        whiteElo = std::atoi(it.second);
-                        insertGameStatement->bind(i + 1, whiteElo);
+                        whiteElo = std::atoi(s);
+                        if (whiteElo > 0) {
+                            insertGameStatement->bind(i + 1, whiteElo);
+                        }
                         break;
                     }
                     case TagIdx_BlackElo:
                     {
-                        blackElo = std::atoi(it.second);
-                        insertGameStatement->bind(i + 1, blackElo);
+                        blackElo = std::atoi(s);
+                        if (blackElo > 0) {
+                            insertGameStatement->bind(i + 1, blackElo);
+                        }
                         break;
                     }
                     case TagIdx_Round:
                     case TagIdx_PlyCount:
                     {
-                        insertGameStatement->bind(i + 1, std::atoi(it.second));
+                        insertGameStatement->bind(i + 1, std::atoi(s));
                         break;
                     }
 
@@ -593,18 +604,16 @@ bool Builder::addGame(const std::unordered_map<const char*, const char*>& itemMa
             }
         }
         
-        if (eventId < 0 || !whiteName || !blackName) {
-            return false;
-        }
-        
-        if (date) {
-            insertGameStatement->bind(TagIdx_Date + 1, date);
-        }
-
         auto whiteId = getPlayerNameId(whiteName, whiteElo);
         auto blackId = getPlayerNameId(blackName, blackElo);
         insertGameStatement->bind(TagIdx_Black + 1, whiteId);
         insertGameStatement->bind(TagIdx_White + 1, blackId);
+
+        insertGameStatement->bind(TagIdx_Event + 1, eventId);
+
+        if (date) {
+            insertGameStatement->bind(TagIdx_Date + 1, date);
+        }
 
         // trim left
         while(*moveText <= ' ') moveText++;
