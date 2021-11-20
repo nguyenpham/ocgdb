@@ -56,7 +56,7 @@ There is a small sample database in the folder samples. A bigger one could be do
 
     https://drive.google.com/file/d/1qUNVBknC69gKmhlI3RafEa7tJcnIlJ9d/view?usp=sharing
 
-## Convert speed
+## Converting speed
 We tested on an iMac 3.6 GHz Quad-Core i7, 16 GB RAM (year 2017), converting a PGN file with 3.45 million games, size 2.42 GB.
 
 Convert into a db3 file (.db3, stored on the hard disk), required 45 seconds:
@@ -70,32 +70,32 @@ Convert into a memory database (output path is :memory:) on the RAM, required 29
     #games: 3457050, elapsed: 29907 ms, 00:29, speed: 115593 games/s
 ```
 
-## Names
-### File name extension
+## File name extension
 It should keep normal extension of a database. For example, the one for SQLite should have the extension .db3. It should have upper/extra extension .ocgdb to distinguide from other database.
 For examples of file names:
 
   mb345.ocgdb.db3
   carlsen.ocgdb.db3
 
+## Names
+Names should be Camel style, less space and closed to PGN tag names as much as posible. 
+For examples: White, BlackElo, PlyCount, GameCount, FEN...
+
+### Some important Table names
+- Events: for event name
+- Sites: for site name
+- Players: for player name
+- Games: for game info, FEN and Moves
+
 ### Field names
-PGN standard requires some name tags, the database should have those fields too. If one is an index field, uses surfix _id.
+PGN standard requires some name tags, the database should have those fields too. If one is an index field, uses surfix ID.
 An important field is Moves to keep all moves in text form.
 
 For examples of field names:
- Event_id, White_id, BlackElo, Result, Date, FEN
+ EventID, WhiteID, BlackElo, Result, Date, FEN
 
 ### Field values
-Except for field Event_id, White_id, Black_id, values of other fields could be NULL.
-
-## Working on
-- Understand, measure speeds, sizes, drawbacks, problems
-- Develop all basic database functions
-- Create a huge database of over 5 million games
-- Benchmark (to speed up later)
-- Improve speed/size
-
-In other words, we want to try and push all boundaries as far as we could.
+Except for field EventID, WhiteID, BlackID, values of other fields could be NULL.
 
 
 ## Data and code
@@ -112,6 +112,7 @@ The file SqlCmd.md contain some SQL commands to create databases and tables, exa
 All samples, tools are C++ 17.
 
 ## History
+* 20/11/2021: Improve/clean code, improve speed for benchmark
 * 16/11/2021: Improve speed for converter, convert 3.45 million games under a minute
 * 8/11/2021: Improve speed for converter, from 6 to over 247 times faster
 * 24/10/2021: first release of source-code

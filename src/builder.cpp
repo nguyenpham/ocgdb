@@ -41,8 +41,8 @@ std::chrono::steady_clock::time_point getNow()
 void Builder::printStats() const
 {
     int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
-    std::cout   << "#games: " << gameCnt
-                << ", #errors: " << errCnt
+    std::cout << "#games: " << gameCnt
+              << ", #errors: " << errCnt
               << ", elapsed: " << elapsed << " ms, "
               << Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
               << ", speed: " << gameCnt * 1000 / elapsed << " games/s"
@@ -107,8 +107,9 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
 {
     assert(buffer && sz > 0);
     
-    std::unordered_map<std::string, const char*> tagMap;
-    
+//    std::unordered_map<std::string, const char*> tagMap;
+    std::unordered_map<const char*, const char*> tagMap;
+
     auto st = 0, eventCnt = 0;
     auto hasEvent = false;
     char *tagName = nullptr, *tagContent = nullptr, *event = nullptr, *moves = nullptr;
@@ -226,16 +227,18 @@ uint64_t Builder::processPgnFile(const std::string& path)
 
     // prepared statements
     {
-        const std::string sql = "INSERT INTO game(Event_id, White_id, WhiteElo, Black_id, BlackElo, Timer, Result, Date, ECO, PlyCount, FEN, Moves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        const std::string sql = "INSERT INTO Games (EventID, SiteID, Date, Round, WhiteID, WhiteElo, BlackID, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         insertGameStatement = new SQLite::Statement(*mDb, sql);
         
-        playerGetIdStatement = new SQLite::Statement(*mDb, "SELECT id FROM player WHERE name=?");
-        playerInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO player(name, elo) VALUES (?, ?) RETURNING id");
+        playerGetIdStatement = new SQLite::Statement(*mDb, "SELECT ID FROM Players WHERE Name=?");
+        playerInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Players (Name, Elo) VALUES (?, ?) RETURNING ID");
 
-        eventGetIdStatement = new SQLite::Statement(*mDb, "SELECT id FROM event WHERE name=?");
-        eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO event(name) VALUES (?) RETURNING id");
+        eventGetIdStatement = new SQLite::Statement(*mDb, "SELECT ID FROM Events WHERE Name=?");
+        eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Events (Name) VALUES (?) RETURNING ID");
 
+        siteGetIdStatement = new SQLite::Statement(*mDb, "SELECT ID FROM Sites WHERE Name=?");
+        siteInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Sites (Name) VALUES (?) RETURNING ID");
     }
     
     {
@@ -278,15 +281,19 @@ uint64_t Builder::processPgnFile(const std::string& path)
     
     {
         // int gameCnt = mDb->execAndGet("SELECT COUNT(*) FROM game");
-        auto str = std::string("INSERT INTO info(name, value) VALUES ('games', '") + std::to_string(gameCnt) + "')";
+        auto str = std::string("INSERT INTO Info (Name, Value) VALUES ('GameCount', '") + std::to_string(gameCnt) + "')";
         mDb->exec(str);
 
-        int playerCnt = mDb->execAndGet("SELECT COUNT(*) FROM player");
-        str = std::string("INSERT INTO info(name, value) VALUES ('players', '") + std::to_string(playerCnt) + "')";
+        int playerCnt = mDb->execAndGet("SELECT COUNT(*) FROM Players");
+        str = std::string("INSERT INTO Info (Name, Value) VALUES ('PlayerCount', '") + std::to_string(playerCnt) + "')";
         mDb->exec(str);
 
-        int eventCnt = mDb->execAndGet("SELECT COUNT(*) FROM event");
-        str = std::string("INSERT INTO info(name, value) VALUES ('events', '") + std::to_string(eventCnt) + "')";
+        int eventCnt = mDb->execAndGet("SELECT COUNT(*) FROM Events");
+        str = std::string("INSERT INTO Info (Name, Value) VALUES ('EventCount', '") + std::to_string(eventCnt) + "')";
+        mDb->exec(str);
+
+        int siteCnt = mDb->execAndGet("SELECT COUNT(*) FROM Sites");
+        str = std::string("INSERT INTO Info (Name, Value) VALUES ('SiteCount', '") + std::to_string(siteCnt) + "')";
         mDb->exec(str);
     }
 
@@ -300,6 +307,9 @@ uint64_t Builder::processPgnFile(const std::string& path)
 
         delete eventGetIdStatement;
         delete eventInsertStatement;
+
+        delete siteGetIdStatement;
+        delete siteInsertStatement;
     }
 
     printStats();
@@ -319,21 +329,25 @@ SQLite::Database* Builder::createDb(const std::string& path)
         auto mDb = new SQLite::Database(path, SQLite::OPEN_READWRITE|SQLite::OPEN_CREATE);
         std::cout << "SQLite database file '" << mDb->getFilename() << "' opened successfully\n";
 
-        mDb->exec("DROP TABLE IF EXISTS info");
-        mDb->exec("CREATE TABLE info (name TEXT UNIQUE NOT NULL, value TEXT)");
-        mDb->exec("INSERT INTO info(name, value) VALUES ('version', '0.1')");
-        mDb->exec("INSERT INTO info(name, value) VALUES ('variant', 'standard')");
-        mDb->exec("INSERT INTO info(name, value) VALUES ('license', 'free')");
+        mDb->exec("DROP TABLE IF EXISTS Info");
+        mDb->exec("CREATE TABLE Info (Name TEXT UNIQUE NOT NULL, Value TEXT)");
+        mDb->exec("INSERT INTO Info (Name, Value) VALUES ('Version', '0.1')");
+        mDb->exec("INSERT INTO Info (Name, Value) VALUES ('Variant', 'standard')");
+        mDb->exec("INSERT INTO Info (Name, Value) VALUES ('License', 'free')");
 
-        mDb->exec("DROP TABLE IF EXISTS event");
-        mDb->exec("CREATE TABLE event (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE)");
-        mDb->exec("INSERT INTO event(name) VALUES (\"\")"); // default empty
+        mDb->exec("DROP TABLE IF EXISTS Events");
+        mDb->exec("CREATE TABLE Events (ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT UNIQUE)");
+        mDb->exec("INSERT INTO Events (Name) VALUES (\"\")"); // default empty
 
-        mDb->exec("DROP TABLE IF EXISTS player");
-        mDb->exec("CREATE TABLE player (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, elo INTEGER)");
+        mDb->exec("DROP TABLE IF EXISTS Sites");
+        mDb->exec("CREATE TABLE Sites (ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT UNIQUE)");
+        mDb->exec("INSERT INTO Sites (Name) VALUES (\"\")"); // default empty
 
-        mDb->exec("DROP TABLE IF EXISTS game");
-        mDb->exec("CREATE TABLE game(id INTEGER PRIMARY KEY AUTOINCREMENT, Event_id INTEGER, White_id INTEGER, WhiteElo INTEGER, Black_id INTEGER, BlackElo INTEGER, Timer TEXT, Date TEXT, ECO TEXT, Result INTEGER, PlyCount INTEGER, FEN TEXT, Moves TEXT, FOREIGN KEY(Event_id) REFERENCES event, FOREIGN KEY(White_id) REFERENCES player, FOREIGN KEY(Black_id) REFERENCES player)");
+        mDb->exec("DROP TABLE IF EXISTS Players");
+        mDb->exec("CREATE TABLE Players (ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT UNIQUE, Elo INTEGER)");
+
+        mDb->exec("DROP TABLE IF EXISTS Games");
+        mDb->exec("CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT, EventID INTEGER, SiteID INTEGER, Date TEXT, Round INTEGER, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, Result INTEGER, Timer TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT, Moves TEXT, FOREIGN KEY(EventID) REFERENCES Events, FOREIGN KEY(SiteID) REFERENCES Sites, FOREIGN KEY(WhiteID) REFERENCES Players, FOREIGN KEY(BlackID) REFERENCES Players)");
         
         return mDb;
     }
@@ -374,82 +388,18 @@ std::string Builder::encodeString(const std::string& str)
     return Funcs::replaceString(str, "\"", "\\\"");
 }
 
-void Builder::queryGameData(SQLite::Database& db, int gameIdx)
+int Builder::getPlayerNameId(const char* name, int elo)
 {
-    std::string str =
-    "SELECT g.id, w.name White, WhiteElo, b.name Black, BlackElo, Timer, Date, Result, ECO, PlyCount, FEN, Moves " \
-    "FROM game g " \
-    "INNER JOIN player w ON White_id = w.id " \
-    "INNER JOIN player b ON Black_id = b.id " \
-    "WHERE g.id = " + std::to_string(gameIdx);
-    
-    SQLite::Statement query(db, str);
-
-    auto ok = false;
-    if (query.executeStep()) {
-        const int         id     = query.getColumn("id");
-        const std::string white  = query.getColumn("White");
-        const std::string black  = query.getColumn("Black");
-        const std::string fen  = query.getColumn("FEN");
-        const std::string moves  = query.getColumn("Moves");
-        const int plyCount  = query.getColumn("PlyCount");
-
-        ok = id == gameIdx && !white.empty() && !black.empty()
-            && (!fen.empty() || !moves.empty())
-            && ((plyCount == 0 && moves.empty()) || (plyCount > 0 && !moves.empty()));
-        
-        if (!ok) {
-            std::cerr << "IMHERE" << std::endl;
-        }
-    }
-
-    if (!ok) {
-        std::cerr << "Error: queryGameData incorrect for " << gameIdx << std::endl;
-    }
-}
-
-void Builder::bench(const std::string& path)
-{
-    SQLite::Database db(path);  // SQLite::OPEN_READONLY
-    std::cout << "SQLite database file '" << db.getFilename().c_str() << "' opened successfully\n";
-
-    std::cout << "Test Querying Speed..." << std::endl;
-
-    auto query = "SELECT COUNT(id) FROM game";
-    int gameCnt = db.execAndGet(query);
-    
-    std::cout << "" << gameCnt << std::endl;
-    
-    if (gameCnt < 1) {
-        return;
-    }
-    
-    auto startTime = getNow();
-    for(auto i = 0, total = 0; i < 100; i++) {
-        for(auto j = 0; j < 10000; j++) {
-            total++;
-            auto gameIdx = (std::rand() % gameCnt) + 1; // not start from 0
-            queryGameData(db, gameIdx);
-        }
-
-        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
-
-        std::cout   << "#total queries: " << total
-                  << ", elapsed: " << elapsed << " ms, "
-                  << Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-                  << ", speed: " << total * 1000 / elapsed << " query/s"
-                  << std::endl;
-    }
-
-    std::cout << "Test DONE." << std::endl;
-}
-
-
-int Builder::getPlayerNameId(const std::string& name, int elo)
-{
-    if (name.empty()) {
+    if (!name) {
         return -1;
     }
+    
+    // trim left
+    while(*name && *name <= ' ') name++;
+
+    // empty
+    if (*name == 0) return -1;
+
     playerGetIdStatement->bind(1, name);
     int playerId = -1;
     
@@ -471,11 +421,18 @@ int Builder::getPlayerNameId(const std::string& name, int elo)
     return playerId;
 }
 
-int Builder::getEventNameId(const std::string& name)
+int Builder::getEventNameId(const char* name)
 {
-    if (name.empty()) {
-        return 0;
+    if (!name) {
+        return 1;
     }
+    
+    // trim left
+    while(*name && *name <= ' ') name++;
+
+    // empty
+    if (*name == 0) return 1;
+
     eventGetIdStatement->bind(1, name);
     int eventId = -1;
     
@@ -496,133 +453,164 @@ int Builder::getEventNameId(const std::string& name)
     return eventId;
 }
 
-bool Builder::addGame(const std::unordered_map<std::string, const char*>& itemMap, const char* moveText)
+int Builder::getSiteNameId(const char* name)
 {
-    assert(strlen(moveText) < 32 * 1024); // hard coding, just for quickly detecting incorrect data
+    if (!name) {
+        return 1;
+    }
+    
+    // trim left
+    while(*name && *name <= ' ') name++;
 
+    // empty
+    if (*name == 0) return 1;
+    
+    siteGetIdStatement->bind(1, name);
+    int siteId = -1;
+    
+    if (siteGetIdStatement->executeStep()) {
+        siteId = siteGetIdStatement->getColumn(0);
+    }
+    siteGetIdStatement->reset();
+    
+    if (siteId < 0) {
+        siteInsertStatement->bind(1, name);
+        if (siteInsertStatement->executeStep()) {
+            siteId = siteInsertStatement->getColumn(0).getInt();
+        }
+        siteInsertStatement->reset();
+    }
+
+    assert(siteId >= 0);
+    return siteId;
+}
+
+const char* tagNames[] = {
+    "Event", "Site", "Date", "Round",
+    "White", "WhiteElo", "Black", "BlackElo",
+    "Result", "TimeControl", "ECO", "PlyCount", "FEN",
+    nullptr, nullptr
+};
+
+enum {
+    TagIdx_Event, TagIdx_Site, TagIdx_Date, TagIdx_Round,
+    TagIdx_White, TagIdx_WhiteElo, TagIdx_Black, TagIdx_BlackElo,
+    TagIdx_Result, TagIdx_Timer, TagIdx_ECO, TagIdx_PlyCount, TagIdx_FEN,
+    TagIdx_Moves,
+    TagIdx_Max
+};
+
+bool Builder::addGame(const std::unordered_map<const char*, const char*>& itemMap, const char* moveText)
+{
     if (itemMap.size() < 3) {
         return false;
     }
+    
+    try {
+        insertGameStatement->reset();
 
-    GameRecord r;
+        auto eventId = -1, whiteElo = 0, blackElo = 0;
+        const char* whiteName = nullptr, *blackName = nullptr, *date = nullptr;
+        
+        for(auto && it : itemMap) {
+            for(int i = 0; tagNames[i]; i++) {
+                if (strcmp(it.first, tagNames[i]) != 0) {
+                    if (strcmp(it.first, "Variant") == 0) {
+                        auto variant = Funcs::string2ChessVariant(it.second);
+                        // at this moment, support only the standard variant
+                        if (variant != ChessVariant::standard) {
+                            return false;
+                        }
+                    }
+                    if (strcmp(it.first, "UTCDate") == 0 && !date) {
+                        date = it.second;
+                    }
+                    continue;
+                }
 
-    auto it = itemMap.find("Event");
-    if (it == itemMap.end())
-        return false;
-    r.eventName = it->second;
+                switch (i) {
+                    case TagIdx_Event:
+                    {
+                        eventId = getEventNameId(it.second);
+                        insertGameStatement->bind(i + 1, eventId);
+                        break;
+                    }
+                    case TagIdx_Site:
+                    {
+                        auto siteId = getSiteNameId(it.second);
+                        insertGameStatement->bind(i + 1, siteId);
+                        break;
+                    }
+                    case TagIdx_White:
+                    {
+                        whiteName = it.second;
+                        break;
+                    }
+                    case TagIdx_Black:
+                    {
+                        blackName = it.second;
+                        break;
+                    }
 
-    it = itemMap.find("Variant");
-    if (it != itemMap.end()) {
-        auto variant = Funcs::string2ChessVariant(it->second);
-        // at this moment, support only the standard variant
-        if (variant != ChessVariant::standard) {
+                    case TagIdx_Date:
+                    {
+                        date = it.second;
+                        break;
+                    }
+                    case TagIdx_Result:
+                    case TagIdx_Timer:
+                    case TagIdx_ECO:
+                    case TagIdx_FEN:
+                    {
+                        insertGameStatement->bind(i + 1, it.second);
+                        break;
+                    }
+                    case TagIdx_WhiteElo:
+                    {
+                        whiteElo = std::atoi(it.second);
+                        insertGameStatement->bind(i + 1, whiteElo);
+                        break;
+                    }
+                    case TagIdx_BlackElo:
+                    {
+                        blackElo = std::atoi(it.second);
+                        insertGameStatement->bind(i + 1, blackElo);
+                        break;
+                    }
+                    case TagIdx_Round:
+                    case TagIdx_PlyCount:
+                    {
+                        insertGameStatement->bind(i + 1, std::atoi(it.second));
+                        break;
+                    }
+
+                        
+                    default:
+                        assert(false);
+                        break;
+                }
+                break;
+            }
+        }
+        
+        if (eventId < 0 || !whiteName || !blackName) {
             return false;
         }
-    }
-
-    it = itemMap.find("White");
-    if (it == itemMap.end())
-        return false;
-    r.whiteName = it->second;
-
-    it = itemMap.find("WhiteElo");
-    if (it != itemMap.end()) {
-        r.whiteElo = std::atoi(it->second);
-    }
-
-    it = itemMap.find("Black");
-    if (it == itemMap.end())
-        return false;
-    r.blackName = it->second;
-
-    it = itemMap.find("BlackElo");
-    if (it != itemMap.end()) {
-        r.blackElo = std::atoi(it->second);
-    }
-
-    it = itemMap.find("Date");
-    if (it != itemMap.end()) {
-        r.dateString = it->second;
-    }
-
-    it = itemMap.find("UTCDate");
-    if (it != itemMap.end()) {
-        r.dateString = it->second;
-    }
-
-    it = itemMap.find("TimeControl");
-    if (it != itemMap.end()) {
-        r.timer = it->second;
-    }
-
-    it = itemMap.find("ECO");
-    if (it != itemMap.end()) {
-        r.eco = it->second;
-    }
-
-    it = itemMap.find("Result");
-    if (it != itemMap.end()) {
-        r.resultType = Funcs::string2ResultType(it->second);
-    }
-
-    r.moveString = moveText;
-
-    it = itemMap.find("PlyCount");
-    if (it != itemMap.end()) {
-        r.plyCount = std::atoi(it->second);
-    }
-
-    return addGame(r);
-}
-
-bool Builder::addGame(const GameRecord& r)
-{
-    try
-    {
-        assert(mDb);
-
-        auto eventId = getEventNameId(r.eventName);
-        auto whiteId = getPlayerNameId(r.whiteName, r.whiteElo);
-        auto blackId = getPlayerNameId(r.blackName, r.blackElo);
-
-        insertGameStatement->bind(1, eventId);
-        insertGameStatement->bind(2, whiteId);
         
-        // use null if it is zero
-        if (r.whiteElo > 0) {
-            insertGameStatement->bind(3, r.whiteElo);
+        if (date) {
+            insertGameStatement->bind(TagIdx_Date + 1, date);
         }
 
-        insertGameStatement->bind(4, blackId);
-        
-        if (r.blackElo > 0) {
-            insertGameStatement->bind(5, r.blackElo);
-        }
+        auto whiteId = getPlayerNameId(whiteName, whiteElo);
+        auto blackId = getPlayerNameId(blackName, blackElo);
+        insertGameStatement->bind(TagIdx_Black + 1, whiteId);
+        insertGameStatement->bind(TagIdx_White + 1, blackId);
 
-        if (r.timer) {
-            insertGameStatement->bind(6, r.timer);
-        }
-        insertGameStatement->bind(7, Funcs::resultType2String(r.resultType, false));
-
-        if (r.dateString) {
-            insertGameStatement->bind(8, r.dateString);
-        }
-        
-        if (r.eco) {
-            insertGameStatement->bind(9, r.eco);
-        }
-        
-        if (r.plyCount > 0) {
-            insertGameStatement->bind(10, r.plyCount);
-        }
-        
-        if (r.fen) {
-            insertGameStatement->bind(11, r.fen);
-        }
-        insertGameStatement->bind(12, r.moveString);
+        // trim left
+        while(*moveText <= ' ') moveText++;
+        insertGameStatement->bind(TagIdx_Moves + 1, moveText);
 
         insertGameStatement->executeStep();
-        insertGameStatement->reset();
     }
     catch (std::exception& e)
     {
@@ -631,4 +619,78 @@ bool Builder::addGame(const GameRecord& r)
     }
 
     return true;
+}
+
+void Builder::queryGameData(SQLite::Database& db, int gameIdx)
+{
+    auto ok = false;
+
+    benchStatement->reset();
+    benchStatement->bind(1, gameIdx);
+
+    if (benchStatement->executeStep()) {
+        const int id = benchStatement->getColumn("ID");
+        const std::string white  = benchStatement->getColumn("White");
+        const std::string black  = benchStatement->getColumn("Black");
+        const std::string fen  = benchStatement->getColumn("FEN");
+        const std::string moves  = benchStatement->getColumn("Moves");
+        const int plyCount = benchStatement->getColumn("PlyCount");
+
+        ok = id == gameIdx && !white.empty() && !black.empty()
+            && (!fen.empty() || !moves.empty())
+            && plyCount >= 0;
+    }
+
+    if (!ok) {
+        std::cerr << "Error: queryGameData incorrect for " << gameIdx << std::endl;
+    }
+}
+
+void Builder::bench(const std::string& path)
+{
+    SQLite::Database db(path);  // SQLite::OPEN_READONLY
+    std::cout << "SQLite database file '" << db.getFilename().c_str() << "' opened successfully\n";
+
+    std::cout << "Test Querying Speed..." << std::endl;
+
+    auto query = "SELECT COUNT(id) FROM Games";
+    int gameCnt = db.execAndGet(query);
+    
+    std::cout << "GameCount: " << gameCnt << std::endl;
+    
+    if (gameCnt < 1) {
+        return;
+    }
+
+    {
+        std::string str =
+        "SELECT g.ID, g.Round, Date, w.Name White, WhiteElo, b.Name Black, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves " \
+        "FROM Games g " \
+        "INNER JOIN Players w ON WhiteID = w.ID " \
+        "INNER JOIN Players b ON BlackID = b.ID " \
+        "WHERE g.ID = ?";
+
+        benchStatement = new SQLite::Statement(db, str);
+    }
+
+    auto startTime = getNow();
+    for(auto i = 0, total = 0; i < 100; i++) {
+        for(auto j = 0; j < 10000; j++) {
+            total++;
+            auto gameIdx = (std::rand() % gameCnt) + 1; // not start from 0
+            queryGameData(db, gameIdx);
+        }
+
+        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+
+        std::cout   << "#total queries: " << total
+                  << ", elapsed: " << elapsed << " ms, "
+                  << Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+                  << ", speed: " << total * 1000 / elapsed << " query/s"
+                  << std::endl;
+    }
+
+    delete benchStatement;
+    
+    std::cout << "Test DONE." << std::endl;
 }

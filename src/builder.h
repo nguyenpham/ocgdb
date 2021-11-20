@@ -22,11 +22,11 @@ namespace ocgdb {
 
 class GameRecord {
 public:
-    int plyCount = 0, whiteElo = 0, blackElo = 0;
+    int plyCount = 0, whiteElo = 0, blackElo = 0, round = -1;
     ResultType resultType = ResultType::noresult;
-    const char* whiteName, *blackName, *eventName;
-    const char *timer = nullptr, *dateString = nullptr, *eco = nullptr;
-    const char* fen = nullptr, *moveString;
+    const char *eventName, *whiteName, *blackName; // must have
+    const char *siteName = nullptr, *timer = nullptr, *dateString = nullptr, *eco = nullptr;
+    const char *fen = nullptr, *moveString;
 };
 
 class Builder
@@ -49,11 +49,13 @@ private:
 
     uint64_t processPgnFile(const std::string& path);
 
-    bool addGame(const GameRecord& r);
-    bool addGame(const std::unordered_map<std::string, const char*>& itemMap, const char* moveText);
+//    bool addGame(const GameRecord& r);
+//    bool addGame(const std::unordered_map<std::string, const char*>& itemMap, const char* moveText);
 
-    int getPlayerNameId(const std::string& name, int elo);
-    int getEventNameId(const std::string& name);
+    bool addGame(const std::unordered_map<const char*, const char*>& itemMap, const char* moveText);
+    int getEventNameId(const char* name);
+    int getSiteNameId(const char* name);
+    int getPlayerNameId(const char* name, int elo);
 
     void printStats() const;
 
@@ -85,7 +87,11 @@ private:
     SQLite::Statement* eventGetIdStatement = nullptr;
     SQLite::Statement* eventInsertStatement = nullptr;
 
-    
+    SQLite::Statement* siteGetIdStatement = nullptr;
+    SQLite::Statement* siteInsertStatement = nullptr;
+
+    SQLite::Statement* benchStatement = nullptr;
+
     /// For stats
     std::chrono::steady_clock::time_point startTime;
     uint64_t gameCnt, errCnt;
