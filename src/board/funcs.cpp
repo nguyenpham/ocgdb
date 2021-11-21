@@ -302,3 +302,20 @@ std::string Funcs::secondToClockString(int second, const std::string& spString)
     str += mstring + spString + sstring;
     return str;
 }
+
+char* Funcs::trim(char* s)
+{
+    if (s) {
+        // trim left
+        while(*s <= ' ' && *s > 0) s++;
+
+        // trim right
+        for(auto len = strlen(s); len > 0; --len) {
+            auto ch = s[len - 1];
+            if (ch <= ' ' && ch > 0) s[len - 1] = 0;
+            else break;
+        }
+    }
+
+    return s;
+}

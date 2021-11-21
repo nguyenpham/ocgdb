@@ -107,9 +107,9 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
 {
     assert(buffer && sz > 0);
     
-    std::unordered_map<const char*, const char*> tagMap;
+    std::unordered_map<char*, char*> tagMap;
 
-    auto st = 0, eventCnt = 0;
+    auto st = 0, evtCnt = 0;
     auto hasEvent = false;
     char *tagName = nullptr, *tagContent = nullptr, *event = nullptr, *moves = nullptr;
 
@@ -177,12 +177,12 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
                     
                     if (strcmp(tagName, "Event") == 0) {
                         event = tagName - 1;
-                        if (eventCnt == 0 && connectBlock) {
+                        if (evtCnt == 0 && connectBlock) {
                             long len =  (event - buffer) - 1;
                             processHalfEnd(buffer, len);
                         }
                         hasEvent = true;
-                        eventCnt++;
+                        evtCnt++;
                         gameCnt++;
                     }
 
@@ -220,24 +220,26 @@ uint64_t Builder::processPgnFile(const std::string& path)
 
     startTime = getNow();
     gameCnt = errCnt = 0;
+    eventCnt = playerCnt = siteCnt = 1;
 
     // Begin transaction
     SQLite::Transaction transaction(*mDb);
 
+    playerIdMap.reserve(1024 * 1024);
+    eventIdMap.reserve(128 * 1024);
+    siteIdMap.reserve(128 * 1024);
+    
     // prepared statements
     {
         const std::string sql = "INSERT INTO Games (EventID, SiteID, Date, Round, WhiteID, WhiteElo, BlackID, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         insertGameStatement = new SQLite::Statement(*mDb, sql);
         
-        playerGetIdStatement = new SQLite::Statement(*mDb, "SELECT ID FROM Players WHERE Name=?");
-        playerInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Players (Name, Elo) VALUES (?, ?) RETURNING ID");
+        playerInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Players (ID, Name, Elo) VALUES (?, ?, ?)");
 
-        eventGetIdStatement = new SQLite::Statement(*mDb, "SELECT ID FROM Events WHERE Name=?");
-        eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Events (Name) VALUES (?) RETURNING ID");
+        eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Events (ID, Name) VALUES (?, ?)");
 
-        siteGetIdStatement = new SQLite::Statement(*mDb, "SELECT ID FROM Sites WHERE Name=?");
-        siteInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Sites (Name) VALUES (?) RETURNING ID");
+        siteInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Sites (ID, Name) VALUES (?, ?)");
     }
     
     {
@@ -283,11 +285,9 @@ uint64_t Builder::processPgnFile(const std::string& path)
         auto str = std::string("INSERT INTO Info (Name, Value) VALUES ('GameCount', '") + std::to_string(gameCnt) + "')";
         mDb->exec(str);
 
-        int playerCnt = mDb->execAndGet("SELECT COUNT(*) FROM Players");
         str = std::string("INSERT INTO Info (Name, Value) VALUES ('PlayerCount', '") + std::to_string(playerCnt) + "')";
         mDb->exec(str);
 
-        int eventCnt = mDb->execAndGet("SELECT COUNT(*) FROM Events");
         str = std::string("INSERT INTO Info (Name, Value) VALUES ('EventCount', '") + std::to_string(eventCnt) + "')";
         mDb->exec(str);
 
@@ -301,13 +301,8 @@ uint64_t Builder::processPgnFile(const std::string& path)
 
     {
         delete insertGameStatement;
-        delete playerGetIdStatement;
         delete playerInsertStatement;
-
-        delete eventGetIdStatement;
         delete eventInsertStatement;
-
-        delete siteGetIdStatement;
         delete siteInsertStatement;
     }
 
@@ -343,11 +338,16 @@ SQLite::Database* Builder::createDb(const std::string& path)
         mDb->exec("INSERT INTO Sites (Name) VALUES (\"\")"); // default empty
 
         mDb->exec("DROP TABLE IF EXISTS Players");
-        mDb->exec("CREATE TABLE Players (ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT UNIQUE, Elo INTEGER)");
-        mDb->exec("INSERT INTO Players (Name) VALUES (\"\")"); // default empty
+        mDb->exec("CREATE TABLE Players (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE, Elo INTEGER)");
+        mDb->exec("INSERT INTO Players (ID, Name) VALUES (1, \"\")"); // default empty
 
         mDb->exec("DROP TABLE IF EXISTS Games");
         mDb->exec("CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT, EventID INTEGER, SiteID INTEGER, Date TEXT, Round INTEGER, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, Result INTEGER, Timer TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT, Moves TEXT, FOREIGN KEY(EventID) REFERENCES Events, FOREIGN KEY(SiteID) REFERENCES Sites, FOREIGN KEY(WhiteID) REFERENCES Players, FOREIGN KEY(BlackID) REFERENCES Players)");
+        
+        
+//        mDb->exec("PRAGMA synchronous=OFF");
+        mDb->exec("PRAGMA journal_mode=MEMORY");
+        mDb->exec("PRAGMA cache_size=64000;");
         
         return mDb;
     }
@@ -388,104 +388,53 @@ std::string Builder::encodeString(const std::string& str)
     return Funcs::replaceString(str, "\"", "\\\"");
 }
 
-int Builder::getPlayerNameId(const char* name, int elo)
+int Builder::getPlayerNameId(char* name, int elo)
 {
-    if (!name) {
-        return 1;
-    }
-    
-    // trim left
-    while(*name && *name <= ' ') name++;
-
-    // empty
-    if (*name == 0) return 1;
-
-    playerGetIdStatement->bind(1, name);
-    auto playerId = -1;
-    
-    if (playerGetIdStatement->executeStep()) {
-        playerId = playerGetIdStatement->getColumn(0);
-    }
-    playerGetIdStatement->reset();
-    
-    if (playerId < 0) {
-        playerInsertStatement->bind(1, name);
-        
-        if (elo > 0) {
-            playerInsertStatement->bind(2, elo);
-        }
-        if (playerInsertStatement->executeStep()) {
-            playerId = playerInsertStatement->getColumn(0).getInt();
-        }
-        playerInsertStatement->reset();
-    }
-
-    assert(playerId > 1);
-    return playerId;
+    return getNameId(name, elo, playerCnt, playerInsertStatement, playerIdMap);
 }
 
-int Builder::getEventNameId(const char* name)
+int Builder::getEventNameId(char* name)
 {
-    if (!name) {
-        return 1;
-    }
-    
-    // trim left
-    while(*name && *name <= ' ') name++;
-
-    // empty or ?
-    if (*name == 0 || name[0] == '?') return 1;
-
-    eventGetIdStatement->bind(1, name);
-    auto eventId = -1;
-    
-    if (eventGetIdStatement->executeStep()) {
-        eventId = eventGetIdStatement->getColumn(0);
-    }
-    eventGetIdStatement->reset();
-    
-    if (eventId < 0) {
-        eventInsertStatement->bind(1, name);
-        if (eventInsertStatement->executeStep()) {
-            eventId = eventInsertStatement->getColumn(0).getInt();
-        }
-        eventInsertStatement->reset();
-    }
-
-    assert(eventId > 1);
-    return eventId;
+    return getNameId(name, -1, eventCnt, eventInsertStatement, eventIdMap);
 }
 
-int Builder::getSiteNameId(const char* name)
+int Builder::getNameId(char* name, int elo, int& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, int>& idMap)
 {
-    if (!name) {
-        return 1;
-    }
-    
-    // trim left
-    while(*name && *name <= ' ') name++;
+    name = Funcs::trim(name);
 
-    // empty or ?
-    if (*name == 0 || name[0] == '?') return 1;
+    // null, empty or ?
+    if (!name || *name == 0 || *name == '?') return 1;
 
-    siteGetIdStatement->bind(1, name);
-    auto siteId = -1;
-    
-    if (siteGetIdStatement->executeStep()) {
-        siteId = siteGetIdStatement->getColumn(0);
-    }
-    siteGetIdStatement->reset();
-    
-    if (siteId < 0) {
-        siteInsertStatement->bind(1, name);
-        if (siteInsertStatement->executeStep()) {
-            siteId = siteInsertStatement->getColumn(0).getInt();
-        }
-        siteInsertStatement->reset();
+    auto s = std::string(name);
+    Funcs::toLower(s);
+    auto it = idMap.find(s);
+    if (it != idMap.end()) {
+        return it->second;
     }
 
-    assert(siteId > 1);
-    return siteId;
+    auto theId = ++cnt;
+
+    insertStatement->reset();
+    insertStatement->bind(1, theId);
+    insertStatement->bind(2, name);
+    
+    if (elo > 0) {
+        insertStatement->bind(3, elo);
+    }
+
+    if (insertStatement->exec() != 1) {
+        return -1; // something wrong
+    }
+
+    idMap[s] = theId;
+
+    assert(theId > 1);
+    return theId;
+}
+
+int Builder::getSiteNameId(char* name)
+{
+    return getNameId(name, -1, siteCnt, siteInsertStatement, siteIdMap);
 }
 
 const char* tagNames[] = {
@@ -503,7 +452,7 @@ enum {
     TagIdx_Max
 };
 
-bool Builder::addGame(const std::unordered_map<const char*, const char*>& itemMap, const char* moveText)
+bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText)
 {
     if (itemMap.size() < 3) {
         return false;
@@ -513,10 +462,10 @@ bool Builder::addGame(const std::unordered_map<const char*, const char*>& itemMa
         insertGameStatement->reset();
 
         auto eventId = 1, whiteElo = 0, blackElo = 0;
-        const char* whiteName = nullptr, *blackName = nullptr, *date = nullptr;
-        
+        char* whiteName = nullptr, *blackName = nullptr, *date = nullptr;
+
         for(auto && it : itemMap) {
-            for(int i = 0; tagNames[i]; i++) {
+            for(auto i = 0; tagNames[i]; i++) {
                 if (strcmp(it.first, tagNames[i]) != 0) {
                     if (strcmp(it.first, "Variant") == 0) {
                         auto variant = Funcs::string2ChessVariant(it.second);
@@ -532,8 +481,9 @@ bool Builder::addGame(const std::unordered_map<const char*, const char*>& itemMa
                 }
 
                 auto s = it.second;
-                while(*s <= ' ') s++; // trim left
-                
+                while(*s <= ' ' && *s > 0) s++; // trim left
+                assert(strlen(s) < 1024);
+                                
                 switch (i) {
                     case TagIdx_Event:
                     {
@@ -619,7 +569,7 @@ bool Builder::addGame(const std::unordered_map<const char*, const char*>& itemMa
         while(*moveText <= ' ') moveText++;
         insertGameStatement->bind(TagIdx_Moves + 1, moveText);
 
-        insertGameStatement->executeStep();
+        insertGameStatement->exec();
     }
     catch (std::exception& e)
     {

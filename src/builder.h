@@ -49,13 +49,12 @@ private:
 
     uint64_t processPgnFile(const std::string& path);
 
-//    bool addGame(const GameRecord& r);
-//    bool addGame(const std::unordered_map<std::string, const char*>& itemMap, const char* moveText);
+    bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
+    int getEventNameId(char* name);
+    int getSiteNameId(char* name);
+    int getPlayerNameId(char* name, int elo);
 
-    bool addGame(const std::unordered_map<const char*, const char*>& itemMap, const char* moveText);
-    int getEventNameId(const char* name);
-    int getSiteNameId(const char* name);
-    int getPlayerNameId(const char* name, int elo);
+    int getNameId(char* name, int elo, int& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, int>& idMap);
 
     void printStats() const;
 
@@ -72,6 +71,8 @@ private:
     char* halfBuf = nullptr;
     long halfBufSz = 0;
 
+    std::unordered_map<std::string, int> playerIdMap, eventIdMap, siteIdMap;
+
 
 //    BoardCore* board = nullptr; /// For verifying games, count moves
     ChessVariant chessVariant = ChessVariant::standard;
@@ -81,13 +82,8 @@ private:
 
     // Prepared statements
     SQLite::Statement* insertGameStatement = nullptr;
-    SQLite::Statement* playerGetIdStatement = nullptr;
     SQLite::Statement* playerInsertStatement = nullptr;
-
-    SQLite::Statement* eventGetIdStatement = nullptr;
     SQLite::Statement* eventInsertStatement = nullptr;
-
-    SQLite::Statement* siteGetIdStatement = nullptr;
     SQLite::Statement* siteInsertStatement = nullptr;
 
     SQLite::Statement* benchStatement = nullptr;
@@ -95,6 +91,7 @@ private:
     /// For stats
     std::chrono::steady_clock::time_point startTime;
     uint64_t gameCnt, errCnt;
+    int eventCnt, playerCnt, siteCnt;
 };
 
 

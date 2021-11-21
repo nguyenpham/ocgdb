@@ -59,15 +59,15 @@ There is a small sample database in the folder samples. A bigger one could be do
 ## Converting speed
 We tested on an iMac 3.6 GHz Quad-Core i7, 16 GB RAM (year 2017), converting a PGN file with 3.45 million games, size 2.42 GB.
 
-Convert into a db3 file (.db3, stored on the hard disk), required 45 seconds:
+Convert into a db3 file (.db3, stored on the hard disk), required 29 seconds:
 
 ```
-    #games: 3457050, elapsed: 45922 ms, 00:45, speed: 75280 games/s
+    #games: 3457050, elapsed: 29977 ms, 00:29, speed: 115323 games/s
 ```
-Convert into a memory database (output path is :memory:) on the RAM, required 29 seconds:
+Convert into a memory database (output path is :memory:) on the RAM, required 22 seconds:
 
 ```
-    #games: 3457050, elapsed: 29907 ms, 00:29, speed: 115593 games/s
+    #games: 3457050, elapsed: 22067 ms, 00:22, speed: 156661 games/s
 ```
 
 ## File name extension
@@ -97,7 +97,7 @@ For examples of field names:
 ```EventID, WhiteID, BlackElo, Round, Result, Date, FEN, Moves```
 
 ### Field values
-Except for field EventID, WhiteID, BlackID, values of other fields could be NULL.
+Except for field EventID, SiteID, WhiteID, BlackID, values of other fields could be NULL.
 
 
 ## Data and code

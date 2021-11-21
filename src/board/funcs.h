@@ -51,6 +51,8 @@ public:
     static std::string score2String(double score, bool pawnUnit);
 
     static std::string secondToClockString(int second, const std::string& spString);
+    
+    static char* trim(char*);
 };
 
 #endif /* Funcs_h */
