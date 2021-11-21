@@ -74,6 +74,7 @@
 		B189EABB272296330075EA55 /* funcs.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = funcs.cpp; sourceTree = "<group>"; };
 		B189EABC272296330075EA55 /* funcs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = funcs.h; sourceTree = "<group>"; };
 		B189EABE27257EF20075EA55 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
+		B1B7B937274A1F8E0075294F /* SqlCmd.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = SqlCmd.md; path = ../SqlCmd.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +91,7 @@
 		B189EA71272249F60075EA55 = {
 			isa = PBXGroup;
 			children = (
+				B1B7B937274A1F8E0075294F /* SqlCmd.md */,
 				B189EABE27257EF20075EA55 /* README.md */,
 				B189EA8427224A400075EA55 /* src */,
 				B189EA7B272249F60075EA55 /* Products */,
