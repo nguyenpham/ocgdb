@@ -20,7 +20,7 @@
 #include "funcs.h"
 
 
-namespace ocgdb {
+namespace bslib {
 
 const int MaxMoveBranch = 250;
 

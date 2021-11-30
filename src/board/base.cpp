@@ -17,7 +17,7 @@
 
 #include "funcs.h"
 
-using namespace ocgdb;
+using namespace bslib;
 
 Piece Piece::emptyPiece(0, Side::none);
 Move Move::illegalMove(-1, -1);
@@ -37,7 +37,7 @@ std::string BoardCore::getStartingFen(FENCharactorSet) const
 std::string BoardCore::getFen(FENCharactorSet) const
 {
     auto k = std::max<int>(fullMoveCnt, (histList.size() + 1) / 2);
-    return getFen(quietCnt / 2, k);
+    return getFen(false, quietCnt / 2, k);
 }
 
 std::string BoardCore::getEPD(FENCharactorSet theSet) const
@@ -48,7 +48,7 @@ std::string BoardCore::getEPD(FENCharactorSet theSet) const
 
 std::string BoardCore::getEPD(const Hist& hist, FENCharactorSet theSet) const
 {
-    auto str = getFen(-1, -1, theSet);
+    auto str = getFen(false, -1, -1, theSet);
 
     auto k = std::max<int>(fullMoveCnt, (histList.size() + 1) / 2);
 
@@ -670,7 +670,7 @@ void BoardCore::_parseComment_standard(const std::string& comment, Hist& hist)
     hist.comment = str;
 }
 
-bool BoardCore::fromMoveList(const std::string& str, Notation notation, int* moveCount)
+bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool parseComment, int* moveCount)
 {
     std::lock_guard<std::mutex> dolock(dataMutex);
 
@@ -760,7 +760,10 @@ bool BoardCore::fromMoveList(const std::string& str, Notation notation, int* mov
                     st = State::none;
                     break;
                 }
-                comment += ch;
+                
+                if (parseComment) {
+                    comment += ch;
+                }
                 break;
 
             case State::variant:
@@ -821,7 +824,7 @@ bool BoardCore::fromMoveList(const std::string& str, Notation notation, int* mov
         if (move == Move::illegalMove) {
             return false;
         }
-
+        
         /// Parse comment before making move for parsing pv
         auto parsedComment = false;
         Hist tmphist;

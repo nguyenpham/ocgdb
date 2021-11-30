@@ -113,6 +113,15 @@ The file SqlCmd.md contain some SQL commands to create databases and tables, exa
 #### Cpp code
 All samples, tools are C++ 17.
 
+## Compile
+Run make file in the subfolder ```src```:
+
+```
+cd src
+make
+```
+In macOS, you can run and compile with xCode with the project file in the folder ```projects```.
+
 ## History
 * 20/11/2021: Improve/clean code, improve speed for benchmark
 * 16/11/2021: Improve speed for converter, convert 3.45 million games under a minute

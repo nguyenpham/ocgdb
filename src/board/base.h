@@ -19,7 +19,7 @@
 #include "types.h"
 #include "chesstypes.h"
 
-namespace ocgdb {
+namespace bslib {
     
     ///////////////////////////////////
 
@@ -75,11 +75,11 @@ namespace ocgdb {
         }
 
         Hist getLastHist() const {
-            return getHistAt(histList.size() - 1);
+            return getHistAt(static_cast<int>(histList.size()) - 1);
         }
 
         Hist _getLastHist() const {
-            return _getHistAt(histList.size() - 1);
+            return _getHistAt(static_cast<int>(histList.size()) - 1);
         }
 
         Hist getHistAt(int idx) const {
@@ -91,7 +91,7 @@ namespace ocgdb {
         }
 
         Hist* getLastHistPointer() {
-            return getHistPointerAt(histList.size() - 1);
+            return getHistPointerAt(static_cast<int>(histList.size()) - 1);
         }
         Hist* getHistPointerAt(int idx) {
             return idx >= 0 && idx < static_cast<int>(histList.size()) ? &histList[idx] : nullptr;
@@ -304,7 +304,7 @@ namespace ocgdb {
         virtual bool isFenValid(const std::string& fen) const = 0;
 
         virtual std::string getFen(FENCharactorSet = FENCharactorSet::standard) const;
-        virtual std::string getFen(int halfCount, int fullMoveCount, FENCharactorSet = FENCharactorSet::standard) const = 0;
+        virtual std::string getFen(bool ignoreEnpassant, int halfCount, int fullMoveCount, FENCharactorSet = FENCharactorSet::standard) const = 0;
 
         virtual std::string getEPD(FENCharactorSet = FENCharactorSet::standard) const;
         virtual std::string getEPD(const Hist&, FENCharactorSet = FENCharactorSet::standard) const;
@@ -333,8 +333,6 @@ namespace ocgdb {
         virtual Move moveFromString_san(const std::string&) = 0;
 
         virtual Result rule() = 0;
-//        virtual Result adjudicationDraw(int minPly, int plyRange, int scoreRange);
-//        virtual Result adjudicationScoreResign(bool oneSide, int plyRange, int scoreRange);
 
         virtual int getRawMaterialScore() const = 0;
 
@@ -352,7 +350,7 @@ namespace ocgdb {
         bool checkMake(int from, int dest, int promotion);
         virtual bool _checkMake(int from, int dest, int promotion) = 0;
         
-        virtual bool fromMoveList(const std::string&, Notation, int* = nullptr);
+        virtual bool fromMoveList(const std::string&, Notation, bool parseComment, int* = nullptr);
 
         std::vector<HistBasic> parsePv(const std::string& pvString, bool isCoordinateOnly);
         std::vector<HistBasic> _parsePv(const std::string& pvString, bool isCoordinateOnly);

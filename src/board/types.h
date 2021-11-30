@@ -11,7 +11,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-namespace ocgdb {
+namespace bslib {
 
 enum class ChessVariant {
     standard, chess960, none
