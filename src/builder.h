@@ -38,6 +38,7 @@ public:
     void convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath);
 
     void bench(const std::string& path);
+    void benchMatchMoves(const std::string& dbPath);
 
 private:
     static SQLite::Database* createDb(const std::string& path);

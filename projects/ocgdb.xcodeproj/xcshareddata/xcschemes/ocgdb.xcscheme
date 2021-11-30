@@ -53,11 +53,15 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/Carlsen.pgn"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-bench"
             isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-benchmatch"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/mb-3.45.pgn"
@@ -69,11 +73,11 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/345.ocgdb.db3"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/carlsen.ocgdb.db3"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db :memory:"

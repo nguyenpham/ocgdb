@@ -99,6 +99,11 @@ For examples of field names:
 ### Field values
 Except for field EventID, SiteID, WhiteID, BlackID, values of other fields could be NULL.
 
+## Matching
+
+```
+SELECT g.ID, g.Round, Date, w.Name White, WhiteElo, b.Name Black, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves FROM Games g INNER JOIN Players w ON WhiteID = w.ID INNER JOIN Players b ON BlackID = b.ID WHERE g.Moves LIKE '1.d4 Nf6 2.Nf3 d5 3.e3 Bf5 4.c4 c6 5.Nc3 e6%'
+```
 
 ## Data and code
 

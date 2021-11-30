@@ -652,3 +652,111 @@ void Builder::bench(const std::string& path)
     
     std::cout << "Test DONE." << std::endl;
 }
+
+void Builder::benchMatchMoves(const std::string& dbPath)
+{
+    const std::vector<std::string> gameBodyVec {
+"1.d4 Nf6 2.Nf3 d5 3.e3 Bf5 4.c4 c6 5.Nc3 e6 6.Bd3 Bxd3 7.Qxd3 Nbd7 8.b3 Bd6 \
+9.O-O O-O 10.Bb2 Qe7 11.Rad1 Rad8 12.Rfe1 dxc4 13.bxc4 e5 14.dxe5 Nxe5 15.Nxe5 Bxe5 \
+16.Qe2 Rxd1 17.Rxd1 Rd8 18.Rxd8+ Qxd8 19.Qd1 Qxd1+ 20.Nxd1 Bxb2 21.Nxb2 b5 \
+22.f3 Kf8 23.Kf2 Ke7  1/2-1/2",
+
+"1.e4 e5 2.Nf3 Nf6 3.d3 d6 4.c3 g6 5.Bg5 Bg7 6.Be2 O-O 7.d4 h6 8.Bxf6 Qxf6 \
+9.dxe5 dxe5 10.O-O Nd7 11.Nbd2 Nc5 12.Qc2 Bg4 13.Rfe1 Rfe8 14.b4 Ne6 15.h3 Bxf3 \
+16.Nxf3 Nf4 17.Bc4 Nxh3+ 18.gxh3 Qxf3 19.Re3 Qh5 20.Qb3 Rf8 21.Rd1 Qg5+ 22.Rg3 Qf6 \
+23.Rdd3 g5 24.Rgf3 Qe7 25.Rf5 Kh8 26.Bxf7 Rad8 27.Rdf3 Rd6 28.Kf1 Qd8 29.Bh5 Rxf5 \
+30.Rxf5 Rc6 31.Rf3 Rd6 32.Rf5 Rd2 33.Rf7 Qd3+ 34.Kg2 Qxe4+ 35.Bf3 Qh4 36.Bxb7 g4 \
+37.Qe6 Qxh3+ 38.Kg1 Rd1+  0-1",
+
+"1.e4 e5 2.Nf3 Nf6 3.Nc3 Nc6 4.Bc4 Bb4 5.d3 d5 6.exd5 Nxd5 7.Bd2 Nxc3 8.bxc3 Be7 \
+9.Qe2 Bf6 10.O-O O-O 11.Rfe1 Re8 12.Qe4 g6 13.g4 Na5 14.Bb3 Nxb3 15.axb3 Bd7 \
+16.g5 Bc6 17.Qh4 Bg7 18.Qg4 Qd6 19.Re2 Re6 20.Rae1 Rae8 21.c4 b6 22.Bc1 Ba8 \
+23.Nd2 Bc6 24.Ne4 Qe7 25.Re3 h5 26.Qg3 Bd7 27.Bb2 Bc6 28.Nf6+ Bxf6 29.gxf6 Qxf6 \
+30.Rxe5 Rxe5 31.Rxe5 Rd8 32.Qe3 Qh4 33.Qg5 Qxg5+ 34.Rxg5 Re8 35.Kf1 Bf3 36.Re5 Rd8 \
+37.Ke1 Kf8 38.Ba3+ Kg8 39.Re7 Rc8 40.Kd2 h4 41.Ke3 Bh5 42.Kd2 g5 43.Rd7 g4 \
+44.Re7 Kg7 45.Ke3 Kf6 46.d4 c5 47.Rxa7 Re8+ 48.Kd2 cxd4 49.Rd7 g3 50.fxg3 Re2+ \
+51.Kd3 Rxh2 52.gxh4 Bg6+ 53.Kxd4 Rd2+  0-1 ",
+
+"1.c4 c5 2.g3 Nc6 3.Bg2 g6 4.Nc3 Bg7 5.a3 d6 6.Rb1 a5 7.Nf3 Nf6 8.O-O O-O \
+9.Ne1 Bd7 10.Nc2 Rb8 11.d3 Ne8 12.Bd2  1/2-1/2"
+    };
+
+    SQLite::Database db(dbPath);  // SQLite::OPEN_READONLY
+    std::cout << "SQLite database file '" << db.getFilename().c_str() << "' opened successfully\n";
+
+    std::cout << "Bench Match Moves..." << std::endl;
+
+    std::vector<BoardCore*> boardVec;
+    for(auto && str : gameBodyVec) {
+        auto board = new ChessBoard();
+        board->newGame("");
+        board->fromMoveList(str, Notation::san);
+        assert(board->getHistListSize() > 1);
+        boardVec.push_back(board);
+    }
+    
+    {
+        std::string sqlString =
+        "SELECT g.ID, g.Round, Date, w.Name White, WhiteElo, b.Name Black, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves " \
+        "FROM Games g " \
+        "INNER JOIN Players w ON WhiteID = w.ID " \
+        "INNER JOIN Players b ON BlackID = b.ID " \
+        "WHERE g.Moves LIKE ?";
+
+        benchStatement = new SQLite::Statement(db, sqlString);
+    }
+
+    for(auto ply = 1; ply < 20; ply++) {
+        auto startTime = getNow();
+        auto total = 0, sucCnt = 0;
+        for(auto j = 0; j < 1000; j++, total++) {
+
+            auto k = std::rand() % boardVec.size();
+            auto board = boardVec.at(k);
+            auto sz = board->getHistListSize();
+            auto n = std::min(ply, sz);
+            
+            std::string s;
+            for(auto t = 0; t < n; t++) {
+                auto hist = board->getHistAt(t);
+                if (t) s += " ";
+                
+                if ((t & 1) == 0) {
+                    s += std::to_string(t / 2 + 1) + ".";
+                }
+                
+                s += hist.sanString;
+            }
+            s += "%";
+            
+            benchStatement->reset();
+            benchStatement->bind(1, s);
+//            std::cout << benchStatement->getExpandedSQL() << std::endl << std::endl;
+
+            while (benchStatement->executeStep()) {
+                sucCnt++;
+            }
+        }
+        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+
+        std::cout   << "ply: " << ply
+                    << ", #total queries: " << total
+                  << ", elapsed: " << elapsed << " ms, "
+                  << Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+//                  << ", speed: " << total * 1000 / elapsed << " query/s"
+                  << ", time per query: " << elapsed / total  << " ms"
+                  << ", total results: " << sucCnt << ", results/query: " << sucCnt / total
+                  << std::endl;
+    }
+
+    // clean up
+    {
+        for(auto && board : boardVec) {
+            delete board;
+        }
+        boardVec.clear();
+        
+        delete benchStatement;
+    }
+    std::cout << "Completed! " << std::endl;
+}
