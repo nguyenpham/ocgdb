@@ -23,7 +23,7 @@ namespace ocgdb {
 class GameRecord {
 public:
     int plyCount = 0, whiteElo = 0, blackElo = 0, round = -1;
-    ResultType resultType = ResultType::noresult;
+    bslib::ResultType resultType = bslib::ResultType::noresult;
     const char *eventName, *whiteName, *blackName; // must have
     const char *siteName = nullptr, *timer = nullptr, *dateString = nullptr, *eco = nullptr;
     const char *fen = nullptr, *moveString;
@@ -76,7 +76,7 @@ private:
 
 
 //    BoardCore* board = nullptr; /// For verifying games, count moves
-    ChessVariant chessVariant = ChessVariant::standard;
+    bslib::ChessVariant chessVariant = bslib::ChessVariant::standard;
 
     std::string dbPath;
     SQLite::Database* mDb = nullptr;

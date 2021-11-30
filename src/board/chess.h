@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include "base.h"
 
-namespace ocgdb {
+namespace bslib {
 
     const int CastleRight_long  = (1<<0);
     const int CastleRight_short = (1<<1);
@@ -42,7 +42,7 @@ namespace ocgdb {
         virtual void _setFen(const std::string& fen) override;
 
         using BoardCore::getFen;
-        virtual std::string getFen(int halfCount, int fullMoveCount, FENCharactorSet) const override;
+        virtual std::string getFen(bool ignoreEnpassant, int halfCount, int fullMoveCount, FENCharactorSet) const override;
 
         virtual void _gen(std::vector<MoveFull>& moveList, Side attackerSide) const override;
         virtual bool _isIncheck(Side beingAttackedSide) const override;

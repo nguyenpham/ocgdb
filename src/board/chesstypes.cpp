@@ -14,7 +14,7 @@
 #include "chess.h"
 #include "funcs.h"
 
-using namespace ocgdb;
+using namespace bslib;
 
 
 std::string Result::reasonString() const

@@ -2,7 +2,7 @@
  * This file is part of Open Chess Game Database Standard.
  *
  * Copyright (c) 2021 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021 developers
+ * Copyright (c) 2021 Developers
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -43,8 +43,8 @@ void Builder::printStats() const
     int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
     std::cout << "#games: " << gameCnt
               << ", #errors: " << errCnt
-              << ", elapsed: " << elapsed << " ms, "
-              << Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+              << ", elapsed: " << elapsed << "ms "
+              << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
               << ", speed: " << gameCnt * 1000 / elapsed << " games/s"
               << std::endl;
 }
@@ -109,15 +109,21 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
     
     std::unordered_map<char*, char*> tagMap;
 
-    auto st = 0, evtCnt = 0;
+    auto evtCnt = 0;
     auto hasEvent = false;
     char *tagName = nullptr, *tagContent = nullptr, *event = nullptr, *moves = nullptr;
 
+    enum class ParsingState {
+        none, tagName, tag_after, tag_content, tag_content_after
+    };
+    
+    auto st = ParsingState::none;
+    
     for(char *p = buffer, *end = buffer + sz; p < end; p++) {
         char ch = *p;
         
         switch (st) {
-            case 0:
+            case ParsingState::none:
             {
                 if (ch == '[') {
                     p++;
@@ -141,7 +147,7 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
                     }
 
                     tagName = p;
-                    st = 1;
+                    st = ParsingState::tagName;
                 } else if (ch > ' ') {
                     if (!moves && hasEvent) {
                         moves = p;
@@ -149,28 +155,28 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
                 }
                 break;
             }
-            case 1: // name tag
+            case ParsingState::tagName: // name tag
             {
                 assert(tagName);
                 if (!isalpha(ch)) {
                     if (ch <= ' ') {
                         *p = 0; // end of the tag name
-                        st = 2;
+                        st = ParsingState::tag_after;
                     } else { // something wrong
-                        st = 0;
+                        st = ParsingState::none;
                     }
                 }
                 break;
             }
-            case 2: // between name and content of a tag
+            case ParsingState::tag_after: // between name and content of a tag
             {
                 if (ch == '"') {
-                    st = 3;
+                    st = ParsingState::tag_content;
                     tagContent = p + 1;
                 }
                 break;
             }
-            case 3:
+            case ParsingState::tag_content:
             {
                 if (ch == '"' || ch == 0) { // == 0 trick to process half begin+end
                     *p = 0;
@@ -191,14 +197,14 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
                     }
 
                     tagName = tagContent = nullptr;
-                    st = 4;
+                    st = ParsingState::tag_content_after;
                 }
                 break;
             }
             default: // the rest of the tag
             {
                 if (ch == '\n' || ch == 0) {
-                    st = 0;
+                    st = ParsingState::none;
                 }
                 break;
             }
@@ -222,23 +228,20 @@ uint64_t Builder::processPgnFile(const std::string& path)
     gameCnt = errCnt = 0;
     eventCnt = playerCnt = siteCnt = 1;
 
-    // Begin transaction
-    SQLite::Transaction transaction(*mDb);
-
     playerIdMap.reserve(1024 * 1024);
     eventIdMap.reserve(128 * 1024);
     siteIdMap.reserve(128 * 1024);
     
+    // Begin transaction
+    SQLite::Transaction transaction(*mDb);
+
     // prepared statements
     {
         const std::string sql = "INSERT INTO Games (EventID, SiteID, Date, Round, WhiteID, WhiteElo, BlackID, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         insertGameStatement = new SQLite::Statement(*mDb, sql);
-        
         playerInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Players (ID, Name, Elo) VALUES (?, ?, ?)");
-
         eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Events (ID, Name) VALUES (?, ?)");
-
         siteInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Sites (ID, Name) VALUES (?, ?)");
     }
     
@@ -247,9 +250,7 @@ uint64_t Builder::processPgnFile(const std::string& path)
 
         FILE *stream = fopen(path.c_str(), "r");
         assert(stream != NULL);
-        fseek(stream, 0, SEEK_END);
-        size_t size = ftell(stream);
-        fseek(stream, 0, SEEK_SET);
+        auto size = bslib::Funcs::getFileSize(stream);
         
         for (size_t sz = 0, idx = 0; sz < size; idx++) {
             auto k = std::min(blockSz, size - sz);
@@ -384,7 +385,7 @@ SQLite::Database* Builder::openDbToWrite()
 
 std::string Builder::encodeString(const std::string& str)
 {
-    return Funcs::replaceString(str, "\"", "\\\"");
+    return bslib::Funcs::replaceString(str, "\"", "\\\"");
 }
 
 int Builder::getPlayerNameId(char* name, int elo)
@@ -399,13 +400,13 @@ int Builder::getEventNameId(char* name)
 
 int Builder::getNameId(char* name, int elo, int& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, int>& idMap)
 {
-    name = Funcs::trim(name);
+    name = bslib::Funcs::trim(name);
 
     // null, empty or ?
     if (!name || *name == 0 || *name == '?') return 1;
 
     auto s = std::string(name);
-    Funcs::toLower(s);
+    bslib::Funcs::toLower(s);
     auto it = idMap.find(s);
     if (it != idMap.end()) {
         return it->second;
@@ -467,9 +468,9 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
             for(auto i = 0; tagNames[i]; i++) {
                 if (strcmp(it.first, tagNames[i]) != 0) {
                     if (strcmp(it.first, "Variant") == 0) {
-                        auto variant = Funcs::string2ChessVariant(it.second);
+                        auto variant = bslib::Funcs::string2ChessVariant(it.second);
                         // at this moment, support only the standard variant
-                        if (variant != ChessVariant::standard) {
+                        if (variant != bslib::ChessVariant::standard) {
                             return false;
                         }
                     }
@@ -643,7 +644,7 @@ void Builder::bench(const std::string& path)
 
         std::cout   << "#total queries: " << total
                   << ", elapsed: " << elapsed << " ms, "
-                  << Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
                   << ", speed: " << total * 1000 / elapsed << " query/s"
                   << std::endl;
     }

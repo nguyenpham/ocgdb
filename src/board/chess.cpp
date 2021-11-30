@@ -26,14 +26,14 @@
 #define move_promotes(move)                                             \
     (((move) >> 12) & 0x7)
 
-namespace ocgdb {
+namespace bslib {
 
     const char* pieceTypeFullNames[8] = {
         "", "king", "queen", "rook", "bishop", "knight", "pawn", ""
     };
 }
 
-using namespace ocgdb;
+using namespace bslib;
 
 extern uint64_t polyglotRandom64[800];
 extern uint64_t *RandomCastle;
@@ -403,7 +403,7 @@ std::string ChessBoard::getFenCastleRights() const {
     return s;
 }
 
-std::string ChessBoard::getFen(int halfCount, int fullMoveCount, FENCharactorSet) const
+std::string ChessBoard::getFen(bool ignoreEnpassant, int halfCount, int fullMoveCount, FENCharactorSet) const
 {
     std::ostringstream stringStream;
     
@@ -434,7 +434,7 @@ std::string ChessBoard::getFen(int halfCount, int fullMoveCount, FENCharactorSet
     stringStream << (side == Side::white ? " w " : " b ")
                  << getFenCastleRights() << " ";
 
-    if (enpassant > 0) {
+    if (!ignoreEnpassant && enpassant > 0) {
         stringStream << posToCoordinateString(enpassant);
     } else {
         stringStream << "-";
@@ -1554,8 +1554,6 @@ bool ChessBoard::isValueSmaller(int type0, int type1) const
 
     return pieceCompareValues[type0] < pieceCompareValues[type1];
 }
-
-
 
 uint64_t ChessBoard::xorHashKey(int pos) const
 {

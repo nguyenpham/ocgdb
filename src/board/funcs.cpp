@@ -12,6 +12,9 @@
 #include <iomanip>
 
 #include "funcs.h"
+
+using namespace bslib;
+
 const char* pieceTypeName = ".kqrbnp";
 
 const char* reasonStrings[] = {
@@ -48,72 +51,72 @@ static std::string originFens[] = {
 };
 
 
-bool Funcs::isChessFamily(ocgdb::ChessVariant variant)
+bool Funcs::isChessFamily(ChessVariant variant)
 {
-    return variant == ocgdb::ChessVariant::standard || variant == ocgdb::ChessVariant::chess960;
+    return variant == ChessVariant::standard || variant == ChessVariant::chess960;
 }
 
-std::string Funcs::getOriginFen(ocgdb::ChessVariant variant)
+std::string Funcs::getOriginFen(ChessVariant variant)
 {
     return originFens[static_cast<int>(variant)];
 }
 
-std::string Funcs::resultType2String(ocgdb::ResultType type, bool shortFrom) {
+std::string Funcs::resultType2String(ResultType type, bool shortFrom) {
     auto t = static_cast<int>(type);
     if (t < 0 || t > 3) t = 0;
     return shortFrom ? resultStrings_short[t] : resultStrings[t];
 }
 
-ocgdb::ResultType Funcs::string2ResultType(const std::string& s)
+ResultType Funcs::string2ResultType(const std::string& s)
 {
     for(int i = 0; resultStrings[i]; i++) {
         if (resultStrings[i] == s) {
-            return static_cast<ocgdb::ResultType>(i);
+            return static_cast<ResultType>(i);
         }
     }
-    return ocgdb::ResultType::noresult;
+    return ResultType::noresult;
 }
 
-std::string Funcs::reasonType2String(ocgdb::ReasonType type)
+std::string Funcs::reasonType2String(ReasonType type)
 {
     auto t = static_cast<int>(type);
     if (t < 0) t = 0;
     return reasonStrings[t];
 }
 
-ocgdb::ReasonType Funcs::string2ReasonType(const std::string& s)
+ReasonType Funcs::string2ReasonType(const std::string& s)
 {
     for(int i = 0; reasonStrings[i]; i++) {
         if (reasonStrings[i] == s) {
-            return static_cast<ocgdb::ReasonType>(i);
+            return static_cast<ReasonType>(i);
         }
     }
-    return ocgdb::ReasonType::noreason;
+    return ReasonType::noreason;
 }
 
-std::string Funcs::side2String(ocgdb::Side side, bool shortFrom)
+std::string Funcs::side2String(Side side, bool shortFrom)
 {
     auto sd = static_cast<int>(side);
     if (sd < 0 || sd > 1) sd = 2;
     return shortFrom ? shortSideStrings[sd] : sideStrings[sd];
 }
 
-ocgdb::Side Funcs::string2Side(std::string s)
+Side Funcs::string2Side(std::string s)
 {
     toLower(s);
     for(int i = 0; sideStrings[i]; i++) {
         if (sideStrings[i] == s || shortSideStrings[i] == s) {
-            return static_cast<ocgdb::Side>(i);
+            return static_cast<Side>(i);
         }
     }
-    return ocgdb::Side::none;
+    return Side::none;
 
 }
 
-std::string Funcs::chessVariant2String(ocgdb::ChessVariant variant)
+std::string Funcs::chessVariant2String(ChessVariant variant)
 {
     auto t = static_cast<int>(variant);
-    if (t < 0 || t >= static_cast<int>(ocgdb::ChessVariant::none)) t = 0;
+    if (t < 0 || t >= static_cast<int>(ChessVariant::none)) t = 0;
     return variantStrings[t];
 }
 
@@ -156,25 +159,23 @@ int Funcs::chessCharactorToPieceType(char ch)
         return k;
     }
 
-    return ocgdb::EMPTY;
+    return EMPTY;
 }
 
-ocgdb::ChessVariant Funcs::string2ChessVariant(std::string s)
+ChessVariant Funcs::string2ChessVariant(std::string s)
 {
     toLower(s);
     for(int i = 0; variantStrings[i]; i++) {
         if (variantStrings[i] == s) {
-            return static_cast<ocgdb::ChessVariant>(i);
+            return static_cast<ChessVariant>(i);
         }
     }
 
     if (s.find("960") != std::string::npos || s == "fischerandom" || s == "fische random") {
-        return ocgdb::ChessVariant::chess960;
+        return ChessVariant::chess960;
     }
-    return ocgdb::ChessVariant::standard;
+    return ChessVariant::standard;
 }
-
-
 
 
 
@@ -318,4 +319,21 @@ char* Funcs::trim(char* s)
     }
 
     return s;
+}
+
+size_t Funcs::getFileSize(FILE * file)
+{
+    assert(file);
+    
+#ifdef _MSC_VER
+    _fseeki64(file, 0, SEEK_END);
+    size_t size = _ftelli64(file);
+    _fseeki64(file, 0, SEEK_SET);
+#else
+    //probably should be fseeko/ftello with #define _FILE_OFFSET_BITS 64
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+#endif
+    return size;
 }

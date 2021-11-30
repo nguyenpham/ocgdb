@@ -11,9 +11,6 @@
 #include <iostream>
 #include "builder.h"
 
-#include "3rdparty/SQLiteCpp/SQLiteCpp.h"
-#include "3rdparty/SQLiteCpp/VariadicBind.h"
-
 int main(int argc, const char * argv[]) {
     std::cout << "Open Chess Game Database Standard, (C) 2021\n";
     ocgdb::Builder oc;
@@ -34,11 +31,11 @@ int main(int argc, const char * argv[]) {
         if (i + 1 >= argc) continue;;
 
         if (str == "-pgn") {
-            pgnPath = std::string(argv[i + 1]);
+            pgnPath = std::string(argv[++i]);
             continue;
         }
         if (str == "-db") {
-            dbPath = std::string(argv[i + 1]);
+            dbPath = std::string(argv[++i]);
             continue;
         }
     }
@@ -65,11 +62,18 @@ int main(int argc, const char * argv[]) {
 
     if (!ok) {
         std::cerr << "Usage:" << std::endl;
-        std::cerr << "       ocgdb -pgn PGNPATH -db DBPATH" << std::endl;
-        std::cerr << "       ocgdb -pgn PGNPATH -db :memory:" << std::endl;
-        std::cerr << "       ocgdb -bench -db DBPATH" << std::endl;
-        std::cerr << "       ocgdb -benchmatch -db DBPATH" << std::endl;
-        std::cerr << " e.g.: ocgdb -pgn c:\\games\\big.png -db c:\\db\\big.ocgdb.db3" << std::endl;
+        std::cerr << " ocgdb [<options>]" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << " -pgn <file>           read PGN games from file" << std::endl;
+        std::cerr << " -db <file>            create database, extension should be .ocgdb.db3" << std::endl;
+        std::cerr << "                       use :memory: to create in memory database" << std::endl;
+        std::cerr << " -bench                benchmarch querying games speed" << std::endl;
+        std::cerr << " -benchmatch           benchmarch querying game moves speed" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "Examples:" << std::endl;
+        std::cerr << " ocgdb -pgn c:\\games\\big.png -db c:\\db\\big.ocgdb.db3" << std::endl;
+        std::cerr << " ocgdb -pgn c:\\games\\big.png -db :memory:" << std::endl;
+        std::cerr << " ocgdb -bench -db c:\\db\\big.ocgdb.db3" << std::endl;
     }
     return 1;
 }

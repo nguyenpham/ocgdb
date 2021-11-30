@@ -75,6 +75,9 @@
 		B189EABC272296330075EA55 /* funcs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = funcs.h; sourceTree = "<group>"; };
 		B189EABE27257EF20075EA55 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		B1B7B937274A1F8E0075294F /* SqlCmd.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = SqlCmd.md; path = ../SqlCmd.md; sourceTree = "<group>"; };
+		B1E693BD2756D54C00997777 /* thread_pool.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = thread_pool.hpp; sourceTree = "<group>"; };
+		B1E693BE2756D54C00997777 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		B1E693BF2756D54C00997777 /* LICENSE.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,6 +142,7 @@
 		B189EA9127224A400075EA55 /* 3rdparty */ = {
 			isa = PBXGroup;
 			children = (
+				B1E693BC2756D54C00997777 /* threadpool */,
 				B189EA9227224A400075EA55 /* sqlite3 */,
 				B189EA9527224A400075EA55 /* SQLiteCpp */,
 			);
@@ -179,6 +183,16 @@
 				B189EAA927224A400075EA55 /* Transaction.h */,
 			);
 			path = SQLiteCpp;
+			sourceTree = "<group>";
+		};
+		B1E693BC2756D54C00997777 /* threadpool */ = {
+			isa = PBXGroup;
+			children = (
+				B1E693BD2756D54C00997777 /* thread_pool.hpp */,
+				B1E693BE2756D54C00997777 /* README.md */,
+				B1E693BF2756D54C00997777 /* LICENSE.txt */,
+			);
+			path = threadpool;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -366,6 +380,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 11.3;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				OTHER_CFLAGS = "-DNDEBUG";
 				SDKROOT = macosx;
 			};
 			name = Release;
