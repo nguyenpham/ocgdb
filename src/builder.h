@@ -2,7 +2,7 @@
  * This file is part of Open Chess Game Database Standard.
  *
  * Copyright (c) 2021 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021 developers
+ * Copyright (c) 2021 Developers
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -38,7 +38,7 @@ public:
     void convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath);
 
     void bench(const std::string& path);
-    void benchMatchMoves(const std::string& dbPath);
+    void benchMatchingMoves(const std::string& dbPath);
 
 private:
     static SQLite::Database* createDb(const std::string& path);

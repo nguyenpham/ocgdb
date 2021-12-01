@@ -244,25 +244,5 @@
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "B5F89C56-B703-4BD7-82A6-49F24C5AE17B"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "736"
-<<<<<<< HEAD
-            endingLineNumber = "736"
-            landmarkName = "Builder::benchMatchMoves(dbPath)"
-            landmarkType = "7">
-=======
-            endingLineNumber = "736">
->>>>>>> main
-         </BreakpointContent>
-      </BreakpointProxy>
    </Breakpoints>
 </Bucket>

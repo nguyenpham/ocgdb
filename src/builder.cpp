@@ -654,7 +654,7 @@ void Builder::bench(const std::string& path)
     std::cout << "Test DONE." << std::endl;
 }
 
-void Builder::benchMatchMoves(const std::string& dbPath)
+void Builder::benchMatchingMoves(const std::string& dbPath)
 {
     const std::vector<std::string> gameBodyVec {
 "1.d4 Nf6 2.Nf3 d5 3.e3 Bf5 4.c4 c6 5.Nc3 e6 6.Bd3 Bxd3 7.Qxd3 Nbd7 8.b3 Bd6 \
@@ -685,13 +685,13 @@ void Builder::benchMatchMoves(const std::string& dbPath)
     SQLite::Database db(dbPath);  // SQLite::OPEN_READONLY
     std::cout << "SQLite database file '" << db.getFilename().c_str() << "' opened successfully\n";
 
-    std::cout << "Bench Match Moves..." << std::endl;
+    std::cout << "Benchmark matching Moves..." << std::endl;
 
-    std::vector<BoardCore*> boardVec;
+    std::vector<bslib::BoardCore*> boardVec;
     for(auto && str : gameBodyVec) {
-        auto board = new ChessBoard();
+        auto board = new bslib::ChessBoard();
         board->newGame("");
-        board->fromMoveList(str, Notation::san);
+        board->fromMoveList(str, bslib::Notation::san, false);
         assert(board->getHistListSize() > 1);
         boardVec.push_back(board);
     }
@@ -732,7 +732,6 @@ void Builder::benchMatchMoves(const std::string& dbPath)
             
             benchStatement->reset();
             benchStatement->bind(1, s);
-//            std::cout << benchStatement->getExpandedSQL() << std::endl << std::endl;
 
             while (benchStatement->executeStep()) {
                 sucCnt++;
@@ -743,8 +742,7 @@ void Builder::benchMatchMoves(const std::string& dbPath)
         std::cout   << "ply: " << ply
                     << ", #total queries: " << total
                   << ", elapsed: " << elapsed << " ms, "
-                  << Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-//                  << ", speed: " << total * 1000 / elapsed << " query/s"
+                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
                   << ", time per query: " << elapsed / total  << " ms"
                   << ", total results: " << sucCnt << ", results/query: " << sucCnt / total
                   << std::endl;
@@ -761,3 +759,5 @@ void Builder::benchMatchMoves(const std::string& dbPath)
     }
     std::cout << "Completed! " << std::endl;
 }
+
+
