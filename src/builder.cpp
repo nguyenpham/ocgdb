@@ -21,15 +21,37 @@
 #include "board/chess.h"
 #include "builder.h"
 
-
 using namespace ocgdb;
+
+Builder* builder = nullptr;
+
+void ThreadRecord::init(SQLite::Database* mDb)
+{
+    if (board) return;
+    
+    assert(mDb);
+    board = Builder::createBoard(bslib::ChessVariant::standard);
+
+    const std::string sql = "INSERT INTO Games (EventID, SiteID, Date, Round, WhiteID, WhiteElo, BlackID, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves, PureMoves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    insertGameStatement = new SQLite::Statement(*mDb, sql);
+}
+
+ThreadRecord::~ThreadRecord()
+{
+    delete board;
+    delete insertGameStatement;
+}
 
 Builder::Builder()
 {
+    builder = this;
 }
 
 Builder::~Builder()
 {
+    // delete all statements
+    threadMap.clear();
     if (mDb) delete mDb;
 }
 
@@ -49,8 +71,12 @@ void Builder::printStats() const
               << std::endl;
 }
 
+bslib::BoardCore* Builder::createBoard(bslib::ChessVariant variant)
+{
+    return variant == bslib::ChessVariant::standard ? new bslib::ChessBoard : nullptr;
+}
 
-void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath)
+void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath, int cpu)
 {
     // Prepare
     setDatabasePath(sqlitePath);
@@ -61,7 +87,42 @@ void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqli
         return;
     }
 
+    // init
+    {
+        startTime = getNow();
+        gameCnt = errCnt = 0;
+        eventCnt = playerCnt = siteCnt = 1;
+        
+        pool = cpu <= 0 ? new thread_pool() : new thread_pool(cpu);
+        std::cout << "Thread count: " << pool->get_thread_count() << std::endl;
+
+        playerIdMap.reserve(1024 * 1024);
+        eventIdMap.reserve(128 * 1024);
+        siteIdMap.reserve(128 * 1024);
+    }
     processPgnFile(pgnPath);
+    
+    // completing
+    {
+        auto str = std::string("INSERT INTO Info (Name, Value) VALUES ('GameCount', '") + std::to_string(gameCnt) + "')";
+        mDb->exec(str);
+
+        str = std::string("INSERT INTO Info (Name, Value) VALUES ('PlayerCount', '") + std::to_string(playerCnt) + "')";
+        mDb->exec(str);
+
+        str = std::string("INSERT INTO Info (Name, Value) VALUES ('EventCount', '") + std::to_string(eventCnt) + "')";
+        mDb->exec(str);
+
+        int siteCnt = mDb->execAndGet("SELECT COUNT(*) FROM Sites");
+        str = std::string("INSERT INTO Info (Name, Value) VALUES ('SiteCount', '") + std::to_string(siteCnt) + "')";
+        mDb->exec(str);
+
+        delete playerInsertStatement;
+        delete eventInsertStatement;
+        delete siteInsertStatement;
+    }
+
+    std::cout << "Completed! " << std::endl;
 }
 
 // the game between two blocks, first half
@@ -136,9 +197,7 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
                         if (hasEvent && p - buffer > 2) {
                             *(p - 2) = 0;
 
-                            if (!addGame(tagMap, moves)) {
-                                errCnt++;
-                            }
+                            threadAddGame(tagMap, moves);
                         }
 
                         tagMap.clear();
@@ -214,32 +273,19 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
     if (connectBlock) {
         processHalfBegin(event, (long)sz - (event - buffer));
     } else if (moves) {
-        if (!addGame(tagMap, moves)) {
-            errCnt++;
-        }
+        threadAddGame(tagMap, moves);
     }
 }
 
 uint64_t Builder::processPgnFile(const std::string& path)
 {
     std::cout << "Processing PGN file: '" << path << "'" << std::endl;
-
-    startTime = getNow();
-    gameCnt = errCnt = 0;
-    eventCnt = playerCnt = siteCnt = 1;
-
-    playerIdMap.reserve(1024 * 1024);
-    eventIdMap.reserve(128 * 1024);
-    siteIdMap.reserve(128 * 1024);
     
     // Begin transaction
     SQLite::Transaction transaction(*mDb);
 
     // prepared statements
     {
-        const std::string sql = "INSERT INTO Games (EventID, SiteID, Date, Round, WhiteID, WhiteElo, BlackID, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-        insertGameStatement = new SQLite::Statement(*mDb, sql);
         playerInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Players (ID, Name, Elo) VALUES (?, ?, ?)");
         eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Events (ID, Name) VALUES (?, ?)");
         siteInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Sites (ID, Name) VALUES (?, ?)");
@@ -264,6 +310,7 @@ uint64_t Builder::processPgnFile(const std::string& path)
                 if (idx && (idx & 0xf) == 0) {
                     printStats();
                 }
+                pool->wait_for_tasks();
             }
             sz += k;
         }
@@ -274,6 +321,7 @@ uint64_t Builder::processPgnFile(const std::string& path)
         if (halfBuf) {
             if (halfBufSz > 0) {
                 processDataBlock(halfBuf, halfBufSz, false);
+                pool->wait_for_tasks();
             }
             
             free(halfBuf);
@@ -281,38 +329,13 @@ uint64_t Builder::processPgnFile(const std::string& path)
         }
     }
     
-    {
-        // int gameCnt = mDb->execAndGet("SELECT COUNT(*) FROM game");
-        auto str = std::string("INSERT INTO Info (Name, Value) VALUES ('GameCount', '") + std::to_string(gameCnt) + "')";
-        mDb->exec(str);
-
-        str = std::string("INSERT INTO Info (Name, Value) VALUES ('PlayerCount', '") + std::to_string(playerCnt) + "')";
-        mDb->exec(str);
-
-        str = std::string("INSERT INTO Info (Name, Value) VALUES ('EventCount', '") + std::to_string(eventCnt) + "')";
-        mDb->exec(str);
-
-        int siteCnt = mDb->execAndGet("SELECT COUNT(*) FROM Sites");
-        str = std::string("INSERT INTO Info (Name, Value) VALUES ('SiteCount', '") + std::to_string(siteCnt) + "')";
-        mDb->exec(str);
-    }
-
     // Commit transaction
     transaction.commit();
 
-    {
-        delete insertGameStatement;
-        delete playerInsertStatement;
-        delete eventInsertStatement;
-        delete siteInsertStatement;
-    }
-
     printStats();
 
-    std::cout << "Completed! " << std::endl;
     return gameCnt;
 }
-
 
 SQLite::Database* Builder::createDb(const std::string& path)
 {
@@ -343,9 +366,9 @@ SQLite::Database* Builder::createDb(const std::string& path)
         mDb->exec("INSERT INTO Players (ID, Name) VALUES (1, \"\")"); // default empty
 
         mDb->exec("DROP TABLE IF EXISTS Games");
-        mDb->exec("CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT, EventID INTEGER, SiteID INTEGER, Date TEXT, Round INTEGER, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, Result INTEGER, Timer TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT, Moves TEXT, FOREIGN KEY(EventID) REFERENCES Events, FOREIGN KEY(SiteID) REFERENCES Sites, FOREIGN KEY(WhiteID) REFERENCES Players, FOREIGN KEY(BlackID) REFERENCES Players)");
+        mDb->exec("CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT, EventID INTEGER, SiteID INTEGER, Date TEXT, Round INTEGER, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, Result INTEGER, Timer TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT, Moves TEXT, PureMoves TEXT, FOREIGN KEY(EventID) REFERENCES Events, FOREIGN KEY(SiteID) REFERENCES Sites, FOREIGN KEY(WhiteID) REFERENCES Players, FOREIGN KEY(BlackID) REFERENCES Players)");
         
-//        mDb->exec("PRAGMA synchronous=OFF");
+        // mDb->exec("PRAGMA synchronous=OFF");
         mDb->exec("PRAGMA journal_mode=MEMORY");
         mDb->exec("PRAGMA cache_size=64000;");
         
@@ -390,11 +413,13 @@ std::string Builder::encodeString(const std::string& str)
 
 int Builder::getPlayerNameId(char* name, int elo)
 {
+    std::lock_guard<std::mutex> dolock(playerMutex);
     return getNameId(name, elo, playerCnt, playerInsertStatement, playerIdMap);
 }
 
 int Builder::getEventNameId(char* name)
 {
+    std::lock_guard<std::mutex> dolock(eventMutex);
     return getNameId(name, -1, eventCnt, eventInsertStatement, eventIdMap);
 }
 
@@ -434,6 +459,7 @@ int Builder::getNameId(char* name, int elo, int& cnt, SQLite::Statement* insertS
 
 int Builder::getSiteNameId(char* name)
 {
+    std::lock_guard<std::mutex> dolock(siteMutex);
     return getNameId(name, -1, siteCnt, siteInsertStatement, siteIdMap);
 }
 
@@ -447,22 +473,40 @@ const char* tagNames[] = {
 enum {
     TagIdx_Event, TagIdx_Site, TagIdx_Date, TagIdx_Round,
     TagIdx_White, TagIdx_WhiteElo, TagIdx_Black, TagIdx_BlackElo,
-    TagIdx_Result, TagIdx_Timer, TagIdx_ECO, TagIdx_PlyCount, TagIdx_FEN,
-    TagIdx_Moves,
+    TagIdx_Result, TagIdx_Timer, TagIdx_ECO, TagIdx_PlyCount,
+    TagIdx_FEN, TagIdx_Moves, TagIdx_PureMoves,
     TagIdx_Max
 };
+
+void doAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText)
+{
+    assert(builder);
+    builder->addGame(itemMap, moveText);
+}
+
+void Builder::threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText)
+{
+    pool->submit(doAddGame, itemMap, moveText);
+}
 
 bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText)
 {
     if (itemMap.size() < 3) {
+        errCnt++;
         return false;
     }
     
-    try {
-        insertGameStatement->reset();
+    auto threadId = std::this_thread::get_id();
+    auto t = &threadMap[threadId];
+    t->init(mDb);
+    assert(t->board);
 
-        auto eventId = 1, whiteElo = 0, blackElo = 0;
+    try {
+        t->insertGameStatement->reset();
+
+        auto eventId = 1, whiteElo = 0, blackElo = 0, plyCount = 0;
         char* whiteName = nullptr, *blackName = nullptr, *date = nullptr;
+        std::string fenString;
 
         for(auto && it : itemMap) {
             for(auto i = 0; tagNames[i]; i++) {
@@ -471,6 +515,7 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
                         auto variant = bslib::Funcs::string2ChessVariant(it.second);
                         // at this moment, support only the standard variant
                         if (variant != bslib::ChessVariant::standard) {
+                            errCnt++;
                             return false;
                         }
                     }
@@ -493,7 +538,7 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
                     case TagIdx_Site:
                     {
                         auto siteId = getSiteNameId(s);
-                        insertGameStatement->bind(i + 1, siteId);
+                        t->insertGameStatement->bind(i + 1, siteId);
                         break;
                     }
                     case TagIdx_White:
@@ -512,13 +557,15 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
                         date = s;
                         break;
                     }
+
+                    case TagIdx_FEN:
+                        fenString = s;
                     case TagIdx_Result:
                     case TagIdx_Timer:
                     case TagIdx_ECO:
-                    case TagIdx_FEN:
                     {
                         if (s[0]) { // ignored empty, use NULL instead
-                            insertGameStatement->bind(i + 1, s);
+                            t->insertGameStatement->bind(i + 1, s);
                         }
                         break;
                     }
@@ -526,7 +573,7 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
                     {
                         whiteElo = std::atoi(s);
                         if (whiteElo > 0) {
-                            insertGameStatement->bind(i + 1, whiteElo);
+                            t->insertGameStatement->bind(i + 1, whiteElo);
                         }
                         break;
                     }
@@ -534,18 +581,22 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
                     {
                         blackElo = std::atoi(s);
                         if (blackElo > 0) {
-                            insertGameStatement->bind(i + 1, blackElo);
+                            t->insertGameStatement->bind(i + 1, blackElo);
                         }
                         break;
                     }
-                    case TagIdx_Round:
                     case TagIdx_PlyCount:
                     {
-                        insertGameStatement->bind(i + 1, std::atoi(s));
+                        plyCount = std::atoi(s);
+                        break;
+                    }
+                    case TagIdx_Round:
+                    {
+                        auto k = std::atoi(s);
+                        t->insertGameStatement->bind(i + 1, k);
                         break;
                     }
 
-                        
                     default:
                         assert(false);
                         break;
@@ -556,24 +607,45 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
         
         auto whiteId = getPlayerNameId(whiteName, whiteElo);
         auto blackId = getPlayerNameId(blackName, blackElo);
-        insertGameStatement->bind(TagIdx_Black + 1, whiteId);
-        insertGameStatement->bind(TagIdx_White + 1, blackId);
+        t->insertGameStatement->bind(TagIdx_Black + 1, whiteId);
+        t->insertGameStatement->bind(TagIdx_White + 1, blackId);
 
-        insertGameStatement->bind(TagIdx_Event + 1, eventId);
+        t->insertGameStatement->bind(TagIdx_Event + 1, eventId);
 
         if (date) {
-            insertGameStatement->bind(TagIdx_Date + 1, date);
+            t->insertGameStatement->bind(TagIdx_Date + 1, date);
         }
 
         // trim left
         while(*moveText <= ' ') moveText++;
-        insertGameStatement->bind(TagIdx_Moves + 1, moveText);
+        t->insertGameStatement->bind(TagIdx_Moves + 1, moveText);
 
-        insertGameStatement->exec();
+        // Parse moves
+        {
+            //assert(t->board);
+            t->board->newGame(fenString);
+            t->board->fromMoveList(moveText, bslib::Notation::san, false);
+
+            std::string str;
+            plyCount = t->board->getHistListSize();
+            for(int i = 0; i < plyCount; ++i) {
+                if (i) str += " ";
+                str += t->board->toString(t->board->_getHistAt(i).move);
+            }
+
+            t->insertGameStatement->bind(TagIdx_PureMoves + 1, str);
+        }
+
+        if (plyCount > 0) {
+            t->insertGameStatement->bind(TagIdx_PlyCount + 1, plyCount);
+        }
+
+        t->insertGameStatement->exec();
     }
     catch (std::exception& e)
     {
         std::cout << "SQLite exception: " << e.what() << std::endl;
+        errCnt++;
         return false;
     }
 
@@ -685,7 +757,7 @@ void Builder::benchMatchingMoves(const std::string& dbPath)
     SQLite::Database db(dbPath);  // SQLite::OPEN_READONLY
     std::cout << "SQLite database file '" << db.getFilename().c_str() << "' opened successfully\n";
 
-    std::cout << "Benchmark matching Moves..." << std::endl;
+    std::cout << "Benchmark matching PureMoves..." << std::endl;
 
     std::vector<bslib::BoardCore*> boardVec;
     for(auto && str : gameBodyVec) {
@@ -702,14 +774,14 @@ void Builder::benchMatchingMoves(const std::string& dbPath)
         "FROM Games g " \
         "INNER JOIN Players w ON WhiteID = w.ID " \
         "INNER JOIN Players b ON BlackID = b.ID " \
-        "WHERE g.Moves LIKE ?";
+        "WHERE g.PureMoves LIKE ?";
 
         benchStatement = new SQLite::Statement(db, sqlString);
     }
 
-    for(auto ply = 1; ply < 20; ply++) {
+    for(auto ply = 20; ply < 30; ply++) {
         auto startTime = getNow();
-        auto total = 0, sucCnt = 0;
+        uint64_t total = 0, sucCnt = 0;
         for(auto j = 0; j < 1000; j++, total++) {
 
             auto k = std::rand() % boardVec.size();
@@ -722,11 +794,7 @@ void Builder::benchMatchingMoves(const std::string& dbPath)
                 auto hist = board->getHistAt(t);
                 if (t) s += " ";
                 
-                if ((t & 1) == 0) {
-                    s += std::to_string(t / 2 + 1) + ".";
-                }
-                
-                s += hist.sanString;
+                s += board->toString(hist.move);
             }
             s += "%";
             
@@ -737,10 +805,10 @@ void Builder::benchMatchingMoves(const std::string& dbPath)
                 sucCnt++;
             }
         }
-        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
 
-        std::cout   << "ply: " << ply
-                    << ", #total queries: " << total
+        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+        std::cout << "ply: " << ply
+                  << ", #total queries: " << total
                   << ", elapsed: " << elapsed << " ms, "
                   << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
                   << ", time per query: " << elapsed / total  << " ms"

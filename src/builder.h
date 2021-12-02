@@ -15,10 +15,31 @@
 #include <unordered_map>
 
 #include "3rdparty/SQLiteCpp/SQLiteCpp.h"
+#include "3rdparty/threadpool/thread_pool.hpp"
+
 #include "board/types.h"
 #include "board/base.h"
 
 namespace ocgdb {
+
+
+//class BuilderOptions
+//{
+//public:
+//    int cpu = 0;
+//};
+//
+
+class ThreadRecord
+{
+public:
+    ThreadRecord() {}
+    ~ThreadRecord();
+    void init(SQLite::Database* mDb);
+    bslib::BoardCore *board = nullptr;
+    SQLite::Statement* insertGameStatement = nullptr;
+};
+
 
 class GameRecord {
 public:
@@ -35,22 +56,24 @@ public:
     Builder();
     virtual ~Builder();
 
-    void convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath);
+    void convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath, int cpu);
 
     void bench(const std::string& path);
     void benchMatchingMoves(const std::string& dbPath);
 
+    bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
+
+    static bslib::BoardCore* createBoard(bslib::ChessVariant variant);
+
 private:
     static SQLite::Database* createDb(const std::string& path);
     static std::string encodeString(const std::string& name);
-//    static BoardCore* createBoard(ChessVariant variant);
 
     void setDatabasePath(const std::string& path);
     SQLite::Database* openDbToWrite();
 
     uint64_t processPgnFile(const std::string& path);
 
-    bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
     int getEventNameId(char* name);
     int getSiteNameId(char* name);
     int getPlayerNameId(char* name, int elo);
@@ -62,9 +85,10 @@ private:
     void processDataBlock(char* buffer, long sz, bool);
     void processHalfBegin(char* buffer, long len);
     void processHalfEnd(char* buffer, long len);
-    
+
 private:
     void queryGameData(SQLite::Database& db, int gameIdx);
+    void threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
 
 private:
     const size_t blockSz = 8 * 1024 * 1024;
@@ -74,20 +98,21 @@ private:
 
     std::unordered_map<std::string, int> playerIdMap, eventIdMap, siteIdMap;
 
-
-//    BoardCore* board = nullptr; /// For verifying games, count moves
     bslib::ChessVariant chessVariant = bslib::ChessVariant::standard;
 
     std::string dbPath;
     SQLite::Database* mDb = nullptr;
 
-    // Prepared statements
-    SQLite::Statement* insertGameStatement = nullptr;
+    /// Prepared statements
     SQLite::Statement* playerInsertStatement = nullptr;
     SQLite::Statement* eventInsertStatement = nullptr;
     SQLite::Statement* siteInsertStatement = nullptr;
 
     SQLite::Statement* benchStatement = nullptr;
+
+    thread_pool* pool = nullptr;
+    mutable std::mutex eventMutex, siteMutex, playerMutex;
+    std::unordered_map<std::thread::id, ThreadRecord> threadMap;
 
     /// For stats
     std::chrono::steady_clock::time_point startTime;
