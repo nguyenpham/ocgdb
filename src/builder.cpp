@@ -28,7 +28,7 @@ Builder* builder = nullptr;
 void ThreadRecord::init(SQLite::Database* mDb)
 {
     if (board) return;
-    
+    gameCnt = errCnt = 0;
     assert(mDb);
     board = Builder::createBoard(bslib::ChessVariant::standard);
 
@@ -62,6 +62,12 @@ std::chrono::steady_clock::time_point getNow()
 
 void Builder::printStats() const
 {
+    uint64_t gameCnt = 0, errCnt = 0;
+    for(auto && r : threadMap) {
+        gameCnt += r.second.gameCnt;
+        errCnt += r.second.errCnt;
+    }
+
     int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
     std::cout << "#games: " << gameCnt
               << ", #errors: " << errCnt
@@ -90,7 +96,6 @@ void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqli
     // init
     {
         startTime = getNow();
-        gameCnt = errCnt = 0;
         eventCnt = playerCnt = siteCnt = 1;
         
         pool = cpu <= 0 ? new thread_pool() : new thread_pool(cpu);
@@ -104,6 +109,11 @@ void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqli
     
     // completing
     {
+        uint64_t gameCnt = 0;
+        for(auto && r : threadMap) {
+            gameCnt += r.second.gameCnt;
+        }
+
         auto str = std::string("INSERT INTO Info (Name, Value) VALUES ('GameCount', '") + std::to_string(gameCnt) + "')";
         mDb->exec(str);
 
@@ -248,7 +258,6 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
                         }
                         hasEvent = true;
                         evtCnt++;
-                        gameCnt++;
                     }
 
                     if (hasEvent) {
@@ -277,7 +286,7 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
     }
 }
 
-uint64_t Builder::processPgnFile(const std::string& path)
+void Builder::processPgnFile(const std::string& path)
 {
     std::cout << "Processing PGN file: '" << path << "'" << std::endl;
     
@@ -333,8 +342,6 @@ uint64_t Builder::processPgnFile(const std::string& path)
     transaction.commit();
 
     printStats();
-
-    return gameCnt;
 }
 
 SQLite::Database* Builder::createDb(const std::string& path)
@@ -491,16 +498,16 @@ void Builder::threadAddGame(const std::unordered_map<char*, char*>& itemMap, con
 
 bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText)
 {
-    if (itemMap.size() < 3) {
-        errCnt++;
-        return false;
-    }
-    
     auto threadId = std::this_thread::get_id();
     auto t = &threadMap[threadId];
     t->init(mDb);
     assert(t->board);
 
+    if (itemMap.size() < 3) {
+        t->errCnt++;
+        return false;
+    }
+    
     try {
         t->insertGameStatement->reset();
 
@@ -515,7 +522,7 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
                         auto variant = bslib::Funcs::string2ChessVariant(it.second);
                         // at this moment, support only the standard variant
                         if (variant != bslib::ChessVariant::standard) {
-                            errCnt++;
+                            t->errCnt++;
                             return false;
                         }
                     }
@@ -641,11 +648,12 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
         }
 
         t->insertGameStatement->exec();
+        t->gameCnt++;
     }
     catch (std::exception& e)
     {
         std::cout << "SQLite exception: " << e.what() << std::endl;
-        errCnt++;
+        t->errCnt++;
         return false;
     }
 

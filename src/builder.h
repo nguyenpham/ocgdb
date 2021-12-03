@@ -38,6 +38,7 @@ public:
     void init(SQLite::Database* mDb);
     bslib::BoardCore *board = nullptr;
     SQLite::Statement* insertGameStatement = nullptr;
+    uint64_t gameCnt, errCnt;
 };
 
 
@@ -72,7 +73,7 @@ private:
     void setDatabasePath(const std::string& path);
     SQLite::Database* openDbToWrite();
 
-    uint64_t processPgnFile(const std::string& path);
+    void processPgnFile(const std::string& path);
 
     int getEventNameId(char* name);
     int getSiteNameId(char* name);
@@ -116,7 +117,6 @@ private:
 
     /// For stats
     std::chrono::steady_clock::time_point startTime;
-    uint64_t gameCnt, errCnt;
     int eventCnt, playerCnt, siteCnt;
 };
 
