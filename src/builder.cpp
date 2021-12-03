@@ -32,15 +32,19 @@ void ThreadRecord::init(SQLite::Database* mDb)
     assert(mDb);
     board = Builder::createBoard(bslib::ChessVariant::standard);
 
-    const std::string sql = "INSERT INTO Games (EventID, SiteID, Date, Round, WhiteID, WhiteElo, BlackID, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves, PureMoves) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const std::string sql = "INSERT INTO Games (EventID, SiteID, Date, Round, WhiteID, WhiteElo, BlackID, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves, ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     insertGameStatement = new SQLite::Statement(*mDb, sql);
+    
+    const std::string sql2 = "INSERT INTO HashPositions (GameID, AtPly, Hash) VALUES (?, ?, ?)";
+    insertHashStatement = new SQLite::Statement(*mDb, sql2);
 }
 
 ThreadRecord::~ThreadRecord()
 {
     delete board;
     delete insertGameStatement;
+    delete insertHashStatement;
 }
 
 Builder::Builder()
@@ -248,7 +252,6 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
                         }
                         hasEvent = true;
                         evtCnt++;
-                        gameCnt++;
                     }
 
                     if (hasEvent) {
@@ -366,8 +369,11 @@ SQLite::Database* Builder::createDb(const std::string& path)
         mDb->exec("INSERT INTO Players (ID, Name) VALUES (1, \"\")"); // default empty
 
         mDb->exec("DROP TABLE IF EXISTS Games");
-        mDb->exec("CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT, EventID INTEGER, SiteID INTEGER, Date TEXT, Round INTEGER, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, Result INTEGER, Timer TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT, Moves TEXT, PureMoves TEXT, FOREIGN KEY(EventID) REFERENCES Events, FOREIGN KEY(SiteID) REFERENCES Sites, FOREIGN KEY(WhiteID) REFERENCES Players, FOREIGN KEY(BlackID) REFERENCES Players)");
+        mDb->exec("CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT, EventID INTEGER, SiteID INTEGER, Date TEXT, Round INTEGER, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, Result INTEGER, Timer TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT, Moves TEXT, FOREIGN KEY(EventID) REFERENCES Events, FOREIGN KEY(SiteID) REFERENCES Sites, FOREIGN KEY(WhiteID) REFERENCES Players, FOREIGN KEY(BlackID) REFERENCES Players)");
         
+        mDb->exec("DROP TABLE IF EXISTS HashPositions");
+        mDb->exec("CREATE TABLE HashPositions (ID INTEGER PRIMARY KEY, GameID INTEGER, AtPly INTEGER, Hash INTEGER)");
+
         // mDb->exec("PRAGMA synchronous=OFF");
         mDb->exec("PRAGMA journal_mode=MEMORY");
         mDb->exec("PRAGMA cache_size=64000;");
@@ -474,7 +480,8 @@ enum {
     TagIdx_Event, TagIdx_Site, TagIdx_Date, TagIdx_Round,
     TagIdx_White, TagIdx_WhiteElo, TagIdx_Black, TagIdx_BlackElo,
     TagIdx_Result, TagIdx_Timer, TagIdx_ECO, TagIdx_PlyCount,
-    TagIdx_FEN, TagIdx_Moves, TagIdx_PureMoves,
+    TagIdx_FEN, TagIdx_Moves,
+    TagIdx_GameID,
     TagIdx_Max
 };
 
@@ -620,20 +627,28 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
         while(*moveText <= ' ') moveText++;
         t->insertGameStatement->bind(TagIdx_Moves + 1, moveText);
 
+        int64_t gameID;
+        {
+            std::lock_guard<std::mutex> dolock(gameMutex);
+            gameID = ++gameCnt;
+        }
+        t->insertGameStatement->bind(TagIdx_GameID + 1, gameID);
+
+
         // Parse moves
         {
             //assert(t->board);
             t->board->newGame(fenString);
             t->board->fromMoveList(moveText, bslib::Notation::san, false);
 
-            std::string str;
             plyCount = t->board->getHistListSize();
             for(int i = 0; i < plyCount; ++i) {
-                if (i) str += " ";
-                str += t->board->toString(t->board->_getHistAt(i).move);
+                t->insertHashStatement->reset();
+                t->insertHashStatement->bind(1, gameID);
+                t->insertHashStatement->bind(2, i);
+                t->insertHashStatement->bind(3, t->board->_getHistAt(i).hashKey);
+                t->insertHashStatement->exec();
             }
-
-            t->insertGameStatement->bind(TagIdx_PureMoves + 1, str);
         }
 
         if (plyCount > 0) {

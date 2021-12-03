@@ -37,7 +37,7 @@ public:
     ~ThreadRecord();
     void init(SQLite::Database* mDb);
     bslib::BoardCore *board = nullptr;
-    SQLite::Statement* insertGameStatement = nullptr;
+    SQLite::Statement *insertGameStatement = nullptr, *insertHashStatement = nullptr;
 };
 
 
@@ -111,7 +111,7 @@ private:
     SQLite::Statement* benchStatement = nullptr;
 
     thread_pool* pool = nullptr;
-    mutable std::mutex eventMutex, siteMutex, playerMutex;
+    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
 
     /// For stats
