@@ -80,6 +80,10 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-db /Users/nguyenpham/Downloads/345withHashPositions.ocgdb.db3"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-db :memory:"
             isEnabled = "NO">
          </CommandLineArgument>

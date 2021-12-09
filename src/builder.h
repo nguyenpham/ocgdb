@@ -23,12 +23,6 @@
 namespace ocgdb {
 
 
-//class BuilderOptions
-//{
-//public:
-//    int cpu = 0;
-//};
-//
 
 class ThreadRecord
 {
@@ -38,6 +32,7 @@ public:
     void init(SQLite::Database* mDb);
     bslib::BoardCore *board = nullptr;
     SQLite::Statement *insertGameStatement = nullptr, *insertHashStatement = nullptr;
+    uint64_t hashKeyCnt, errCnt;
 };
 
 
@@ -116,7 +111,7 @@ private:
 
     /// For stats
     std::chrono::steady_clock::time_point startTime;
-    uint64_t gameCnt, errCnt;
+    uint64_t gameCnt;
     int eventCnt, playerCnt, siteCnt;
 };
 
