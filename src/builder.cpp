@@ -764,6 +764,7 @@ void Builder::bench(const std::string& path)
     std::cout << "Test DONE." << std::endl;
 }
 
+
 void Builder::benchMatchingMoves(const std::string& dbPath)
 {
     const std::vector<std::string> gameBodyVec {
@@ -794,10 +795,13 @@ void Builder::benchMatchingMoves(const std::string& dbPath)
 
     std::cout << "Benchmark matching moves dbPath: " << dbPath << std::endl;
 
-//    SQLite::Database db(dbPath);  // SQLite::OPEN_READONLY
-    
-    SQLite::Database db(dbPath, SQLite::OPEN_READWRITE);
     {
+        SQLite::Database db(dbPath, SQLite::OPEN_READWRITE);
+        std::cout << "SQLite database file '" << db.getFilename().c_str() << "' opened successfully\n";
+
+#define _USE_INDEX_
+
+#ifdef _USE_INDEX_
         std::cout << "Creating Index if not exists..." << std::endl;
         auto startTime = getNow();
         db.exec("CREATE INDEX IF NOT EXISTS HashKeyIndex ON HashPositions (HashKey)");
@@ -805,8 +809,26 @@ void Builder::benchMatchingMoves(const std::string& dbPath)
         std::cout << "Create Index, elapsed: " << elapsed << " ms, "
                   << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
                   << std::endl;
+#else
+        std::cout << "Drop Index if not exists..." << std::endl;
+        db.exec("DROP INDEX IF EXISTS HashKeyIndex");
+#endif
     }
-    std::cout << "SQLite database file '" << db.getFilename().c_str() << "' opened successfully\n";
+    
+    SQLite::Database memdb(":memory:", SQLite::OPEN_READWRITE);
+    
+    std::cout << "Load database into in-memory one" << std::endl;
+
+    auto startTime = getNow();
+    memdb.backup(dbPath.c_str(), SQLite::Database::BackupType::Load);
+    
+    int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+    std::cout << "Loaded into memory, elapsed: " << elapsed << " ms, "
+              << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+              << std::endl;
+
+
+    std::cout << "SQLite database file '" << memdb.getFilename().c_str() << "' opened successfully\n";
 
     std::vector<bslib::BoardCore*> boardVec;
     for(auto && str : gameBodyVec) {
@@ -826,7 +848,7 @@ void Builder::benchMatchingMoves(const std::string& dbPath)
         "INNER JOIN HashPositions h ON g.ID = h.GameID " \
         "WHERE h.HashKey = ?";
 
-        benchStatement = new SQLite::Statement(db, sqlString);
+        benchStatement = new SQLite::Statement(memdb, sqlString);
     }
 
     for(auto ply = 1; ply < 30; ply++) {
