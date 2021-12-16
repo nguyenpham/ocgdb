@@ -14,6 +14,23 @@
 int main(int argc, const char * argv[]) {
     std::cout << "Open Chess Game Database Standard, Database Builder, (C) 2021\n";
     ocgdb::Builder oc;
+    
+    
+//    {
+//        std::cout << "Testing..." << std::endl;
+//        std::unordered_map<uint64_t, ocgdb::HashData*> hashMap;
+//
+//        int64_t cnt = 0;
+//        for(int i = 0; i < 300 * 1024 * 1024; i++) {
+//            auto r = new ocgdb::HashData;
+//            for(int j = 0; j < 40; j++) {
+//                r->gameIdVec.push_back(j);
+//                cnt++;
+//            }
+//            hashMap[i] = r;
+//        }
+//        std::cout << "Tested. DONE! cnt: " << cnt << std::endl;
+//    }
 
     auto benchMode = 0, cpu = 0;
     std::string pgnPath, dbPath;
