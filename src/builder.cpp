@@ -393,19 +393,25 @@ void Builder::writeHashTable()
     auto startTime = getNow();
 
     int64_t cnt = 0, blobCnt = 0, oneCnt = 0;
+    uint64_t maxBlob = 0;
+    bslib::ChessBoard board;
+    board.newGame();
+    auto startingHashKey = board.hashKey;
     
     {
         std::cout   << "* updating hash keys with multi games (using blob)..." << std::endl;
         SQLite::Transaction hashTransaction(*mDb);
+        
         for(auto && h : hashMap) {
             auto n = h.second.gameIdVec.size();
-            if (n <= 1) {
+            auto hashKey = static_cast<int64_t>(h.first);
+            if (n < 2 || startingHashKey == hashKey) { // don't save the first
                 continue;
             }
 
+            maxBlob = std::max<uint64_t>(maxBlob, n);
             cnt++;
 
-            auto hashKey = static_cast<int64_t>(h.first);
             posCnt += n;
 
             try {
@@ -436,19 +442,21 @@ void Builder::writeHashTable()
         
         hashTransaction.commit();
     }
+    
+    std::cout << "maxBlob: " << maxBlob << std::endl;
 
     {
-        std::cout   << "* updating hash keys with one game each only..." << std::endl;
+        std::cout << "* updating hash keys with one game each only..." << std::endl;
         SQLite::Transaction hashTransaction(*mDb);
         for(auto && h : hashMap) {
             auto n = h.second.gameIdVec.size();
-            if (n != 1) {
+            auto hashKey = static_cast<int64_t>(h.first);
+            if (n != 1 || startingHashKey == hashKey) { // don't save the first
                 continue;
             }
 
             cnt++;
 
-            auto hashKey = static_cast<int64_t>(h.first);
             posCnt += n;
 
             try {
