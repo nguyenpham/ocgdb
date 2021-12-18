@@ -399,7 +399,7 @@ void Builder::writeHashTable()
     auto startingHashKey = board.hashKey;
     
     {
-        std::cout   << "* updating hash keys with multi games (using blob)..." << std::endl;
+        std::cout   << "* updating hash keys with multi games (using blobs)..." << std::endl;
         SQLite::Transaction hashTransaction(*mDb);
         
         for(auto && h : hashMap) {
@@ -490,7 +490,7 @@ void Builder::writeHashTable()
     
     std::cout   << "Completed writing hash keys, total: " << hashMap.size()
                 << ", one: " << oneCnt << ", blob: " << blobCnt
-                << "%, elapsed: " << elapsed << "ms "
+                << ", elapsed: " << elapsed << "ms "
                 << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
                 << ", speed: " << hashMap.size() * 1000ULL / elapsed << " hash keys/s"
                 << std::endl;
