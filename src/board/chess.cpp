@@ -403,7 +403,7 @@ std::string ChessBoard::getFenCastleRights() const {
     return s;
 }
 
-std::string ChessBoard::getFen(bool ignoreEnpassant, int halfCount, int fullMoveCount, FENCharactorSet) const
+std::string ChessBoard::getFen(int halfCount, int fullMoveCount, FENCharactorSet) const
 {
     std::ostringstream stringStream;
     
@@ -434,10 +434,8 @@ std::string ChessBoard::getFen(bool ignoreEnpassant, int halfCount, int fullMove
     stringStream << (side == Side::white ? " w " : " b ")
                  << getFenCastleRights() << " ";
 
-    if (!ignoreEnpassant && enpassant > 0) {
+    if (enpassant > 0) {
         stringStream << posToCoordinateString(enpassant);
-    } else {
-        stringStream << "-";
     }
     
     if (halfCount >= 0 && fullMoveCount >= 0) {

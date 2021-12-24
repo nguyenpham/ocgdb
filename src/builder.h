@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <fstream>
 
 #include "3rdparty/SQLiteCpp/SQLiteCpp.h"
 #include "3rdparty/threadpool/thread_pool.hpp"
@@ -30,6 +31,7 @@ class HashData
 {
 public:
 //    std::string fenString;
+//    int theId;
     std::vector<int> gameIdVec;
 };
 
@@ -75,6 +77,8 @@ public:
     std::set<int> gameIdSet;
 
 private:
+    void saveHashKey(uint64_t hashKey, const std::string&, int gameID);
+
     static SQLite::Database* createDb(const std::string& path);
     static std::string encodeString(const std::string& name);
 
@@ -99,6 +103,7 @@ private:
     void queryGameData(SQLite::Database& db, int gameIdx);
     void threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
     void writeHashTable();
+    static int standardizeFEN(char *fenBuf);
 
 private:
     const size_t blockSz = 8 * 1024 * 1024;
@@ -119,7 +124,9 @@ private:
     SQLite::Statement *eventInsertStatement = nullptr;
     SQLite::Statement *siteInsertStatement = nullptr;
 
-    SQLite::Statement *insertHashStatement_blob = nullptr, *insertHashStatement_one = nullptr;
+//    SQLite::Statement *updateHashStatement = nullptr; // *selectHashStatement = nullptr,
+
+    SQLite::Statement *insertHashStatement_one = nullptr, *insertHashStatement_blob = nullptr;
 
     SQLite::Statement *hashStatement = nullptr,  *benchStatement = nullptr;
 
@@ -130,10 +137,13 @@ private:
     mutable std::mutex hashMutex;
     std::unordered_map<uint64_t, HashData> hashMap;
 
+    std::fstream fenFile;
+    std::string fenFilePath;
+
     /// For stats
     std::chrono::steady_clock::time_point startTime;
-    int gameCnt, eventCnt, playerCnt, siteCnt;
-    uint64_t errCnt, posCnt;
+    int gameCnt, eventCnt, playerCnt, siteCnt, hashHit;
+    int64_t errCnt, posCnt, hashCnt;
 };
 
 

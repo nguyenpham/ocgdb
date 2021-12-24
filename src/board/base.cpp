@@ -37,7 +37,7 @@ std::string BoardCore::getStartingFen(FENCharactorSet) const
 std::string BoardCore::getFen(FENCharactorSet) const
 {
     auto k = std::max<int>(fullMoveCnt, (histList.size() + 1) / 2);
-    return getFen(false, quietCnt / 2, k);
+    return getFen(quietCnt / 2, k);
 }
 
 std::string BoardCore::getEPD(FENCharactorSet theSet) const
@@ -48,7 +48,7 @@ std::string BoardCore::getEPD(FENCharactorSet theSet) const
 
 std::string BoardCore::getEPD(const Hist& hist, FENCharactorSet theSet) const
 {
-    auto str = getFen(false, -1, -1, theSet);
+    auto str = getFen(-1, -1, theSet);
 
     auto k = std::max<int>(fullMoveCnt, (histList.size() + 1) / 2);
 
@@ -670,7 +670,7 @@ void BoardCore::_parseComment_standard(const std::string& comment, Hist& hist)
     hist.comment = str;
 }
 
-bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool parseComment, int* moveCount)
+bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool parseComment, bool createMoveFEN, int* moveCount)
 {
     std::lock_guard<std::mutex> dolock(dataMutex);
 
@@ -810,6 +810,7 @@ bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool par
         *moveCount = static_cast<int>(moveStringVec.size());
     }
 
+    std::string fenString;
     for(size_t i = 0; i < moveStringVec.size(); i++) {
         auto ss = moveStringVec.at(i);
 
@@ -835,6 +836,11 @@ bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool par
             parsedComment = true;
         }
 
+        if (createMoveFEN) {
+            fenString = getFen();
+        }
+
+
         if (!_checkMake(move.from, move.dest, move.promotion)) {
             return false;
         }
@@ -843,6 +849,10 @@ bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool par
         if (parsedComment) {
             histList.back().comment = tmphist.comment;
             histList.back().esVec = tmphist.esVec;
+        }
+        
+        if (createMoveFEN) {
+            histList.back().fenString = fenString;
         }
         
 //        {

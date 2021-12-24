@@ -304,7 +304,7 @@ namespace bslib {
         virtual bool isFenValid(const std::string& fen) const = 0;
 
         virtual std::string getFen(FENCharactorSet = FENCharactorSet::standard) const;
-        virtual std::string getFen(bool ignoreEnpassant, int halfCount, int fullMoveCount, FENCharactorSet = FENCharactorSet::standard) const = 0;
+        virtual std::string getFen(int halfCount, int fullMoveCount, FENCharactorSet = FENCharactorSet::standard) const = 0;
 
         virtual std::string getEPD(FENCharactorSet = FENCharactorSet::standard) const;
         virtual std::string getEPD(const Hist&, FENCharactorSet = FENCharactorSet::standard) const;
@@ -350,7 +350,7 @@ namespace bslib {
         bool checkMake(int from, int dest, int promotion);
         virtual bool _checkMake(int from, int dest, int promotion) = 0;
         
-        virtual bool fromMoveList(const std::string&, Notation, bool parseComment, int* = nullptr);
+        virtual bool fromMoveList(const std::string&, Notation, bool parseComment, bool createMoveFEN, int* = nullptr);
 
         std::vector<HistBasic> parsePv(const std::string& pvString, bool isCoordinateOnly);
         std::vector<HistBasic> _parsePv(const std::string& pvString, bool isCoordinateOnly);

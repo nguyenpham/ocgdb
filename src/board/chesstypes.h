@@ -289,7 +289,7 @@ public:
     int8_t castleRights[2];
     int64_t hashKey;
     int quietCnt;
-    std::string comment; // moveString,
+    std::string comment, fenString; // moveString,
 
     std::vector<EngineScore> esVec;
 

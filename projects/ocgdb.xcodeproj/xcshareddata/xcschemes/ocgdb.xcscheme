@@ -56,6 +56,10 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-db /Users/nguyenpham/Downloads/carlsen.ocgdb.db3"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-bench"
             isEnabled = "NO">
          </CommandLineArgument>
@@ -68,15 +72,11 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/mb-3.45.ocgdb.db3"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/345.ocgdb.db3"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/carlsen.ocgdb.db3"
+            argument = "-db /Users/nguyenpham/Downloads/mb-3.45.ocgdb.db3"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -89,7 +89,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-cpu 4"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>
