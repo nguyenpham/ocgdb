@@ -10,9 +10,16 @@
 
 #include <iostream>
 #include "builder.h"
+#include "board/chess.h"
 
 int main(int argc, const char * argv[]) {
     std::cout << "Open Chess Game Database Standard, Database Builder, (C) 2021\n";
+    
+    // init
+    {
+        bslib::ChessBoard::staticInit();
+    }
+
     ocgdb::Builder oc;
     
     

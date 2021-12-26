@@ -290,6 +290,7 @@ public:
     int64_t hashKey;
     int quietCnt;
     std::string comment, fenString; // moveString,
+    std::vector<uint64_t> bitboardVec;
 
     std::vector<EngineScore> esVec;
 

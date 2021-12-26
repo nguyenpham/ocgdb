@@ -670,7 +670,7 @@ void BoardCore::_parseComment_standard(const std::string& comment, Hist& hist)
     hist.comment = str;
 }
 
-bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool parseComment, bool createMoveFEN, int* moveCount)
+bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool parseComment, CreateExtra createExtra, int* moveCount)
 {
     std::lock_guard<std::mutex> dolock(dataMutex);
 
@@ -811,6 +811,8 @@ bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool par
     }
 
     std::string fenString;
+    std::vector<uint64_t> bitboardVec;
+    
     for(size_t i = 0; i < moveStringVec.size(); i++) {
         auto ss = moveStringVec.at(i);
 
@@ -836,8 +838,12 @@ bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool par
             parsedComment = true;
         }
 
-        if (createMoveFEN) {
+        if (createExtra == CreateExtra::fen) {
             fenString = getFen();
+        } else
+        if (createExtra == CreateExtra::bitboard) {
+            bitboardVec = posToBitboards();
+            assert(!bitboardVec.empty());
         }
 
 
@@ -851,8 +857,11 @@ bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool par
             histList.back().esVec = tmphist.esVec;
         }
         
-        if (createMoveFEN) {
+        if (createExtra == CreateExtra::fen) {
             histList.back().fenString = fenString;
+        } else
+        if (createExtra == CreateExtra::bitboard) {
+            histList.back().bitboardVec = bitboardVec;
         }
         
 //        {

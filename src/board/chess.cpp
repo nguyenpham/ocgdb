@@ -1831,3 +1831,37 @@ uint64_t polyglotRandom64[800] = {
     uint64_t(0xCF3145DE0ADD4289), uint64_t(0xD0E4427A5514FB72), uint64_t(0x77C621CC9FB3A483), uint64_t(0x67A34DAC4356550B),
     uint64_t(0xF8D626AAAF278509),
 };
+
+
+uint64_t ChessBoard::posToBitboard[64];
+
+void ChessBoard::staticInit()
+{
+    for(int i = 0; i < 64; ++i) {
+        posToBitboard[i] = 1ULL << i;
+    }
+}
+
+std::vector<uint64_t> ChessBoard::posToBitboards() const
+{
+    std::vector<uint64_t> vec = { 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL };
+    assert(vec.size() == 9);
+    
+    for (int i = 0; i < 64; i++) {
+        auto piece = _getPiece(i);
+        if (piece.isEmpty()) {
+            continue;
+        }
+        auto k = posToBitboard[i];
+        auto type = piece.type + 1;
+        auto sd = static_cast<int>(piece.side); assert(sd == 0 || sd == 1);
+        
+        vec[type] |= k;
+        vec[sd] |= k;
+    }
+
+    int64_t rights0 = castleRights[0], rights1 = castleRights[1];
+    vec[8] = (enpassant & 0xff) | rights0 << 8 | rights1 << 10;
+    assert(vec[0] && vec[1] && vec[2]); // two sides and king must be not zero
+    return vec;
+}

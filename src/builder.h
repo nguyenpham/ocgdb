@@ -72,12 +72,12 @@ public:
     bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
 
     static bslib::BoardCore* createBoard(bslib::ChessVariant variant);
-    void saveHashKey(bslib::BoardCore*, int gameID);
+    void saveBitboards(bslib::BoardCore*, int gameID);
 
     std::set<int> gameIdSet;
 
 private:
-    void saveHashKey(uint64_t hashKey, const std::string&, int gameID);
+    void saveBitboards(uint64_t hashKey, const std::vector<uint64_t>&, int gameID);
 
     static SQLite::Database* createDb(const std::string& path);
     static std::string encodeString(const std::string& name);
@@ -99,11 +99,20 @@ private:
     void processHalfBegin(char* buffer, long len);
     void processHalfEnd(char* buffer, long len);
 
+    void updateBoard(bslib::BoardCore*, const std::vector<uint64_t>& bbvec);
+
 private:
     void queryGameData(SQLite::Database& db, int gameIdx);
     void threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
-    void writeHashTable();
+    void writeBitboards();
     static int standardizeFEN(char *fenBuf);
+
+#define BenchMatchingFlag_oneOnly         (1 << 0)
+#define BenchMatchingFlag_print_fen       (1 << 1)
+#define BenchMatchingFlag_print_pgn       (1 << 2)
+
+    uint64_t benchMatchingMoves(SQLite::Statement *statement, int flag);
+    std::string getPgn(SQLite::Statement *statement);
 
 private:
     const size_t blockSz = 8 * 1024 * 1024;
@@ -128,7 +137,7 @@ private:
 
     SQLite::Statement *insertHashStatement_one = nullptr, *insertHashStatement_blob = nullptr;
 
-    SQLite::Statement *hashStatement = nullptr,  *benchStatement = nullptr;
+    SQLite::Statement *bitboardStatement = nullptr,  *benchStatement = nullptr;
 
     thread_pool* pool = nullptr;
     mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex;

@@ -350,7 +350,10 @@ namespace bslib {
         bool checkMake(int from, int dest, int promotion);
         virtual bool _checkMake(int from, int dest, int promotion) = 0;
         
-        virtual bool fromMoveList(const std::string&, Notation, bool parseComment, bool createMoveFEN, int* = nullptr);
+        enum class CreateExtra {
+            none, fen, bitboard
+        };
+        virtual bool fromMoveList(const std::string&, Notation, bool parseComment, CreateExtra, int* = nullptr);
 
         std::vector<HistBasic> parsePv(const std::string& pvString, bool isCoordinateOnly);
         std::vector<HistBasic> _parsePv(const std::string& pvString, bool isCoordinateOnly);
@@ -384,6 +387,7 @@ namespace bslib {
         virtual void _takeBack(const Hist& hist) = 0;
 
         virtual int findKing(Side side) const;
+        virtual std::vector<uint64_t> posToBitboards() const = 0;
 
     protected:
         void setupPieceIndexes();

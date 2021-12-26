@@ -104,6 +104,10 @@ namespace bslib {
             return castleRights[sd];
         }
 
+        void setEnpassant(int _enpassant) {
+            enpassant = _enpassant;
+        }
+
         void setCastleRights(int sd, int8_t rights) {
             castleRights[sd] = rights;
         }
@@ -116,6 +120,8 @@ namespace bslib {
         virtual Move moveFromString_castling(const std::string& str, Side side) const;
 
         static bool isChessFenValid(const std::string& fen);
+        static void staticInit();
+        static uint64_t posToBitboard[64];
 
     protected:
 
@@ -145,6 +151,8 @@ namespace bslib {
         virtual bool isValueSmaller(int type0, int type1) const override;
 
         void gen_addMove(std::vector<MoveFull>& moveList, int from, int dest, bool capOnly) const;
+
+        virtual std::vector<uint64_t> posToBitboards() const override;
 
     protected:
         uint64_t hashKeyEnpassant(int enpassant) const;
