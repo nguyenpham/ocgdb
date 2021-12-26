@@ -1049,11 +1049,11 @@ std::string Builder::getPgn(SQLite::Statement *statement)
     auto result = benchStatement->getColumn("Result").getString();
 
     std::string str =
-        std::string("[Event \"") + event + "\"\n"
-        + std::string("[White \"") + white + "\"\n"
-        + std::string("[Black \"") + black + "\"\n"
-        + std::string("[Date \"") + date + "\"\n"
-        + std::string("[Result \"") + result + "\"\n"
+        std::string("[Event \"") + event + "\"]\n"
+        + std::string("[White \"") + white + "\"]\n"
+        + std::string("[Black \"") + black + "\"]\n"
+        + std::string("[Date \"") + date + "\"]\n"
+        + std::string("[Result \"") + result + "\"]\n"
         + "\n"
         + moves;
 
