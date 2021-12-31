@@ -1256,7 +1256,40 @@ void Builder::benchMatchingMoves(const std::string& dbPath)
     }
     
     // testing
-    
+    // query positions with 2 Black Rooks in the middle squares
+    {
+        std::cout << "Finding all games with 2 Black Rooks..." << std::endl;
+        auto startTime = getNow();
+
+        std::string sqlString = "SELECT * FROM BitboardPositions WHERE popCount(Black & Rook & ?)=?";
+        SQLite::Statement statement(db, sqlString);
+        
+        int64_t maskMids =
+//                              bslib::ChessBoard::posToBitboard[bslib::pos_c4]
+//                            | bslib::ChessBoard::posToBitboard[bslib::pos_c5]
+                              bslib::ChessBoard::posToBitboard[bslib::pos_d4]
+                            | bslib::ChessBoard::posToBitboard[bslib::pos_d5]
+                            | bslib::ChessBoard::posToBitboard[bslib::pos_e4]
+                            | bslib::ChessBoard::posToBitboard[bslib::pos_e5]
+//                            | bslib::ChessBoard::posToBitboard[bslib::pos_f4]
+//                            | bslib::ChessBoard::posToBitboard[bslib::pos_f5]
+                            ;
+
+        statement.bind(1, maskMids);
+        statement.bind(2, 2);
+
+        auto cnt = benchMatchingMoves(&statement, BenchMatchingFlag_print_pgn);
+
+        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+        std::cout << "Finding 2 Black Rooks DONE. Elapsed: " << elapsed << " ms, "
+                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+                  << ", total results: " << cnt
+                  << ", time per results: " << elapsed / std::max<int64_t>(1, cnt)  << " ms"
+                  << std::endl;
+    }
+
+    return;
+
     // query positions with 3 White Queens
     {
         std::cout << "Finding all games with 3 White Queens..." << std::endl;
