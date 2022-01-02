@@ -459,6 +459,14 @@ void Builder::bench(const std::string& pgnPath, int cpu)
         std::cout << "Thread count: " << pool->get_thread_count() << std::endl;
     }
 
+    // Read, parse all moves (not asnwering for any query)
+    {
+        std::cout << "Read and parse all moves..." << std::endl;
+        checkToStop = nullptr;
+        processPgnFile(pgnPath);
+        std::cout << "Completed reading and parsing all moves." << std::endl;
+    }
+
     // 3 White Queens
     {
         std::cout << "Querying 3 White Queens..." << std::endl;
