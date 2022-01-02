@@ -90,10 +90,19 @@ namespace bslib {
             return idx >= 0 && idx < static_cast<int>(histList.size()) ? histList.at(idx) : Hist();
         }
 
-        Hist* getLastHistPointer() {
-            return getHistPointerAt(static_cast<int>(histList.size()) - 1);
+        Hist* _getLastHistPointer() {
+            return _getHistPointerAt(static_cast<int>(histList.size()) - 1);
         }
-        Hist* getHistPointerAt(int idx) {
+ 
+        const Hist* _getLastHistPointer() const {
+            return _getHistPointerAt(static_cast<int>(histList.size()) - 1);
+        }
+
+        Hist* _getHistPointerAt(int idx) {
+            return idx >= 0 && idx < static_cast<int>(histList.size()) ? &histList[idx] : nullptr;
+        }
+        
+        const Hist* _getHistPointerAt(int idx) const {
             return idx >= 0 && idx < static_cast<int>(histList.size()) ? &histList[idx] : nullptr;
         }
 
@@ -353,7 +362,7 @@ namespace bslib {
         enum class CreateExtra {
             none, fen, bitboard
         };
-        virtual bool fromMoveList(const std::string&, Notation, bool parseComment, CreateExtra, int* = nullptr);
+        virtual bool fromMoveList(int64_t gameId, const std::string&, Notation, bool parseComment, CreateExtra, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> = nullptr, int* = nullptr);
 
         std::vector<HistBasic> parsePv(const std::string& pvString, bool isCoordinateOnly);
         std::vector<HistBasic> _parsePv(const std::string& pvString, bool isCoordinateOnly);

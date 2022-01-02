@@ -121,8 +121,11 @@ namespace bslib {
 
         static bool isChessFenValid(const std::string& fen);
         static void staticInit();
-        static uint64_t posToBitboard[64];
 
+        static uint64_t _posToBitboard[64];
+
+        static uint64_t posToBitboard(const char* s);
+        
     protected:
 
         virtual bool isValidPromotion(int promotion, Side) const override {

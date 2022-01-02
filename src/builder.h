@@ -72,13 +72,14 @@ public:
     bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
 
     static bslib::BoardCore* createBoard(bslib::ChessVariant variant);
-    void saveBitboards(bslib::BoardCore*, int gameID);
 
     std::set<int> gameIdSet;
 
-private:
-    void saveBitboards(uint64_t hashKey, const std::vector<uint64_t>&, int gameID);
+    void parsePGNGame(int64_t gameID, const char* fenText, const char* moveText);
 
+private:
+    void searchPositions(SQLite::Database& db, std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*)> checkToStop);
+    
     static SQLite::Database* createDb(const std::string& path);
     static std::string encodeString(const std::string& name);
 
@@ -104,15 +105,14 @@ private:
 private:
     void queryGameData(SQLite::Database& db, int gameIdx);
     void threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
-    void writeBitboards();
     static int standardizeFEN(char *fenBuf);
 
-#define BenchMatchingFlag_oneOnly         (1 << 0)
-#define BenchMatchingFlag_print_fen       (1 << 1)
-#define BenchMatchingFlag_print_pgn       (1 << 2)
+//#define BenchMatchingFlag_oneOnly         (1 << 0)
+//#define BenchMatchingFlag_print_fen       (1 << 1)
+//#define BenchMatchingFlag_print_pgn       (1 << 2)
 
-    uint64_t benchMatchingMoves(SQLite::Statement *statement, int flag);
-    std::string getPgn(SQLite::Statement *statement);
+//    uint64_t benchMatchingMoves(SQLite::Statement *statement, int flag);
+//    std::string getPgn(SQLite::Statement *statement);
 
 private:
     const size_t blockSz = 8 * 1024 * 1024;
@@ -120,7 +120,10 @@ private:
     char* halfBuf = nullptr;
     long halfBufSz = 0;
 
-    
+    void threadParsePGNGame(int64_t gameID, const char* fenText, const char* moveText);
+
+    std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*)> checkToStop = nullptr;
+
     std::unordered_map<std::string, int> playerIdMap, eventIdMap, siteIdMap;
 
     bslib::ChessVariant chessVariant = bslib::ChessVariant::standard;
@@ -133,26 +136,19 @@ private:
     SQLite::Statement *eventInsertStatement = nullptr;
     SQLite::Statement *siteInsertStatement = nullptr;
 
-//    SQLite::Statement *updateHashStatement = nullptr; // *selectHashStatement = nullptr,
-
-    SQLite::Statement *insertHashStatement_one = nullptr, *insertHashStatement_blob = nullptr;
-
-    SQLite::Statement *bitboardStatement = nullptr,  *benchStatement = nullptr;
+    SQLite::Statement *benchStatement = nullptr;
 
     thread_pool* pool = nullptr;
     mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
 
-    mutable std::mutex hashMutex;
+    mutable std::mutex hashMutex, parsingMutex;
     std::unordered_map<uint64_t, HashData> hashMap;
-
-    std::fstream fenFile;
-    std::string fenFilePath;
 
     /// For stats
     std::chrono::steady_clock::time_point startTime;
     int gameCnt, eventCnt, playerCnt, siteCnt, hashHit;
-    int64_t errCnt, posCnt, hashCnt;
+    int64_t errCnt, posCnt, hashCnt, succCount;
 };
 
 
