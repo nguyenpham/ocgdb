@@ -27,14 +27,6 @@
 namespace ocgdb {
 
 
-class HashData
-{
-public:
-//    std::string fenString;
-//    int theId;
-    std::vector<int> gameIdVec;
-};
-
 class ThreadRecord
 {
 public:
@@ -42,7 +34,7 @@ public:
     void init(SQLite::Database* mDb);
 
 public:
-    int64_t errCnt;
+    int64_t errCnt = 0, gameCnt = 0, hdpLen = 0;
     
     bslib::BoardCore *board = nullptr;
     SQLite::Statement *insertGameStatement = nullptr;
@@ -66,8 +58,8 @@ public:
 
     void convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath, int cpu);
 
-    void bench(const std::string& path);
-    void benchMatchingMoves(const std::string& dbPath);
+    void bench(const std::string& path, int cpu);
+//    void benchMatchingMoves(const std::string& dbPath);
 
     bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
 
@@ -75,7 +67,7 @@ public:
 
     std::set<int> gameIdSet;
 
-    void parsePGNGame(int64_t gameID, const char* fenText, const char* moveText);
+    void parsePGNGame(int64_t gameID, const std::string& fenText, const std::string& moveText);
 
 private:
     void searchPositions(SQLite::Database& db, std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*)> checkToStop);
@@ -107,20 +99,14 @@ private:
     void threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
     static int standardizeFEN(char *fenBuf);
 
-//#define BenchMatchingFlag_oneOnly         (1 << 0)
-//#define BenchMatchingFlag_print_fen       (1 << 1)
-//#define BenchMatchingFlag_print_pgn       (1 << 2)
-
-//    uint64_t benchMatchingMoves(SQLite::Statement *statement, int flag);
-//    std::string getPgn(SQLite::Statement *statement);
-
 private:
     const size_t blockSz = 8 * 1024 * 1024;
     const int halfBlockSz = 16 * 1024;
     char* halfBuf = nullptr;
     long halfBufSz = 0;
 
-    void threadParsePGNGame(int64_t gameID, const char* fenText, const char* moveText);
+//    void threadParsePGNGame(int64_t gameID, const char* fenText, const char* moveText);
+    void threadParsePGNGame(int64_t gameID, const std::string& fenText, const std::string& moveText);
 
     std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*)> checkToStop = nullptr;
 
@@ -142,13 +128,12 @@ private:
     mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
 
-    mutable std::mutex hashMutex, parsingMutex;
-    std::unordered_map<uint64_t, HashData> hashMap;
-
+    mutable std::mutex parsingMutex;
+    
     /// For stats
     std::chrono::steady_clock::time_point startTime;
     int gameCnt, eventCnt, playerCnt, siteCnt, hashHit;
-    int64_t errCnt, posCnt, hashCnt, succCount;
+    int64_t errCnt, posCnt, succCount; // hashCnt,
 };
 
 

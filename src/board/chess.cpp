@@ -1868,8 +1868,12 @@ uint64_t ChessBoard::posToBitboard(const char* s)
 
 std::vector<uint64_t> ChessBoard::posToBitboards() const
 {
-    std::vector<uint64_t> vec = { 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL };
-    assert(vec.size() == 9);
+    std::vector<uint64_t> vec = {   hashKey, 0ULL, 0ULL, 0ULL, 0ULL,
+                                    0ULL, 0ULL, 0ULL, 0ULL, 0ULL,
+                                    0ULL, 0ULL
+
+    };
+    assert(vec.size() == static_cast<int>(BBIdx::max));
     
     for (int i = 0; i < 64; i++) {
         auto piece = _getPiece(i);
@@ -1877,15 +1881,19 @@ std::vector<uint64_t> ChessBoard::posToBitboards() const
             continue;
         }
         auto k = _posToBitboard[i];
-        auto type = piece.type + 1;
         auto sd = static_cast<int>(piece.side); assert(sd == 0 || sd == 1);
         
-        vec[type] |= k;
-        vec[sd] |= k;
+        vec[static_cast<int>(BBIdx::kings) + piece.type - 1] |= k;
+        vec[static_cast<int>(BBIdx::black) + sd] |= k;
+        
+        if (piece.type == static_cast<int>(PieceTypeStd::king)) {
+            vec[static_cast<int>(BBIdx::blackkingsquare) + sd] = k;
+        }
     }
 
     int64_t rights0 = castleRights[0], rights1 = castleRights[1];
-    vec[8] = (enpassant & 0xff) | rights0 << 8 | rights1 << 10;
-    assert(vec[0] && vec[1] && vec[2]); // two sides and king must be not zero
+    vec[static_cast<int>(BBIdx::prop)] = (enpassant & 0xff) | rights0 << 8 | rights1 << 10;
+    assert(vec[static_cast<int>(BBIdx::hash)] && vec[static_cast<int>(BBIdx::black)] && vec[static_cast<int>(BBIdx::white)]); // two sides and king must be not zero
+    assert(vec[static_cast<int>(BBIdx::blackkingsquare)] != vec[static_cast<int>(BBIdx::whitekingsquare)]);
     return vec;
 }

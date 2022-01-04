@@ -39,6 +39,10 @@ enum class PieceTypeStd {
     empty, king, queen, rook, bishop, knight, pawn
 };
 
+enum class BBIdx {
+    hash, blackkingsquare, whitekingsquare, black, white, kings, queens, rooks, bishops, knights, pawns, prop, max
+};
+
 enum class MoveEvaluationSymbol
 {
     blunder, // ?? (Blunder)
