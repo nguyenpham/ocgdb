@@ -22,6 +22,7 @@
 		B189EAB827224A410075EA55 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B189EAAA27224A400075EA55 /* main.cpp */; };
 		B189EABA27228BE70075EA55 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = B189EAB927228BE60075EA55 /* Makefile */; };
 		B189EABD272296330075EA55 /* funcs.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B189EABB272296330075EA55 /* funcs.cpp */; };
+		B1DDA40F27887B2200E5E2B6 /* parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1DDA40D27887B2200E5E2B6 /* parser.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -75,6 +76,8 @@
 		B189EABC272296330075EA55 /* funcs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = funcs.h; sourceTree = "<group>"; };
 		B189EABE27257EF20075EA55 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		B1B7B937274A1F8E0075294F /* SqlCmd.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = SqlCmd.md; path = ../SqlCmd.md; sourceTree = "<group>"; };
+		B1DDA40D27887B2200E5E2B6 /* parser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = parser.cpp; sourceTree = "<group>"; };
+		B1DDA40E27887B2200E5E2B6 /* parser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = parser.h; sourceTree = "<group>"; };
 		B1E693BD2756D54C00997777 /* thread_pool.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = thread_pool.hpp; sourceTree = "<group>"; };
 		B1E693BE2756D54C00997777 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		B1E693BF2756D54C00997777 /* LICENSE.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
@@ -118,6 +121,8 @@
 				B189EA8E27224A400075EA55 /* builder.h */,
 				B189EA9127224A400075EA55 /* 3rdparty */,
 				B189EAAA27224A400075EA55 /* main.cpp */,
+				B1DDA40D27887B2200E5E2B6 /* parser.cpp */,
+				B1DDA40E27887B2200E5E2B6 /* parser.h */,
 			);
 			name = src;
 			path = ../src;
@@ -260,6 +265,7 @@
 				B189EAB827224A410075EA55 /* main.cpp in Sources */,
 				B189EAAB27224A410075EA55 /* chesstypes.cpp in Sources */,
 				B189EAB327224A410075EA55 /* Exception.cpp in Sources */,
+				B1DDA40F27887B2200E5E2B6 /* parser.cpp in Sources */,
 				B189EABD272296330075EA55 /* funcs.cpp in Sources */,
 				B189EAB727224A410075EA55 /* Transaction.cpp in Sources */,
 				B189EAAE27224A410075EA55 /* builder.cpp in Sources */,

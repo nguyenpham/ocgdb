@@ -1,8 +1,8 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021 Developers
+ * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
+ * Copyright (c) 2021-2022 Developers
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)

@@ -1,8 +1,8 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021 Developers
+ * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
+ * Copyright (c) 2021-2022 Developers
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -59,7 +59,6 @@ public:
     void convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath, int cpu);
 
     void bench(const std::string& path, int cpu);
-//    void benchMatchingMoves(const std::string& dbPath);
 
     bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
 
@@ -70,6 +69,8 @@ public:
     void parsePGNGame(int64_t gameID, const std::string& fenText, const std::string& moveText);
 
 private:
+    void searchPosition(SQLite::Database& db, const std::string& query);
+
     void searchPositions(SQLite::Database& db, std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*)> checkToStop);
     
     static SQLite::Database* createDb(const std::string& path);

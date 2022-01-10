@@ -1,8 +1,8 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021 developers
+ * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
+ * Copyright (c) 2021-2022 developers
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -1896,4 +1896,20 @@ std::vector<uint64_t> ChessBoard::posToBitboards() const
     assert(vec[static_cast<int>(BBIdx::hash)] && vec[static_cast<int>(BBIdx::black)] && vec[static_cast<int>(BBIdx::white)]); // two sides and king must be not zero
     assert(vec[static_cast<int>(BBIdx::blackkingsquare)] != vec[static_cast<int>(BBIdx::whitekingsquare)]);
     return vec;
+}
+
+
+std::string ChessBoard::bitboard2string(uint64_t bb)
+{
+    std::string s;
+    uint64_t k = 1;
+    for(int i = 0; i < 64; i++, k <<= 1) {
+        s += (bb & k) != 0 ? "1 " : ". ";
+        if (i && (i & 7) == 7) {
+            s += "\n";
+        }
+    }
+    
+    s += "bb: " + std::to_string(bb) + "\n";
+    return s;
 }
