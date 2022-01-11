@@ -30,8 +30,6 @@ namespace ocgdb {
 class HashData
 {
 public:
-//    std::string fenString;
-//    int theId;
     std::vector<int> gameIdVec;
 };
 
@@ -45,6 +43,7 @@ public:
     int64_t errCnt;
     
     bslib::BoardCore *board = nullptr;
+    int16_t* buf = nullptr;
     SQLite::Statement *insertGameStatement = nullptr;
 };
 
@@ -104,7 +103,7 @@ private:
 private:
     void queryGameData(SQLite::Database& db, int gameIdx);
     void threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
-    void writeBitboards();
+//    void writeBitboards();
     static int standardizeFEN(char *fenBuf);
 
 #define BenchMatchingFlag_oneOnly         (1 << 0)
@@ -135,9 +134,10 @@ private:
 
 //    SQLite::Statement *updateHashStatement = nullptr; // *selectHashStatement = nullptr,
 
-    SQLite::Statement *insertHashStatement_one = nullptr, *insertHashStatement_blob = nullptr;
+//    SQLite::Statement *insertHashStatement_one = nullptr, *insertHashStatement_blob = nullptr;
 
-    SQLite::Statement *bitboardStatement = nullptr,  *benchStatement = nullptr;
+//    SQLite::Statement *bitboardStatement = nullptr;
+    SQLite::Statement *benchStatement = nullptr;
 
     thread_pool* pool = nullptr;
     mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex;

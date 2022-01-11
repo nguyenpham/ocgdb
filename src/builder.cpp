@@ -34,15 +34,18 @@ void ThreadRecord::init(SQLite::Database* mDb)
     assert(mDb);
     board = Builder::createBoard(bslib::ChessVariant::standard);
 
-    const std::string sql = "INSERT INTO Games (EventID, SiteID, Date, Round, WhiteID, WhiteElo, BlackID, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves, ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    const std::string sql = "INSERT INTO Games (EventID, SiteID, Date, Round, WhiteID, WhiteElo, BlackID, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves, MoveBlob, ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-    insertGameStatement = new SQLite::Statement(*mDb, sql);    
+    insertGameStatement = new SQLite::Statement(*mDb, sql);
+    
+    buf = new int16_t[1024 * 2];
 }
 
 ThreadRecord::~ThreadRecord()
 {
     delete board;
     delete insertGameStatement;
+    delete buf;
 }
 
 Builder::Builder()
@@ -166,9 +169,9 @@ void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqli
         eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Events (ID, Name) VALUES (?, ?)");
         siteInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Sites (ID, Name) VALUES (?, ?)");
 
-        insertHashStatement_blob = new SQLite::Statement(*mDb, "INSERT INTO BitboardPositions (Black, White, King, Queen, Rook, Bishop, Knight, Pawn, Prop, MultiGameIDs) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-
-        insertHashStatement_one = new SQLite::Statement(*mDb, "INSERT INTO BitboardPositions (Black, White, King, Queen, Rook, Bishop, Knight, Pawn, Prop, GameID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+//        insertHashStatement_blob = new SQLite::Statement(*mDb, "INSERT INTO BitboardPositions (Black, White, King, Queen, Rook, Bishop, Knight, Pawn, Prop, MultiGameIDs) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+//
+//        insertHashStatement_one = new SQLite::Statement(*mDb, "INSERT INTO BitboardPositions (Black, White, King, Queen, Rook, Bishop, Knight, Pawn, Prop, GameID) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     }
 
     fenFilePath = sqlitePath + ".bb.tmp";
@@ -194,8 +197,8 @@ void Builder::convertPgn2Sql(const std::string& pgnPath, const std::string& sqli
         delete eventInsertStatement;
         delete siteInsertStatement;
         
-        delete insertHashStatement_blob;
-        delete insertHashStatement_one;
+//        delete insertHashStatement_blob;
+//        delete insertHashStatement_one;
     }
 
     std::cout << "Completed! " << std::endl;
@@ -407,7 +410,7 @@ uint64_t Builder::processPgnFile(const std::string& path)
 
     fenFile.close();
 
-    writeBitboards();
+//    writeBitboards();
 
     printStats();
 
@@ -438,142 +441,142 @@ int Builder::standardizeFEN(char *fenBuf)
     return fenSz;
 }
 
-void Builder::writeBitboards()
-{
-    std::cout << "writing bitboards... size: "  << hashMap.size() << std::endl;
-    auto startTime = getNow();
-
-    int64_t cnt = 0, blobCnt = 0, oneCnt = 0;
-    uint64_t maxBlob = 0;
-    
-    int64_t startingHashKey;
-    // Just for geting the hash key of the starting position
-    {
-        bslib::ChessBoard board;
-        board.newGame();
-        startingHashKey = board.hashKey;
-    }
-    
-    std::cout << "Writing blobs..." << std::endl;
-
-    int oneId;
-    int64_t hashKey, bitboards[16];
-
-    {
-        SQLite::Transaction transaction(*mDb);
-
-        std::fstream file(fenFilePath, std::ios::in | std::ios::binary);
-        for(int idx = 0; idx < hashMap.size(); idx++) {
-                        
-            file.read(reinterpret_cast<char*>(&hashKey), sizeof(hashKey));
-            for(int i = 0; i < 9; ++i) {
-                file.read(reinterpret_cast<char*>(&bitboards[i]), sizeof(int64_t));
-            }
-            file.read(reinterpret_cast<char*>(&oneId), sizeof(oneId));
-
-            auto it = hashMap.find(hashKey);
-            if (it == hashMap.end() || it->second.gameIdVec.empty() || startingHashKey == hashKey) {
-                continue;
-            }
-
-            auto n = it->second.gameIdVec.size() + 1;
-            maxBlob = std::max<uint64_t>(maxBlob, n);
-
-            cnt++;
-            blobCnt++;
-            posCnt += n;
-
-            try {
-                auto sz = static_cast<int>(n * sizeof(int));
-                std::vector<int> gameIdVec;
-                gameIdVec.push_back(oneId);
-                gameIdVec.insert(gameIdVec.end(), it->second.gameIdVec.begin(), it->second.gameIdVec.end());
-
-                insertHashStatement_blob->reset();
-                
-                for(int i = 0; i < 9; i++) {
-                    insertHashStatement_blob->bind(i + 1, bitboards[i]);
-                }
-
-                insertHashStatement_blob->bind(10, gameIdVec.data(), sz);
-                insertHashStatement_blob->exec();
-            } catch (std::exception& e) {
-                std::cout << "saveHashKey, insertHashStatement, SQLite exception: " << e.what() << std::endl;
-                errCnt++;
-            }
-            
-            if ((cnt & 0x1fffff) == 0) {
-                int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count();
-                
-                std::cout   << "  writting bitboards..., cnt: " << cnt << ", one: " << oneCnt << ", blob: " << blobCnt
-                            << ", elapsed: " << elapsed << "ms "
-                            << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-                            << ", speed: " << cnt * 1000 / elapsed << " hash keys/s"
-                            << std::endl;
-            }
-        }
-        file.close();
-        transaction.commit();
-    }
-
-    
-    std::cout << "Writing ones..." << std::endl;
-    {
-        SQLite::Transaction transaction(*mDb);
-
-        std::fstream file(fenFilePath, std::ios::in | std::ios::binary);
-        for(int idx = 0; idx < hashMap.size(); idx++) {
-                  
-            file.read(reinterpret_cast<char*>(&hashKey), sizeof(hashKey));
-            for(int i = 0; i < 9; ++i) {
-                file.read(reinterpret_cast<char*>(&bitboards[i]), sizeof(int64_t));
-            }
-            file.read(reinterpret_cast<char*>(&oneId), sizeof(oneId));
-
-            auto it = hashMap.find(hashKey);
-            if (it == hashMap.end() || !it->second.gameIdVec.empty() || startingHashKey == hashKey) {
-                continue;
-            }
-
-            cnt++;
-            posCnt++;
-            oneCnt++;
-
-            try {
-                insertHashStatement_one->reset();
-                for(int i = 0; i < 9; i++) {
-                    insertHashStatement_one->bind(i + 1, bitboards[i]);
-                }
-                insertHashStatement_one->bind(10, oneId);
-                insertHashStatement_one->exec();
-            } catch (std::exception& e) {
-                std::cout << "saveHashKey, insertHashStatement, SQLite exception: " << e.what() << std::endl;
-                errCnt++;
-            }
-            
-            if ((cnt & 0x1fffff) == 0) {
-                int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count();
-                
-                std::cout   << "  writting bitboards..., cnt: " << cnt << ", one: " << oneCnt << ", blob: " << blobCnt
-                            << ", elapsed: " << elapsed << "ms "
-                            << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-                            << ", speed: " << cnt * 1000 / elapsed << " hash keys/s"
-                            << std::endl;
-            }
-        }
-        file.close();
-        transaction.commit();
-    }
-    
-    int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count();
-    
-    std::cout   << "Completed writing bitboards, total: " << hashMap.size()
-                << ", one: " << oneCnt << ", blob: " << blobCnt
-                << ", elapsed: " << elapsed << "ms "
-                << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-                << ", speed: " << hashMap.size() * 1000ULL / elapsed << " hash keys/s"
-                << std::endl;
-}
+//void Builder::writeBitboards()
+//{
+//    std::cout << "writing bitboards... size: "  << hashMap.size() << std::endl;
+//    auto startTime = getNow();
+//
+//    int64_t cnt = 0, blobCnt = 0, oneCnt = 0;
+//    uint64_t maxBlob = 0;
+//
+//    int64_t startingHashKey;
+//    // Just for geting the hash key of the starting position
+//    {
+//        bslib::ChessBoard board;
+//        board.newGame();
+//        startingHashKey = board.hashKey;
+//    }
+//
+//    std::cout << "Writing blobs..." << std::endl;
+//
+//    int oneId;
+//    int64_t hashKey, bitboards[16];
+//
+//    {
+//        SQLite::Transaction transaction(*mDb);
+//
+//        std::fstream file(fenFilePath, std::ios::in | std::ios::binary);
+//        for(int idx = 0; idx < hashMap.size(); idx++) {
+//
+//            file.read(reinterpret_cast<char*>(&hashKey), sizeof(hashKey));
+//            for(int i = 0; i < 9; ++i) {
+//                file.read(reinterpret_cast<char*>(&bitboards[i]), sizeof(int64_t));
+//            }
+//            file.read(reinterpret_cast<char*>(&oneId), sizeof(oneId));
+//
+//            auto it = hashMap.find(hashKey);
+//            if (it == hashMap.end() || it->second.gameIdVec.empty() || startingHashKey == hashKey) {
+//                continue;
+//            }
+//
+//            auto n = it->second.gameIdVec.size() + 1;
+//            maxBlob = std::max<uint64_t>(maxBlob, n);
+//
+//            cnt++;
+//            blobCnt++;
+//            posCnt += n;
+//
+//            try {
+//                auto sz = static_cast<int>(n * sizeof(int));
+//                std::vector<int> gameIdVec;
+//                gameIdVec.push_back(oneId);
+//                gameIdVec.insert(gameIdVec.end(), it->second.gameIdVec.begin(), it->second.gameIdVec.end());
+//
+//                insertHashStatement_blob->reset();
+//
+//                for(int i = 0; i < 9; i++) {
+//                    insertHashStatement_blob->bind(i + 1, bitboards[i]);
+//                }
+//
+//                insertHashStatement_blob->bind(10, gameIdVec.data(), sz);
+//                insertHashStatement_blob->exec();
+//            } catch (std::exception& e) {
+//                std::cout << "saveHashKey, insertHashStatement, SQLite exception: " << e.what() << std::endl;
+//                errCnt++;
+//            }
+//
+//            if ((cnt & 0x1fffff) == 0) {
+//                int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count();
+//
+//                std::cout   << "  writting bitboards..., cnt: " << cnt << ", one: " << oneCnt << ", blob: " << blobCnt
+//                            << ", elapsed: " << elapsed << "ms "
+//                            << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+//                            << ", speed: " << cnt * 1000 / elapsed << " hash keys/s"
+//                            << std::endl;
+//            }
+//        }
+//        file.close();
+//        transaction.commit();
+//    }
+//
+//
+//    std::cout << "Writing ones..." << std::endl;
+//    {
+//        SQLite::Transaction transaction(*mDb);
+//
+//        std::fstream file(fenFilePath, std::ios::in | std::ios::binary);
+//        for(int idx = 0; idx < hashMap.size(); idx++) {
+//
+//            file.read(reinterpret_cast<char*>(&hashKey), sizeof(hashKey));
+//            for(int i = 0; i < 9; ++i) {
+//                file.read(reinterpret_cast<char*>(&bitboards[i]), sizeof(int64_t));
+//            }
+//            file.read(reinterpret_cast<char*>(&oneId), sizeof(oneId));
+//
+//            auto it = hashMap.find(hashKey);
+//            if (it == hashMap.end() || !it->second.gameIdVec.empty() || startingHashKey == hashKey) {
+//                continue;
+//            }
+//
+//            cnt++;
+//            posCnt++;
+//            oneCnt++;
+//
+//            try {
+//                insertHashStatement_one->reset();
+//                for(int i = 0; i < 9; i++) {
+//                    insertHashStatement_one->bind(i + 1, bitboards[i]);
+//                }
+//                insertHashStatement_one->bind(10, oneId);
+//                insertHashStatement_one->exec();
+//            } catch (std::exception& e) {
+//                std::cout << "saveHashKey, insertHashStatement, SQLite exception: " << e.what() << std::endl;
+//                errCnt++;
+//            }
+//
+//            if ((cnt & 0x1fffff) == 0) {
+//                int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count();
+//
+//                std::cout   << "  writting bitboards..., cnt: " << cnt << ", one: " << oneCnt << ", blob: " << blobCnt
+//                            << ", elapsed: " << elapsed << "ms "
+//                            << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+//                            << ", speed: " << cnt * 1000 / elapsed << " hash keys/s"
+//                            << std::endl;
+//            }
+//        }
+//        file.close();
+//        transaction.commit();
+//    }
+//
+//    int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count();
+//
+//    std::cout   << "Completed writing bitboards, total: " << hashMap.size()
+//                << ", one: " << oneCnt << ", blob: " << blobCnt
+//                << ", elapsed: " << elapsed << "ms "
+//                << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+//                << ", speed: " << hashMap.size() * 1000ULL / elapsed << " hash keys/s"
+//                << std::endl;
+//}
 
 SQLite::Database* Builder::createDb(const std::string& path)
 {
@@ -604,10 +607,10 @@ SQLite::Database* Builder::createDb(const std::string& path)
         mDb->exec("INSERT INTO Players (ID, Name) VALUES (1, \"\")"); // default empty
 
         mDb->exec("DROP TABLE IF EXISTS Games");
-        mDb->exec("CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT, EventID INTEGER, SiteID INTEGER, Date TEXT, Round INTEGER, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, Result INTEGER, Timer TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT, Moves TEXT, FOREIGN KEY(EventID) REFERENCES Events, FOREIGN KEY(SiteID) REFERENCES Sites, FOREIGN KEY(WhiteID) REFERENCES Players, FOREIGN KEY(BlackID) REFERENCES Players)");
+        mDb->exec("CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT, EventID INTEGER, SiteID INTEGER, Date TEXT, Round INTEGER, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, Result INTEGER, Timer TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT, Moves TEXT, MoveBlob BLOB, FOREIGN KEY(EventID) REFERENCES Events, FOREIGN KEY(SiteID) REFERENCES Sites, FOREIGN KEY(WhiteID) REFERENCES Players, FOREIGN KEY(BlackID) REFERENCES Players)");
         
-        mDb->exec("DROP TABLE IF EXISTS BitboardPositions");
-        mDb->exec("CREATE TABLE BitboardPositions (ID INTEGER PRIMARY KEY AUTOINCREMENT, White INTEGER, Black INTEGER, King INTEGER, Queen INTEGER, Rook INTEGER, Bishop INTEGER, Knight INTEGER, Pawn INTEGER, Prop INTEGER, GameID INTEGER DEFAULT NULL, MultiGameIDs BLOB DEFAULT NULL)");
+//        mDb->exec("DROP TABLE IF EXISTS BitboardPositions");
+//        mDb->exec("CREATE TABLE BitboardPositions (ID INTEGER PRIMARY KEY AUTOINCREMENT, White INTEGER, Black INTEGER, King INTEGER, Queen INTEGER, Rook INTEGER, Bishop INTEGER, Knight INTEGER, Pawn INTEGER, Prop INTEGER, GameID INTEGER DEFAULT NULL, MultiGameIDs BLOB DEFAULT NULL)");
 
         mDb->exec("PRAGMA journal_mode=OFF");
 //        mDb->exec("PRAGMA synchronous=OFF");
@@ -716,6 +719,7 @@ enum {
     TagIdx_White, TagIdx_WhiteElo, TagIdx_Black, TagIdx_BlackElo,
     TagIdx_Result, TagIdx_Timer, TagIdx_ECO, TagIdx_PlyCount,
     TagIdx_FEN, TagIdx_Moves,
+    TagIdx_MoveBlob,
     TagIdx_GameID,
     TagIdx_Max
 };
@@ -878,7 +882,14 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
             t->board->fromMoveList(moveText, bslib::Notation::san, false, bslib::BoardCore::CreateExtra::bitboard);
 
             plyCount = t->board->getHistListSize();
-            saveBitboards(t->board, gameID);
+//            saveBitboards(t->board, gameID);
+            
+            for(auto i = 0; i < plyCount; i++) {
+                auto move = t->board->_getHistAt(i).move;
+                auto m = move.from | move.dest << 6 | move.promotion << 12;
+                t->buf[i] = m;
+            }
+            t->insertGameStatement->bind(TagIdx_MoveBlob + 1, t->buf, plyCount * sizeof(int16_t));
         }
 
         if (plyCount > 0) {
@@ -1195,194 +1206,194 @@ void Builder::updateBoard(bslib::BoardCore* board, const std::vector<uint64_t>& 
 
 void Builder::benchMatchingMoves(const std::string& dbPath)
 {
-    const std::vector<std::string> gameBodyVec {
-"1.d4 Nf6 2.Nf3 d5 3.e3 Bf5 4.c4 c6 5.Nc3 e6 6.Bd3 Bxd3 7.Qxd3 Nbd7 8.b3 Bd6 \
-9.O-O O-O 10.Bb2 Qe7 11.Rad1 Rad8 12.Rfe1 dxc4 13.bxc4 e5 14.dxe5 Nxe5 15.Nxe5 Bxe5 \
-16.Qe2 Rxd1 17.Rxd1 Rd8 18.Rxd8+ Qxd8 19.Qd1 Qxd1+ 20.Nxd1 Bxb2 21.Nxb2 b5 \
-22.f3 Kf8 23.Kf2 Ke7  1/2-1/2",
-
-"1.e4 e5 2.Nf3 Nf6 3.d3 d6 4.c3 g6 5.Bg5 Bg7 6.Be2 O-O 7.d4 h6 8.Bxf6 Qxf6 \
-9.dxe5 dxe5 10.O-O Nd7 11.Nbd2 Nc5 12.Qc2 Bg4 13.Rfe1 Rfe8 14.b4 Ne6 15.h3 Bxf3 \
-16.Nxf3 Nf4 17.Bc4 Nxh3+ 18.gxh3 Qxf3 19.Re3 Qh5 20.Qb3 Rf8 21.Rd1 Qg5+ 22.Rg3 Qf6 \
-23.Rdd3 g5 24.Rgf3 Qe7 25.Rf5 Kh8 26.Bxf7 Rad8 27.Rdf3 Rd6 28.Kf1 Qd8 29.Bh5 Rxf5 \
-30.Rxf5 Rc6 31.Rf3 Rd6 32.Rf5 Rd2 33.Rf7 Qd3+ 34.Kg2 Qxe4+ 35.Bf3 Qh4 36.Bxb7 g4 \
-37.Qe6 Qxh3+ 38.Kg1 Rd1+  0-1",
-
-"1.e4 e5 2.Nf3 Nf6 3.Nc3 Nc6 4.Bc4 Bb4 5.d3 d5 6.exd5 Nxd5 7.Bd2 Nxc3 8.bxc3 Be7 \
-9.Qe2 Bf6 10.O-O O-O 11.Rfe1 Re8 12.Qe4 g6 13.g4 Na5 14.Bb3 Nxb3 15.axb3 Bd7 \
-16.g5 Bc6 17.Qh4 Bg7 18.Qg4 Qd6 19.Re2 Re6 20.Rae1 Rae8 21.c4 b6 22.Bc1 Ba8 \
-23.Nd2 Bc6 24.Ne4 Qe7 25.Re3 h5 26.Qg3 Bd7 27.Bb2 Bc6 28.Nf6+ Bxf6 29.gxf6 Qxf6 \
-30.Rxe5 Rxe5 31.Rxe5 Rd8 32.Qe3 Qh4 33.Qg5 Qxg5+ 34.Rxg5 Re8 35.Kf1 Bf3 36.Re5 Rd8 \
-37.Ke1 Kf8 38.Ba3+ Kg8 39.Re7 Rc8 40.Kd2 h4 41.Ke3 Bh5 42.Kd2 g5 43.Rd7 g4 \
-44.Re7 Kg7 45.Ke3 Kf6 46.d4 c5 47.Rxa7 Re8+ 48.Kd2 cxd4 49.Rd7 g3 50.fxg3 Re2+ \
-51.Kd3 Rxh2 52.gxh4 Bg6+ 53.Kxd4 Rd2+  0-1 ",
-
-"1.c4 c5 2.g3 Nc6 3.Bg2 g6 4.Nc3 Bg7 5.a3 d6 6.Rb1 a5 7.Nf3 Nf6 8.O-O O-O \
-9.Ne1 Bd7 10.Nc2 Rb8 11.d3 Ne8 12.Bd2  1/2-1/2"
-    };
-
-    std::cout << "Benchmark searching & matching dbPath: " << dbPath << std::endl;
-
-    SQLite::Database db(dbPath, SQLite::OPEN_READWRITE);
-    
-    db.createFunction("inResultSet", 1, true, nullptr, &inResultSet, nullptr, nullptr, nullptr);
-
-    db.createFunction("popCount", 1, true, nullptr, &popCount, nullptr, nullptr, nullptr);
-    db.createFunction("firstOne", 1, true, nullptr, &bitScanForward, nullptr, nullptr, nullptr);
-
-    // prepare tests
-    std::vector<bslib::BoardCore*> boardVec;
-    for(auto && str : gameBodyVec) {
-        auto board = new bslib::ChessBoard();
-        board->newGame("");
-        board->fromMoveList(str, bslib::Notation::san, false, bslib::BoardCore::CreateExtra::bitboard);
-        assert(board->getHistListSize() > 1);
-        boardVec.push_back(board);
-    }
-    
-    {
-        std::string sqlString = "SELECT * FROM BitboardPositions WHERE White=? AND King=? AND Queen=? AND Rook=? AND Bishop=? AND Knight=? AND Pawn=?";
-        bitboardStatement = new SQLite::Statement(db, sqlString);
-
-        sqlString =
-        "SELECT g.ID, e.Name Event, g.Round, Date, w.Name White, WhiteElo, b.Name Black, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves " \
-        "FROM Games g " \
-        "INNER JOIN Events e ON EventID = e.ID " \
-        "INNER JOIN Players w ON WhiteID = w.ID " \
-        "INNER JOIN Players b ON BlackID = b.ID " \
-        "WHERE inResultSet(g.ID)";
-
-        benchStatement = new SQLite::Statement(db, sqlString);
-    }
-    
-    // testing
-    // query positions with 2 Black Rooks in the middle squares
-    {
-        std::cout << "Finding all games with 2 Black Rooks..." << std::endl;
-        auto startTime = getNow();
-
-        std::string sqlString = "SELECT * FROM BitboardPositions WHERE popCount(Black & Rook & ?)=?";
-        SQLite::Statement statement(db, sqlString);
-        
-        int64_t maskMids =
-//                              bslib::ChessBoard::posToBitboard[bslib::pos_c4]
-//                            | bslib::ChessBoard::posToBitboard[bslib::pos_c5]
-                              bslib::ChessBoard::posToBitboard[bslib::pos_d4]
-                            | bslib::ChessBoard::posToBitboard[bslib::pos_d5]
-                            | bslib::ChessBoard::posToBitboard[bslib::pos_e4]
-                            | bslib::ChessBoard::posToBitboard[bslib::pos_e5]
+//    const std::vector<std::string> gameBodyVec {
+//"1.d4 Nf6 2.Nf3 d5 3.e3 Bf5 4.c4 c6 5.Nc3 e6 6.Bd3 Bxd3 7.Qxd3 Nbd7 8.b3 Bd6 \
+//9.O-O O-O 10.Bb2 Qe7 11.Rad1 Rad8 12.Rfe1 dxc4 13.bxc4 e5 14.dxe5 Nxe5 15.Nxe5 Bxe5 \
+//16.Qe2 Rxd1 17.Rxd1 Rd8 18.Rxd8+ Qxd8 19.Qd1 Qxd1+ 20.Nxd1 Bxb2 21.Nxb2 b5 \
+//22.f3 Kf8 23.Kf2 Ke7  1/2-1/2",
+//
+//"1.e4 e5 2.Nf3 Nf6 3.d3 d6 4.c3 g6 5.Bg5 Bg7 6.Be2 O-O 7.d4 h6 8.Bxf6 Qxf6 \
+//9.dxe5 dxe5 10.O-O Nd7 11.Nbd2 Nc5 12.Qc2 Bg4 13.Rfe1 Rfe8 14.b4 Ne6 15.h3 Bxf3 \
+//16.Nxf3 Nf4 17.Bc4 Nxh3+ 18.gxh3 Qxf3 19.Re3 Qh5 20.Qb3 Rf8 21.Rd1 Qg5+ 22.Rg3 Qf6 \
+//23.Rdd3 g5 24.Rgf3 Qe7 25.Rf5 Kh8 26.Bxf7 Rad8 27.Rdf3 Rd6 28.Kf1 Qd8 29.Bh5 Rxf5 \
+//30.Rxf5 Rc6 31.Rf3 Rd6 32.Rf5 Rd2 33.Rf7 Qd3+ 34.Kg2 Qxe4+ 35.Bf3 Qh4 36.Bxb7 g4 \
+//37.Qe6 Qxh3+ 38.Kg1 Rd1+  0-1",
+//
+//"1.e4 e5 2.Nf3 Nf6 3.Nc3 Nc6 4.Bc4 Bb4 5.d3 d5 6.exd5 Nxd5 7.Bd2 Nxc3 8.bxc3 Be7 \
+//9.Qe2 Bf6 10.O-O O-O 11.Rfe1 Re8 12.Qe4 g6 13.g4 Na5 14.Bb3 Nxb3 15.axb3 Bd7 \
+//16.g5 Bc6 17.Qh4 Bg7 18.Qg4 Qd6 19.Re2 Re6 20.Rae1 Rae8 21.c4 b6 22.Bc1 Ba8 \
+//23.Nd2 Bc6 24.Ne4 Qe7 25.Re3 h5 26.Qg3 Bd7 27.Bb2 Bc6 28.Nf6+ Bxf6 29.gxf6 Qxf6 \
+//30.Rxe5 Rxe5 31.Rxe5 Rd8 32.Qe3 Qh4 33.Qg5 Qxg5+ 34.Rxg5 Re8 35.Kf1 Bf3 36.Re5 Rd8 \
+//37.Ke1 Kf8 38.Ba3+ Kg8 39.Re7 Rc8 40.Kd2 h4 41.Ke3 Bh5 42.Kd2 g5 43.Rd7 g4 \
+//44.Re7 Kg7 45.Ke3 Kf6 46.d4 c5 47.Rxa7 Re8+ 48.Kd2 cxd4 49.Rd7 g3 50.fxg3 Re2+ \
+//51.Kd3 Rxh2 52.gxh4 Bg6+ 53.Kxd4 Rd2+  0-1 ",
+//
+//"1.c4 c5 2.g3 Nc6 3.Bg2 g6 4.Nc3 Bg7 5.a3 d6 6.Rb1 a5 7.Nf3 Nf6 8.O-O O-O \
+//9.Ne1 Bd7 10.Nc2 Rb8 11.d3 Ne8 12.Bd2  1/2-1/2"
+//    };
+//
+//    std::cout << "Benchmark searching & matching dbPath: " << dbPath << std::endl;
+//
+//    SQLite::Database db(dbPath, SQLite::OPEN_READWRITE);
+//    
+//    db.createFunction("inResultSet", 1, true, nullptr, &inResultSet, nullptr, nullptr, nullptr);
+//
+//    db.createFunction("popCount", 1, true, nullptr, &popCount, nullptr, nullptr, nullptr);
+//    db.createFunction("firstOne", 1, true, nullptr, &bitScanForward, nullptr, nullptr, nullptr);
+//
+//    // prepare tests
+//    std::vector<bslib::BoardCore*> boardVec;
+//    for(auto && str : gameBodyVec) {
+//        auto board = new bslib::ChessBoard();
+//        board->newGame("");
+//        board->fromMoveList(str, bslib::Notation::san, false, bslib::BoardCore::CreateExtra::bitboard);
+//        assert(board->getHistListSize() > 1);
+//        boardVec.push_back(board);
+//    }
+//    
+//    {
+//        std::string sqlString = "SELECT * FROM BitboardPositions WHERE White=? AND King=? AND Queen=? AND Rook=? AND Bishop=? AND Knight=? AND Pawn=?";
+//        bitboardStatement = new SQLite::Statement(db, sqlString);
+//
+//        sqlString =
+//        "SELECT g.ID, e.Name Event, g.Round, Date, w.Name White, WhiteElo, b.Name Black, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves " \
+//        "FROM Games g " \
+//        "INNER JOIN Events e ON EventID = e.ID " \
+//        "INNER JOIN Players w ON WhiteID = w.ID " \
+//        "INNER JOIN Players b ON BlackID = b.ID " \
+//        "WHERE inResultSet(g.ID)";
+//
+//        benchStatement = new SQLite::Statement(db, sqlString);
+//    }
+//    
+//    // testing
+//    // query positions with 2 Black Rooks in the middle squares
+//    {
+//        std::cout << "Finding all games with 2 Black Rooks..." << std::endl;
+//        auto startTime = getNow();
+//
+//        std::string sqlString = "SELECT * FROM BitboardPositions WHERE popCount(Black & Rook & ?)=?";
+//        SQLite::Statement statement(db, sqlString);
+//        
+//        int64_t maskMids =
+////                              bslib::ChessBoard::posToBitboard[bslib::pos_c4]
+////                            | bslib::ChessBoard::posToBitboard[bslib::pos_c5]
+//                              bslib::ChessBoard::posToBitboard[bslib::pos_d4]
+//                            | bslib::ChessBoard::posToBitboard[bslib::pos_d5]
+//                            | bslib::ChessBoard::posToBitboard[bslib::pos_e4]
+//                            | bslib::ChessBoard::posToBitboard[bslib::pos_e5]
+////                            | bslib::ChessBoard::posToBitboard[bslib::pos_f4]
+////                            | bslib::ChessBoard::posToBitboard[bslib::pos_f5]
+//                            ;
+//
+//        statement.bind(1, maskMids);
+//        statement.bind(2, 2);
+//
+//        auto cnt = benchMatchingMoves(&statement, BenchMatchingFlag_print_pgn);
+//
+//        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+//        std::cout << "Finding 2 Black Rooks DONE. Elapsed: " << elapsed << " ms, "
+//                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+//                  << ", total results: " << cnt
+//                  << ", time per results: " << elapsed / std::max<int64_t>(1, cnt)  << " ms"
+//                  << std::endl;
+//    }
+//
+//    return;
+//
+//    // query positions with 3 White Queens
+//    {
+//        std::cout << "Finding all games with 3 White Queens..." << std::endl;
+//        auto startTime = getNow();
+//
+//        std::string sqlString = "SELECT * FROM BitboardPositions WHERE popCount(White & Queen)=?";
+//        SQLite::Statement statement(db, sqlString);
+//        statement.bind(1, 3);
+//
+//        auto cnt = benchMatchingMoves(&statement, 0); //BenchMatchingFlag_print_pgn);
+//
+//        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+//        std::cout << "Finding 3 White Queens DONE. Elapsed: " << elapsed << " ms, "
+//                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+//                  << ", total results: " << cnt
+//                  << ", time per results: " << elapsed / std::max<int64_t>(1, cnt)  << " ms"
+//                  << std::endl;
+//    }
+//
+//    // query games with White Pawns in d4, e5, f4, g4, Black King in b7
+//    {
+//        std::cout << "Finding all positions with White Pawns in d4, e5, f4, g4, Black King in b7..." << std::endl;
+//        auto startTime = getNow();
+//
+//        std::string sqlString = "SELECT * FROM BitboardPositions WHERE (White & Pawn & ?)=? AND (Black & King)=?";
+//        SQLite::Statement statement(db, sqlString);
+//        
+//        int64_t maskPawns =   bslib::ChessBoard::posToBitboard[bslib::pos_d4]
+//                            | bslib::ChessBoard::posToBitboard[bslib::pos_e5]
 //                            | bslib::ChessBoard::posToBitboard[bslib::pos_f4]
-//                            | bslib::ChessBoard::posToBitboard[bslib::pos_f5]
-                            ;
-
-        statement.bind(1, maskMids);
-        statement.bind(2, 2);
-
-        auto cnt = benchMatchingMoves(&statement, BenchMatchingFlag_print_pgn);
-
-        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
-        std::cout << "Finding 2 Black Rooks DONE. Elapsed: " << elapsed << " ms, "
-                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-                  << ", total results: " << cnt
-                  << ", time per results: " << elapsed / std::max<int64_t>(1, cnt)  << " ms"
-                  << std::endl;
-    }
-
-    return;
-
-    // query positions with 3 White Queens
-    {
-        std::cout << "Finding all games with 3 White Queens..." << std::endl;
-        auto startTime = getNow();
-
-        std::string sqlString = "SELECT * FROM BitboardPositions WHERE popCount(White & Queen)=?";
-        SQLite::Statement statement(db, sqlString);
-        statement.bind(1, 3);
-
-        auto cnt = benchMatchingMoves(&statement, 0); //BenchMatchingFlag_print_pgn);
-
-        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
-        std::cout << "Finding 3 White Queens DONE. Elapsed: " << elapsed << " ms, "
-                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-                  << ", total results: " << cnt
-                  << ", time per results: " << elapsed / std::max<int64_t>(1, cnt)  << " ms"
-                  << std::endl;
-    }
-
-    // query games with White Pawns in d4, e5, f4, g4, Black King in b7
-    {
-        std::cout << "Finding all positions with White Pawns in d4, e5, f4, g4, Black King in b7..." << std::endl;
-        auto startTime = getNow();
-
-        std::string sqlString = "SELECT * FROM BitboardPositions WHERE (White & Pawn & ?)=? AND (Black & King)=?";
-        SQLite::Statement statement(db, sqlString);
-        
-        int64_t maskPawns =   bslib::ChessBoard::posToBitboard[bslib::pos_d4]
-                            | bslib::ChessBoard::posToBitboard[bslib::pos_e5]
-                            | bslib::ChessBoard::posToBitboard[bslib::pos_f4]
-                            | bslib::ChessBoard::posToBitboard[bslib::pos_g4];
-        int64_t maskKing = bslib::ChessBoard::posToBitboard[bslib::pos_b7];
-
-        statement.bind(1,  maskPawns);
-        statement.bind(2,  maskPawns);
-        statement.bind(3,  maskKing);
-
-        auto cnt = benchMatchingMoves(&statement, 0); //BenchMatchingFlag_print_fen|BenchMatchingFlag_print_pgn);
-
-        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
-        std::cout
-                  << "Finding 4 Pawns & King in specific squares DONE. Elapsed: " << elapsed << " ms, "
-                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-                  << ", total results: " << cnt
-                  << ", time per results: " << elapsed / std::max<int64_t>(1, cnt)  << " ms"
-                  << std::endl;
-    }
-    
-    // matching
-    std::cout << "Matching exactly..." << std::endl;
-    for(auto ply = 1; ply < 30; ply++) {
-        auto startTime = getNow();
-        uint64_t total = 0, sucCnt = 0;
-        for(auto j = 0; j < 1000; j++, total++) {
-
-            auto k = std::rand() % boardVec.size();
-            auto board = boardVec.at(k);
-            auto sz = board->getHistListSize();
-            if (ply >= sz) {
-                continue;
-            }
-
-            auto hist = board->getHistAt(ply);
-
-            bitboardStatement->reset();
-            
-            for(auto i = 1; i < 8; i++) {
-                bitboardStatement->bind(i, static_cast<int64_t>(hist.bitboardVec.at(i)));
-            }
-
-            sucCnt += benchMatchingMoves(bitboardStatement, BenchMatchingFlag_oneOnly);
-        }
-
-        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
-        std::cout << "ply: " << ply
-                  << ", #total queries: " << total
-                  << ", elapsed: " << elapsed << " ms, "
-                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-                  << ", time per query: " << elapsed / total  << " ms"
-                  << ", total results: " << sucCnt << ", results/query: " << sucCnt / total
-                  << std::endl;
-    }
-
-    // clean up
-    {
-        for(auto && board : boardVec) {
-            delete board;
-        }
-        boardVec.clear();
-        
-        delete bitboardStatement;
-        delete benchStatement;
-    }
+//                            | bslib::ChessBoard::posToBitboard[bslib::pos_g4];
+//        int64_t maskKing = bslib::ChessBoard::posToBitboard[bslib::pos_b7];
+//
+//        statement.bind(1,  maskPawns);
+//        statement.bind(2,  maskPawns);
+//        statement.bind(3,  maskKing);
+//
+//        auto cnt = benchMatchingMoves(&statement, 0); //BenchMatchingFlag_print_fen|BenchMatchingFlag_print_pgn);
+//
+//        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+//        std::cout
+//                  << "Finding 4 Pawns & King in specific squares DONE. Elapsed: " << elapsed << " ms, "
+//                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+//                  << ", total results: " << cnt
+//                  << ", time per results: " << elapsed / std::max<int64_t>(1, cnt)  << " ms"
+//                  << std::endl;
+//    }
+//    
+//    // matching
+//    std::cout << "Matching exactly..." << std::endl;
+//    for(auto ply = 1; ply < 30; ply++) {
+//        auto startTime = getNow();
+//        uint64_t total = 0, sucCnt = 0;
+//        for(auto j = 0; j < 1000; j++, total++) {
+//
+//            auto k = std::rand() % boardVec.size();
+//            auto board = boardVec.at(k);
+//            auto sz = board->getHistListSize();
+//            if (ply >= sz) {
+//                continue;
+//            }
+//
+//            auto hist = board->getHistAt(ply);
+//
+//            bitboardStatement->reset();
+//            
+//            for(auto i = 1; i < 8; i++) {
+//                bitboardStatement->bind(i, static_cast<int64_t>(hist.bitboardVec.at(i)));
+//            }
+//
+//            sucCnt += benchMatchingMoves(bitboardStatement, BenchMatchingFlag_oneOnly);
+//        }
+//
+//        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+//        std::cout << "ply: " << ply
+//                  << ", #total queries: " << total
+//                  << ", elapsed: " << elapsed << " ms, "
+//                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+//                  << ", time per query: " << elapsed / total  << " ms"
+//                  << ", total results: " << sucCnt << ", results/query: " << sucCnt / total
+//                  << std::endl;
+//    }
+//
+//    // clean up
+//    {
+//        for(auto && board : boardVec) {
+//            delete board;
+//        }
+//        boardVec.clear();
+//        
+//        delete bitboardStatement;
+//        delete benchStatement;
+//    }
     std::cout << "Completed! " << std::endl;
 }
 
