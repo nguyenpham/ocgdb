@@ -14,41 +14,14 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
             startingLineNumber = "409"
             endingLineNumber = "409"
+=======
+            startingLineNumber = "337"
+            endingLineNumber = "337"
+>>>>>>> searchwithtextparser
             landmarkName = "Builder::processPgnFile(path)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "F3C955F6-9708-4192-92F2-A115342B1518"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "592"
-            endingLineNumber = "592"
-            landmarkName = "Builder::createDb(path)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "9752E48B-3542-47D4-AD4E-D881F8F527C2"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "698"
-            endingLineNumber = "698"
-            landmarkName = "Builder::getNameId(name, elo, cnt, insertStatement, idMap)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -62,136 +35,101 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
+            startingLineNumber = "592"
+            endingLineNumber = "592"
+            landmarkName = "Builder::createDb(path)"
+=======
+            startingLineNumber = "563"
+            endingLineNumber = "563"
+            landmarkName = "Builder::addGame(itemMap, moveText)"
+>>>>>>> searchwithtextparser
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "C4C0BA0C-375B-4AB4-AA8C-E3795A94E936"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/builder.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
+            startingLineNumber = "698"
+            endingLineNumber = "698"
+            landmarkName = "Builder::getNameId(name, elo, cnt, insertStatement, idMap)"
+=======
+            startingLineNumber = "812"
+            endingLineNumber = "812"
+            landmarkName = "Builder::parsePGNGame(gameID, fenText, moveText)"
+>>>>>>> searchwithtextparser
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "5D1E298F-6642-4401-BCA9-0562416D6CE7"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/builder.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
             startingLineNumber = "759"
             endingLineNumber = "759"
             landmarkName = "Builder::addGame(itemMap, moveText)"
+=======
+            startingLineNumber = "800"
+            endingLineNumber = "800"
+            landmarkName = "Builder::threadParsePGNGame(gameID, fenText, moveText)"
+>>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "6ECE1B7F-449F-4E43-A6BF-5B10096BA945"
+            uuid = "4197FEEE-2DA4-4A6F-BBD8-472BC6DB6C1A"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
+            filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
             startingLineNumber = "631"
             endingLineNumber = "631"
             landmarkName = "Builder::setDatabasePath(path)"
+=======
+            startingLineNumber = "786"
+            endingLineNumber = "786"
+            landmarkName = "Parser::lexParse(s)"
+>>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "9B8F8E92-990B-4D9E-BB3D-9FBFD0FD0B40"
+            uuid = "F5527B4E-5F94-41CF-A648-89F4AB19B721"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
+            filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
             startingLineNumber = "658"
             endingLineNumber = "658"
             landmarkName = "Builder::getPlayerNameId(name, elo)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "CE1BAB59-A55D-456A-AC4B-E4DBF4C74A6D"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "666"
-            endingLineNumber = "666"
-            landmarkName = "Builder::getEventNameId(name)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "B02E953E-80C6-4A71-9FA7-A36D98AF7709"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "674"
-            endingLineNumber = "674"
-            landmarkName = "Builder::getNameId(name, elo, cnt, insertStatement, idMap)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "DA57B4CA-5081-4ABF-8999-71A4AF29E527"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "686"
-            endingLineNumber = "686"
-            landmarkName = "Builder::getNameId(name, elo, cnt, insertStatement, idMap)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "AD4E36F0-3F8E-42A4-998A-98BE55A43D51"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "625"
-            endingLineNumber = "625"
-            landmarkName = "Builder::createDb(path)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "47599883-CC37-4215-A2E4-A53913F16408"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "636"
-            endingLineNumber = "636"
-            landmarkName = "Builder::setDatabasePath(path)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "0A7656DE-45B8-443E-B7C0-2011705A3AB4"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "641"
-            endingLineNumber = "641"
+=======
+            startingLineNumber = "369"
+            endingLineNumber = "369"
             landmarkName = "unknown"
             landmarkType = "0">
          </BreakpointContent>
@@ -199,96 +137,426 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "516A6969-87F7-4327-9967-505FC5DB1481"
+            uuid = "2F9527A7-56BD-4FEE-9292-BB01AD9F9CAD"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
+            filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "801"
+            endingLineNumber = "801"
+            landmarkName = "Parser::lexParse(s)"
+>>>>>>> searchwithtextparser
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "356AA96E-B71B-4900-88C5-DBF1C0E32C00"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
+            startingLineNumber = "666"
+            endingLineNumber = "666"
+            landmarkName = "Builder::getEventNameId(name)"
+=======
+            startingLineNumber = "889"
+            endingLineNumber = "889"
+            landmarkName = "Parser::lexParse(s)"
+>>>>>>> searchwithtextparser
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "3FC952F0-CA55-4BCE-84E2-39B354064694"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
+            startingLineNumber = "674"
+            endingLineNumber = "674"
+            landmarkName = "Builder::getNameId(name, elo, cnt, insertStatement, idMap)"
+=======
+            startingLineNumber = "436"
+            endingLineNumber = "436"
+            landmarkName = "Parser::parse(s)"
+>>>>>>> searchwithtextparser
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "973DBD09-D67A-4949-81F6-0EC471029EEB"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
+            startingLineNumber = "686"
+            endingLineNumber = "686"
+            landmarkName = "Builder::getNameId(name, elo, cnt, insertStatement, idMap)"
+=======
+            startingLineNumber = "434"
+            endingLineNumber = "434"
+            landmarkName = "Parser::parse(s)"
+>>>>>>> searchwithtextparser
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "C5D0EFDC-EFAF-425A-B985-B1D417DA8C8C"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
+            startingLineNumber = "625"
+            endingLineNumber = "625"
+            landmarkName = "Builder::createDb(path)"
+=======
+            startingLineNumber = "649"
+            endingLineNumber = "649"
+            landmarkName = "Parser::parse_factor(from)"
+>>>>>>> searchwithtextparser
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "EF24CCDB-5C14-4F75-B371-D7D904A3E934"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
+            startingLineNumber = "636"
+            endingLineNumber = "636"
+            landmarkName = "Builder::setDatabasePath(path)"
+=======
+            startingLineNumber = "744"
+            endingLineNumber = "744"
+            landmarkName = "Parser::parse_piecename(from)"
+>>>>>>> searchwithtextparser
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "FE3B2792-52B3-4D67-BE5A-630CD8CAE810"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
+            startingLineNumber = "641"
+            endingLineNumber = "641"
+            landmarkName = "unknown"
+            landmarkType = "0">
+=======
+            startingLineNumber = "620"
+            endingLineNumber = "620"
+            landmarkName = "Parser::parse_term(from)"
+            landmarkType = "7">
+>>>>>>> searchwithtextparser
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "6561A1DD-AF19-470E-A364-F0DC46C1DE38"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
             startingLineNumber = "120"
             endingLineNumber = "120"
             landmarkName = "Builder::saveBitboards(hashKey, bitboardVec, gameID)"
+=======
+            startingLineNumber = "684"
+            endingLineNumber = "684"
+            landmarkName = "Parser::parse_piece(from)"
+>>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "558B00D7-E823-4DCF-92B2-5AFECE37B986"
+            uuid = "BBCAB48B-D97E-41B9-816E-1473474B533C"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
+            filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
             startingLineNumber = "1363"
             endingLineNumber = "1363"
             landmarkName = "Builder::benchMatchingMoves(dbPath)"
+=======
+            startingLineNumber = "720"
+            endingLineNumber = "720"
+            landmarkName = "Parser::parse_squareset(node, from)"
+>>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "4A0046F2-044D-41A4-9224-8B592FBE3CE4"
+            uuid = "4E5A5AD8-8608-4AA5-A9DE-620121E44314"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
+            filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "108"
+            endingLineNumber = "108"
+            landmarkName = "Node::selectSquare(s)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "439303F7-B3C7-4D48-A808-07003A7C723C"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
             startingLineNumber = "1362"
             endingLineNumber = "1362"
             landmarkName = "Builder::benchMatchingMoves(dbPath)"
+=======
+            startingLineNumber = "715"
+            endingLineNumber = "715"
+            landmarkName = "Parser::parse_squareset(node, from)"
+>>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "2F34D10C-7A5C-462E-88AE-04B1EFBC5CC9"
+            uuid = "F577EE68-4A04-4037-8E88-FBD88A0EC333"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "722"
+            endingLineNumber = "722"
+            landmarkName = "Parser::parse_squareset(node, from)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "4E8F403D-4CEA-46A6-894E-0977968D8737"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "759"
+            endingLineNumber = "759"
+            landmarkName = "Parser::parse_piecename(from)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "6BF80C5F-04F4-4064-9B5F-59752FC1C91B"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "884"
+            endingLineNumber = "884"
+            landmarkName = "Parser::lexParse(s)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "463A00E4-997A-40A6-8F9A-325B8A761881"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "883"
+            endingLineNumber = "883"
+            landmarkName = "Parser::lexParse(s)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "B37F0D81-3D61-4749-876F-0D1A896314BC"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "882"
+            endingLineNumber = "882"
+            landmarkName = "Parser::lexParse(s)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "CDD5EDC6-BBBB-4820-AF01-14B73A6F44C9"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "898"
+            endingLineNumber = "898"
+            landmarkName = "Parser::lexParse(s)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "857DB098-BCAF-4E6E-8B1B-119EADA2F7B1"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "872"
+            endingLineNumber = "872"
+            landmarkName = "Parser::lexParse(s)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "7866128D-C6DF-4F77-AA7F-5850A56AD1E8"
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
             startingLineNumber = "1121"
             endingLineNumber = "1121"
             landmarkName = "Builder::benchMatchingMoves(statement, flag)"
+=======
+            startingLineNumber = "850"
+            endingLineNumber = "850"
+            landmarkName = "Builder::searchPosition(db, query)"
+>>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "72EE7A5A-41B0-4A38-B3A9-4F85557AD597"
-            shouldBeEnabled = "Yes"
+            uuid = "CC49724B-3291-4551-8F6C-7AE8007614E8"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
             startingLineNumber = "1130"
             endingLineNumber = "1130"
             landmarkName = "Builder::benchMatchingMoves(statement, flag)"
+=======
+            startingLineNumber = "855"
+            endingLineNumber = "855"
+            landmarkName = "Builder::searchPosition(db, query)"
+>>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "711BBD47-EEC4-495D-A3A6-2D46944C0A12"
-            shouldBeEnabled = "Yes"
+            uuid = "D87AB489-1FAA-4DFD-8B7E-29478850E125"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
+<<<<<<< HEAD
             startingLineNumber = "1134"
             endingLineNumber = "1134"
             landmarkName = "Builder::benchMatchingMoves(statement, flag)"
+=======
+            startingLineNumber = "872"
+            endingLineNumber = "872"
+            landmarkName = "Builder::searchPosition(db, query)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "7917D731-B8F6-453D-A59E-6CC4649B7FBE"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/parser.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "206"
+            endingLineNumber = "206"
+            landmarkName = "Node::evaluate(bitboardVec)"
+>>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

@@ -1,8 +1,8 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021 developers
+ * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
+ * Copyright (c) 2021-2022 developers
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -121,7 +121,11 @@ namespace bslib {
 
         static bool isChessFenValid(const std::string& fen);
         static void staticInit();
-        static uint64_t posToBitboard[64];
+
+        static uint64_t _posToBitboard[64];
+
+        static uint64_t posToBitboard(const char* s);
+        static std::string bitboard2string(uint64_t bb);
 
     protected:
 

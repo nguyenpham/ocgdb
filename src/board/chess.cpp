@@ -1,8 +1,8 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021 developers
+ * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
+ * Copyright (c) 2021-2022 developers
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -1833,35 +1833,83 @@ uint64_t polyglotRandom64[800] = {
 };
 
 
-uint64_t ChessBoard::posToBitboard[64];
+uint64_t ChessBoard::_posToBitboard[64];
+
+static const int toSFPos[] {
+    SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
+    SQ_A7, SQ_B7, SQ_C7, SQ_D7, SQ_E7, SQ_F7, SQ_G7, SQ_H7,
+    SQ_A6, SQ_B6, SQ_C6, SQ_D6, SQ_E6, SQ_F6, SQ_G6, SQ_H6,
+    SQ_A5, SQ_B5, SQ_C5, SQ_D5, SQ_E5, SQ_F5, SQ_G5, SQ_H5,
+    SQ_A4, SQ_B4, SQ_C4, SQ_D4, SQ_E4, SQ_F4, SQ_G4, SQ_H4,
+    SQ_A3, SQ_B3, SQ_C3, SQ_D3, SQ_E3, SQ_F3, SQ_G3, SQ_H3,
+    SQ_A2, SQ_B2, SQ_C2, SQ_D2, SQ_E2, SQ_F2, SQ_G2, SQ_H2,
+    SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,
+};
 
 void ChessBoard::staticInit()
 {
     for(int i = 0; i < 64; ++i) {
-        posToBitboard[i] = 1ULL << i;
+        _posToBitboard[i] = 1ULL << toSFPos[i];
     }
+}
+
+// "e2", "a7"
+uint64_t ChessBoard::posToBitboard(const char* s)
+{
+    auto c = s[0], d = s[1];
+    if (c >= 'a' && c <= 'h' && d >= '1' && d <= '8') {
+        auto pos = static_cast<int>('8' - d) * 8 + static_cast<int>(c - 'a');
+        assert(pos >= 0 && pos < 64);
+        return _posToBitboard[pos];
+    }
+    
+    return 0;
 }
 
 std::vector<uint64_t> ChessBoard::posToBitboards() const
 {
-    std::vector<uint64_t> vec = { 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL, 0ULL };
-    assert(vec.size() == 9);
+    std::vector<uint64_t> vec = {   hashKey, 0ULL, 0ULL, 0ULL, 0ULL,
+                                    0ULL, 0ULL, 0ULL, 0ULL, 0ULL,
+                                    0ULL, 0ULL
+
+    };
+    assert(vec.size() == static_cast<int>(BBIdx::max));
     
     for (int i = 0; i < 64; i++) {
         auto piece = _getPiece(i);
         if (piece.isEmpty()) {
             continue;
         }
-        auto k = posToBitboard[i];
-        auto type = piece.type + 1;
+        auto k = _posToBitboard[i];
         auto sd = static_cast<int>(piece.side); assert(sd == 0 || sd == 1);
         
-        vec[type] |= k;
-        vec[sd] |= k;
+        vec[static_cast<int>(BBIdx::kings) + piece.type - 1] |= k;
+        vec[static_cast<int>(BBIdx::black) + sd] |= k;
+        
+        if (piece.type == static_cast<int>(PieceTypeStd::king)) {
+            vec[static_cast<int>(BBIdx::blackkingsquare) + sd] = k;
+        }
     }
 
     int64_t rights0 = castleRights[0], rights1 = castleRights[1];
-    vec[8] = (enpassant & 0xff) | rights0 << 8 | rights1 << 10;
-    assert(vec[0] && vec[1] && vec[2]); // two sides and king must be not zero
+    vec[static_cast<int>(BBIdx::prop)] = (enpassant & 0xff) | rights0 << 8 | rights1 << 10;
+    assert(vec[static_cast<int>(BBIdx::hash)] && vec[static_cast<int>(BBIdx::black)] && vec[static_cast<int>(BBIdx::white)]); // two sides and king must be not zero
+    assert(vec[static_cast<int>(BBIdx::blackkingsquare)] != vec[static_cast<int>(BBIdx::whitekingsquare)]);
     return vec;
+}
+
+
+std::string ChessBoard::bitboard2string(uint64_t bb)
+{
+    std::string s;
+    uint64_t k = 1;
+    for(int i = 0; i < 64; i++, k <<= 1) {
+        s += (bb & k) != 0 ? "1 " : ". ";
+        if (i && (i & 7) == 7) {
+            s += "\n";
+        }
+    }
+    
+    s += "bb: " + std::to_string(bb) + "\n";
+    return s;
 }

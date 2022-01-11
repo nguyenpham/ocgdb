@@ -127,6 +127,84 @@ make
 ```
 In macOS, you can run and compile with xCode with the project file in the folder ```projects```.
 
+
+## The query language 
+The EBNF (Extended Backus Naur Form) of the language as the below:
+
+```
+clause = condition { ("and" | "or" | "&&" | "||") condition }
+condition = expression { ( "=" | "<" | "<="| " >" | ">=" | "==“ | "!=" | "<>" ) expression }
+expression = term  {( "+" | "-" ) term }
+term = factor {( "*" | "/" ]) factor} 
+factor = number | piece | "(" expression ")"
+piece = piecename (<empty> | square | squareset)
+piecename = "K" | "Q" | "R" | "B" | "N" | "P" | "k" | "q" | "r" | "b" | "n" | "p" | "white" | "black"
+squareset = column | row | "[" (square | squarerange | columnrange | rowrange) { "," (square | squarerange | columnrange | rowrange) } "]"
+squarerange = square "-" square
+columnrange = column "-" column
+rowrange = row "-" row
+square = column row 
+column = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h"
+row = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8"
+```
+
+Some symbols are mixed between SQL style and C/C++ style (such as users can use both <> and != for not-equal comparison) just for convenience.
+
+A condition/expression may have some chess piece names such as Q (for white Queens), p (for black Pawns). When evaluating, they are counted as cardinalities/total numbers of those chess pieces on the chessboard.
+
+For examples:
+
+```
+R                the total number of White Rooks
+qb3              the total number of Black Queens on square b3
+B3               the total number of White Bishops on row 3
+bb               the total number of Black Bishops on column b
+n[b-e]           the total number of Black Knights from column b to e
+P[a4, c5, d5]    the total number of White Pawns on squares a4, c5, and d5
+```
+
+Users can do all calculations between those pieces, numbers and all will turn to conditions (true/false) in the end.
+
+The condition may be implicit or explicit:
+
+```
+R         the implicit form of the comparison R != 0
+R == 3        the total of White Rooks must be 3
+q[5-7] >= 2     the total of Black Queens from row 5 to row 7 must be equal or larger than 2
+```
+
+Some other examples:
+
+```
+// find all positions having 3 White Queens
+Q = 3
+
+// Find all positions having two Black Rooks in the middle squares
+r[e4, e5, d4, d5] = 2
+
+// White Pawns in d4, e5, f4, g4, Black King in b7
+P[d4, e5, f4, g4] = 4 and kb7
+
+// black Pawns in column b, row 5, from square a2 to d2 must be smaller than 4
+p[b, 5, a2 - d2] < 4
+
+// Black Pawns in column c more than 1
+pc > 1
+
+// White Pawns in row 3 from 2
+P3 >= 2
+
+// Two Bishops in column c, d, e, f
+B[c-f] + b[c-f] = 2
+
+// There are 5 white pieces in row 6
+white6 = 5
+```
+
+
+### The Parser
+Because the language is very simple and input strings are typically so short, we implement its parser in a simple, straightforward way, using recursive method. From an input string (query), the parser will create an evaluation tree. That tree will be evaluated at every chess position with the parameters as a set of bitboards of that position. The position and its game will be picked up as the result if the evaluation of the tree is true (not zero).
+
 ## History
 * 20/11/2021: Improve/clean code, improve speed for benchmark
 * 16/11/2021: Improve speed for converter, convert 3.45 million games under a minute

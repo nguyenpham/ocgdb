@@ -1,8 +1,8 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021 developers
+ * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
+ * Copyright (c) 2021-2022 developers
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -670,7 +670,7 @@ void BoardCore::_parseComment_standard(const std::string& comment, Hist& hist)
     hist.comment = str;
 }
 
-bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool parseComment, CreateExtra createExtra, int* moveCount)
+bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation notation, bool parseComment, CreateExtra createExtra, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> shouldStop, int* moveCount)
 {
     std::lock_guard<std::mutex> dolock(dataMutex);
 
@@ -813,6 +813,7 @@ bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool par
     std::string fenString;
     std::vector<uint64_t> bitboardVec;
     
+    auto hit = false;
     for(size_t i = 0; i < moveStringVec.size(); i++) {
         auto ss = moveStringVec.at(i);
 
@@ -844,6 +845,11 @@ bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool par
         if (createExtra == CreateExtra::bitboard) {
             bitboardVec = posToBitboards();
             assert(!bitboardVec.empty());
+
+            if (shouldStop && shouldStop(gameId, bitboardVec, this)) {
+                hit = true;
+                break;
+            }
         }
 
 
@@ -864,17 +870,16 @@ bool BoardCore::fromMoveList(const std::string& str, Notation notation, bool par
             histList.back().bitboardVec = bitboardVec;
         }
         
-//        {
-//            auto it = eSymMap.find(i);
-//            if (it != eSymMap.end()) {
-//                auto esym = Funcs::string2MoveEvaluationSymbol(it->second);
-//                if (esym != MoveEvaluationSymbol::none && !histList.empty()) {
-//                    histList.back().mes = esym;
-//                }
-//            }
-//
-//        }
     }
+    
+    // last position
+    if (shouldStop && !hit) {
+        bitboardVec = posToBitboards();
+        if (shouldStop(gameId, bitboardVec, this)) {
+            hit = true;
+        }
+    }
+
     return true;
 }
 
