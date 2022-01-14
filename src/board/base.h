@@ -358,11 +358,21 @@ namespace bslib {
 
         bool checkMake(int from, int dest, int promotion);
         virtual bool _checkMake(int from, int dest, int promotion) = 0;
-        
-        enum class CreateExtra {
-            none, fen, bitboard
+        virtual bool _quickCheckMake(int from, int dest, int promotion, bool createSanString) = 0;
+        virtual bool _quickCheck_rook(int from, int dest, bool checkMiddle) const;
+
+        enum ParseMoveListFlag {
+            ParseMoveListFlag_quick_check       = 1 << 0,
+            ParseMoveListFlag_create_fen        = 1 << 1,
+            ParseMoveListFlag_create_bitboard   = 1 << 2,
+            ParseMoveListFlag_parseComment      = 1 << 3,
+            
+            ParseMoveListFlag_move_size_1_byte  = 1 << 4, // for the 2nd function one only
         };
-        virtual bool fromMoveList(int64_t gameId, const std::string&, Notation, bool parseComment, CreateExtra, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> = nullptr, int* = nullptr);
+        
+        virtual bool fromMoveList(int64_t gameId, const std::string&, Notation, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> = nullptr);
+
+        virtual bool fromMoveList(int64_t gameId, const std::vector<int8_t>& moveVec, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> = nullptr);
 
         std::vector<HistBasic> parsePv(const std::string& pvString, bool isCoordinateOnly);
         std::vector<HistBasic> _parsePv(const std::string& pvString, bool isCoordinateOnly);

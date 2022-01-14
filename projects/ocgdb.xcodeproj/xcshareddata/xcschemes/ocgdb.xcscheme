@@ -64,23 +64,16 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-benchmoves"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/mb-3.45.pgn"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/345.ocgdb.db3"
             isEnabled = "YES">
-<<<<<<< HEAD
-=======
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/workspace/345.ocgdb.db3"
             isEnabled = "NO">
->>>>>>> searchwithtextparser
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/345a7.ocgdb.db3"
@@ -101,6 +94,10 @@
          <CommandLineArgument
             argument = "-cpu 4"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-cpu 1"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>

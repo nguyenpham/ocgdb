@@ -54,6 +54,7 @@ namespace bslib {
         virtual void _make(const MoveFull& move, Hist& hist) override;
         virtual void _takeBack(const Hist& hist) override;
         virtual bool _checkMake(int from, int dest, int promotion) override;
+        virtual bool _quickCheckMake(int from, int dest, int promotion, bool createSanString) override;
 
         virtual int charactorToPieceType(char ch) const override;
         
@@ -127,7 +128,22 @@ namespace bslib {
         static uint64_t posToBitboard(const char* s);
         static std::string bitboard2string(uint64_t bb);
 
+        static int16_t encode2Bytes(Move move);
+        static Move decode2Bytes(uint16_t d);
+        static std::pair<uint16_t, int> encode1Byte(MoveFull move);
+        std::pair<Move, int> decode1Byte(const int8_t* d);
+
     protected:
+        bool _quickCheck_bishop(int from, int dest, bool checkMiddle) const;
+        virtual bool _quickCheck_king(int from, int dest, bool checkMiddle) const;
+
+
+        std::vector<int> _attackByRook(int from, int dest, const Piece& movePiece);
+        std::vector<int> _attackByBishop(int from, int dest, const Piece& movePiece);
+        std::vector<int> _attackByQueen(int from, int dest, const Piece& movePiece);
+        std::vector<int> _attackByPawn(int from, int dest, const Piece& movePiece, const Piece& cap, int enpassant);
+        std::vector<int> _attackByKnight(int dest, const Piece& movePiece);
+        bool createSanStringForLastMove();
 
         virtual bool isValidPromotion(int promotion, Side) const override {
             return promotion > KING && promotion < static_cast<int>(PieceTypeStd::pawn);

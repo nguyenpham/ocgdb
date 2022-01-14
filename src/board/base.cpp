@@ -11,6 +11,7 @@
 #include <chrono>
 #include <map>
 #include <sstream>
+#include <iostream>
 
 #include "base.h"
 #include "chess.h"
@@ -137,10 +138,10 @@ void BoardCore::_newGame(std::string fen)
 
 void BoardCore::setupPieceIndexes()
 {
-    auto idx = 0;
+    int idxs[] = { 0, 0};
     for(auto && piece : pieces) {
         if (piece.isEmpty()) continue;
-        piece.idx = idx++;
+        piece.idx = idxs[static_cast<int>(piece.side)]++;
     }
 }
 
@@ -670,7 +671,7 @@ void BoardCore::_parseComment_standard(const std::string& comment, Hist& hist)
     hist.comment = str;
 }
 
-bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation notation, bool parseComment, CreateExtra createExtra, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> shouldStop, int* moveCount)
+bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation notation, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> shouldStop)
 {
     std::lock_guard<std::mutex> dolock(dataMutex);
 
@@ -761,7 +762,7 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
                     break;
                 }
                 
-                if (parseComment) {
+                if (flag & ParseMoveListFlag_parseComment) {
                     comment += ch;
                 }
                 break;
@@ -806,9 +807,9 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
         commentMap[moveStringVec.size()] = comment;
     }
 
-    if (moveCount) {
-        *moveCount = static_cast<int>(moveStringVec.size());
-    }
+//    if (moveCount) {
+//        *moveCount = static_cast<int>(moveStringVec.size());
+//    }
 
     std::string fenString;
     std::vector<uint64_t> bitboardVec;
@@ -831,18 +832,21 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
         
         /// Parse comment before making move for parsing pv
         auto parsedComment = false;
+        
         Hist tmphist;
-        auto it = commentMap.find(i + 1);
-        if (it != commentMap.end()) {
-            //histList.back().comment = it->second;
-            _parseComment(it->second, tmphist);
-            parsedComment = true;
+        if (flag & ParseMoveListFlag_parseComment) {
+            auto it = commentMap.find(i + 1);
+            if (it != commentMap.end()) {
+                //histList.back().comment = it->second;
+                _parseComment(it->second, tmphist);
+                parsedComment = true;
+            }
         }
 
-        if (createExtra == CreateExtra::fen) {
+        if (flag & ParseMoveListFlag_create_fen) {
             fenString = getFen();
-        } else
-        if (createExtra == CreateExtra::bitboard) {
+        }
+        if (flag & ParseMoveListFlag_create_bitboard) {
             bitboardVec = posToBitboards();
             assert(!bitboardVec.empty());
 
@@ -853,8 +857,14 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
         }
 
 
-        if (!_checkMake(move.from, move.dest, move.promotion)) {
-            return false;
+        if (flag & ParseMoveListFlag_quick_check) {
+            if (!_quickCheckMake(move.from, move.dest, move.promotion, false)) {
+                return false;
+            }
+        } else {
+            if (!_checkMake(move.from, move.dest, move.promotion)) {
+                return false;
+            }
         }
         
         assert(!histList.empty());
@@ -863,10 +873,11 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
             histList.back().esVec = tmphist.esVec;
         }
         
-        if (createExtra == CreateExtra::fen) {
+        if (flag & ParseMoveListFlag_create_fen) {
             histList.back().fenString = fenString;
-        } else
-        if (createExtra == CreateExtra::bitboard) {
+        }
+        
+        if (flag & ParseMoveListFlag_create_bitboard) {
             histList.back().bitboardVec = bitboardVec;
         }
         
@@ -882,6 +893,106 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
 
     return true;
 }
+
+bool BoardCore::_quickCheck_rook(int from, int dest, bool checkMiddle) const
+{
+    // same row
+    if (getRank(from) == getRank(dest)) {
+        if (checkMiddle) {
+            auto d = from < dest ? +1 : -1;
+            for(auto i = from + d, step = 0; i != dest; i += d, step++) {
+                assert(step < 8);
+                if (!_isEmpty(i)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    if (getColumn(from) != getColumn(dest)) {
+        return false;
+    }
+
+    // same file
+    if (checkMiddle) {
+        auto c = columnCount();
+        auto d = from < dest ? c : -c;
+        for(auto i = from + d, step = 0; i != dest; i += d, step++) {
+            assert(step < 8);
+            if (!_isEmpty(i)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool BoardCore::fromMoveList(int64_t gameId,
+                             const std::vector<int8_t>& moveVec, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> shouldStop)
+{
+    assert(!moveVec.empty());
+    
+    std::lock_guard<std::mutex> dolock(dataMutex);
+    
+    std::string fenString;
+    std::vector<uint64_t> bitboardVec;
+    
+    auto hit = false;
+
+    for(auto i = 0; i < moveVec.size();) {
+        if (flag & ParseMoveListFlag_create_fen) {
+            fenString = getFen();
+        }
+
+        if (flag & ParseMoveListFlag_create_bitboard) {
+            bitboardVec = posToBitboards();
+            assert(!bitboardVec.empty());
+
+            if (shouldStop && shouldStop(gameId, bitboardVec, this)) {
+                hit = true;
+                break;
+            }
+        }
+        
+        Move move;
+        
+        if (flag & ParseMoveListFlag_move_size_1_byte) {
+            auto pair = ((ChessBoard*)this)->decode1Byte(moveVec.data() + i);
+            assert(pair.second == 1 || pair.second == 2);
+            move = pair.first;
+            i += pair.second;
+        } else {
+            auto q = reinterpret_cast<const uint16_t*>(moveVec.data() + i);
+            move = ChessBoard::decode2Bytes(*q);
+            i += 2;
+        }
+
+        auto theSide = side;
+        auto fullmove = createFullMove(move.from, move.dest, move.promotion);
+        _make(fullmove); assert(side != theSide);
+
+        if (flag & ParseMoveListFlag_create_fen) {
+            histList.back().fenString = fenString;
+        }
+        if (flag & ParseMoveListFlag_create_bitboard) {
+            histList.back().bitboardVec = bitboardVec;
+        }
+    }
+
+    // last position
+    if (shouldStop && !hit) {
+        bitboardVec = posToBitboards();
+        if (shouldStop(gameId, bitboardVec, this)) {
+            hit = true;
+        }
+    }
+
+    return true;
+}
+
+
 
 std::string BoardCore::toMoveListString(Notation notation, int itemPerLine, bool moveCounter, CommentComputerInfoType computerInfoType, bool pawnUnit, int precision) const
 {

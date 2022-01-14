@@ -115,11 +115,11 @@
 		B189EA8427224A400075EA55 /* src */ = {
 			isa = PBXGroup;
 			children = (
-				B189EA8527224A400075EA55 /* board */,
-				B189EA9127224A400075EA55 /* 3rdparty */,
 				B189EAB927228BE60075EA55 /* Makefile */,
+				B189EA8527224A400075EA55 /* board */,
 				B189EA8D27224A400075EA55 /* builder.cpp */,
 				B189EA8E27224A400075EA55 /* builder.h */,
+				B189EA9127224A400075EA55 /* 3rdparty */,
 				B189EAAA27224A400075EA55 /* main.cpp */,
 				B1DDA40D27887B2200E5E2B6 /* parser.cpp */,
 				B1DDA40E27887B2200E5E2B6 /* parser.h */,
@@ -136,10 +136,10 @@
 				B189EA8627224A400075EA55 /* chess.h */,
 				B189EA8727224A400075EA55 /* chesstypes.cpp */,
 				B189EA8827224A400075EA55 /* types.h */,
+				B189EA8C27224A400075EA55 /* base.h */,
 				B189EA8927224A400075EA55 /* base.cpp */,
 				B189EA8A27224A400075EA55 /* chess.cpp */,
 				B189EA8B27224A400075EA55 /* chesstypes.h */,
-				B189EA8C27224A400075EA55 /* base.h */,
 			);
 			path = board;
 			sourceTree = "<group>";

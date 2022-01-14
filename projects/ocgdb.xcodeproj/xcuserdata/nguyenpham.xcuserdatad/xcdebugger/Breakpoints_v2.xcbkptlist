@@ -14,13 +14,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "409"
-            endingLineNumber = "409"
-=======
-            startingLineNumber = "337"
-            endingLineNumber = "337"
->>>>>>> searchwithtextparser
+            startingLineNumber = "359"
+            endingLineNumber = "359"
             landmarkName = "Builder::processPgnFile(path)"
             landmarkType = "7">
          </BreakpointContent>
@@ -35,15 +30,9 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "592"
-            endingLineNumber = "592"
-            landmarkName = "Builder::createDb(path)"
-=======
-            startingLineNumber = "563"
-            endingLineNumber = "563"
+            startingLineNumber = "603"
+            endingLineNumber = "603"
             landmarkName = "Builder::addGame(itemMap, moveText)"
->>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -57,15 +46,9 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "698"
-            endingLineNumber = "698"
-            landmarkName = "Builder::getNameId(name, elo, cnt, insertStatement, idMap)"
-=======
-            startingLineNumber = "812"
-            endingLineNumber = "812"
-            landmarkName = "Builder::parsePGNGame(gameID, fenText, moveText)"
->>>>>>> searchwithtextparser
+            startingLineNumber = "893"
+            endingLineNumber = "893"
+            landmarkName = "Builder::updateBoard(board, bbvec)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -79,15 +62,9 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "759"
-            endingLineNumber = "759"
-            landmarkName = "Builder::addGame(itemMap, moveText)"
-=======
-            startingLineNumber = "800"
-            endingLineNumber = "800"
-            landmarkName = "Builder::threadParsePGNGame(gameID, fenText, moveText)"
->>>>>>> searchwithtextparser
+            startingLineNumber = "881"
+            endingLineNumber = "881"
+            landmarkName = "Builder::updateBoard(board, bbvec)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -101,15 +78,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "631"
-            endingLineNumber = "631"
-            landmarkName = "Builder::setDatabasePath(path)"
-=======
             startingLineNumber = "786"
             endingLineNumber = "786"
             landmarkName = "Parser::lexParse(s)"
->>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -123,11 +94,6 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "658"
-            endingLineNumber = "658"
-            landmarkName = "Builder::getPlayerNameId(name, elo)"
-=======
             startingLineNumber = "369"
             endingLineNumber = "369"
             landmarkName = "unknown"
@@ -147,7 +113,6 @@
             startingLineNumber = "801"
             endingLineNumber = "801"
             landmarkName = "Parser::lexParse(s)"
->>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -161,15 +126,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "666"
-            endingLineNumber = "666"
-            landmarkName = "Builder::getEventNameId(name)"
-=======
             startingLineNumber = "889"
             endingLineNumber = "889"
             landmarkName = "Parser::lexParse(s)"
->>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -183,15 +142,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "674"
-            endingLineNumber = "674"
-            landmarkName = "Builder::getNameId(name, elo, cnt, insertStatement, idMap)"
-=======
             startingLineNumber = "436"
             endingLineNumber = "436"
             landmarkName = "Parser::parse(s)"
->>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -205,15 +158,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "686"
-            endingLineNumber = "686"
-            landmarkName = "Builder::getNameId(name, elo, cnt, insertStatement, idMap)"
-=======
             startingLineNumber = "434"
             endingLineNumber = "434"
             landmarkName = "Parser::parse(s)"
->>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -227,15 +174,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "625"
-            endingLineNumber = "625"
-            landmarkName = "Builder::createDb(path)"
-=======
             startingLineNumber = "649"
             endingLineNumber = "649"
             landmarkName = "Parser::parse_factor(from)"
->>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -249,15 +190,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "636"
-            endingLineNumber = "636"
-            landmarkName = "Builder::setDatabasePath(path)"
-=======
             startingLineNumber = "744"
             endingLineNumber = "744"
             landmarkName = "Parser::parse_piecename(from)"
->>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -271,17 +206,10 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "641"
-            endingLineNumber = "641"
-            landmarkName = "unknown"
-            landmarkType = "0">
-=======
             startingLineNumber = "620"
             endingLineNumber = "620"
             landmarkName = "Parser::parse_term(from)"
             landmarkType = "7">
->>>>>>> searchwithtextparser
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -294,15 +222,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "120"
-            endingLineNumber = "120"
-            landmarkName = "Builder::saveBitboards(hashKey, bitboardVec, gameID)"
-=======
             startingLineNumber = "684"
             endingLineNumber = "684"
             landmarkName = "Parser::parse_piece(from)"
->>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -316,15 +238,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "1363"
-            endingLineNumber = "1363"
-            landmarkName = "Builder::benchMatchingMoves(dbPath)"
-=======
             startingLineNumber = "720"
             endingLineNumber = "720"
             landmarkName = "Parser::parse_squareset(node, from)"
->>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -354,15 +270,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "1362"
-            endingLineNumber = "1362"
-            landmarkName = "Builder::benchMatchingMoves(dbPath)"
-=======
             startingLineNumber = "715"
             endingLineNumber = "715"
             landmarkName = "Parser::parse_squareset(node, from)"
->>>>>>> searchwithtextparser
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -481,71 +391,6 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "7866128D-C6DF-4F77-AA7F-5850A56AD1E8"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "1121"
-            endingLineNumber = "1121"
-            landmarkName = "Builder::benchMatchingMoves(statement, flag)"
-=======
-            startingLineNumber = "850"
-            endingLineNumber = "850"
-            landmarkName = "Builder::searchPosition(db, query)"
->>>>>>> searchwithtextparser
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "CC49724B-3291-4551-8F6C-7AE8007614E8"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "1130"
-            endingLineNumber = "1130"
-            landmarkName = "Builder::benchMatchingMoves(statement, flag)"
-=======
-            startingLineNumber = "855"
-            endingLineNumber = "855"
-            landmarkName = "Builder::searchPosition(db, query)"
->>>>>>> searchwithtextparser
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "D87AB489-1FAA-4DFD-8B7E-29478850E125"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-<<<<<<< HEAD
-            startingLineNumber = "1134"
-            endingLineNumber = "1134"
-            landmarkName = "Builder::benchMatchingMoves(statement, flag)"
-=======
-            startingLineNumber = "872"
-            endingLineNumber = "872"
-            landmarkName = "Builder::searchPosition(db, query)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
             uuid = "7917D731-B8F6-453D-A59E-6CC4649B7FBE"
             shouldBeEnabled = "No"
             ignoreCount = "0"
@@ -556,7 +401,150 @@
             startingLineNumber = "206"
             endingLineNumber = "206"
             landmarkName = "Node::evaluate(bitboardVec)"
->>>>>>> searchwithtextparser
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "AAFF2F2E-4A7D-4DB6-BF91-752E60C14583"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/board/chess.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "2664"
+            endingLineNumber = "2664"
+            landmarkName = "ChessBoard::decode1Byte(d)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "362F7FC9-D230-4BD2-B975-1A4277135421"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/board/chess.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "2673"
+            endingLineNumber = "2673"
+            landmarkName = "ChessBoard::decode1Byte(d)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "9B7700B7-5468-4F7C-8382-D6E6390A6BC4"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/board/chess.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "2653"
+            endingLineNumber = "2653"
+            landmarkName = "ChessBoard::decode1Byte(d)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "63853514-FA10-4813-9B4B-4EE17F666374"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/board/base.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "944"
+            endingLineNumber = "944"
+            landmarkName = "BoardCore::fromMoveList(gameId, moveVec, flag, shouldStop)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "E19FF5A1-7E11-4BE8-AACC-EA53D7774A4C"
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/board/chess.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "2666"
+            endingLineNumber = "2666"
+            landmarkName = "ChessBoard::decode1Byte(d)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "A26EC049-0274-4359-966C-71CDE385F159"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/builder.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "995"
+            endingLineNumber = "995"
+            landmarkName = "Builder::searchPosition(db, query)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "D3D2B433-110A-468E-850A-EDAD65F5F9B5"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/board/chess.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "2414"
+            endingLineNumber = "2414"
+            landmarkName = "ChessBoard::staticInit()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "9279336F-D359-4B66-8457-EF0D08AB8EE6"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/board/chess.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "2420"
+            endingLineNumber = "2420"
+            landmarkName = "ChessBoard::staticInit()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "C946496C-4043-4E13-9799-EBAC6A5CEE47"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/board/chess.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "2415"
+            endingLineNumber = "2415"
+            landmarkName = "ChessBoard::staticInit()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
