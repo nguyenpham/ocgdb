@@ -24,8 +24,60 @@
 
 namespace ocgdb {
 
-const int EncodeMoveSize = 2;
-const bool KeepMovesField = false;
+// Current limit is about 4 billion, we can change later by changing this define
+#define IDInteger uint32_t
+
+enum class ColumnMovesMode
+{
+    none,
+    moves, moves1, moves2,
+    moves_moves1, moves_moves2
+};
+
+enum class Task
+{
+    createSQLdatabase,
+    query,
+    bench
+};
+
+enum class Option
+{
+    comment_discard,
+    site_discard,
+    accept_newTags,
+    player_limit_elo,
+    player_discard_no_elo,
+
+    query_stop_at_first_result,
+    query_print_all,
+    query_print_fen,
+    query_print_pgn,
+};
+
+class ParaRecord
+{
+public:
+    std::vector<std::string> pgnPaths;
+    std::string dbPath;
+
+    std::vector<std::string> queries;
+    std::set<Option> optionSet;
+
+    Task task = Task::createSQLdatabase;
+    int cpuNumber = -1, lowElo = 0;
+    int64_t gameNumberLimit = 0xffffffffffffULL; // stop when the number of games reached that limit
+    
+    ColumnMovesMode columnMovesMode = ColumnMovesMode::moves;
+    
+    mutable std::string errorString;
+    
+    std::string getErrorString() const {
+        return errorString;
+    }
+    std::string toString() const;
+    bool isValid() const;
+};
 
 class ThreadRecord
 {
@@ -33,9 +85,12 @@ public:
     ~ThreadRecord();
     void init(SQLite::Database* mDb);
 
+    bool createInsertGameStatement(SQLite::Database* mDb, const std::unordered_map<std::string, int>&);
+    
 public:
     int64_t errCnt = 0, gameCnt = 0, hdpLen = 0;
-    
+    int insertGameStatementIdxSz = -1;
+
     bslib::BoardCore *board = nullptr;
     int8_t* buf = nullptr;
     SQLite::Statement *insertGameStatement = nullptr;
@@ -59,15 +114,14 @@ public:
     Builder();
     virtual ~Builder();
 
-    void convertPgn2Sql(const std::string& pgnPath, const std::string& sqlitePath, int cpu);
-
-    void bench(const std::string& path, int cpu);
-
+    void runTask(const ParaRecord&);
+    
+public:
     bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
 
     static bslib::BoardCore* createBoard(bslib::ChessVariant variant);
 
-    std::set<int> gameIdSet;
+    std::set<IDInteger> gameIdSet;
 
     void parsePGNGame(int64_t gameID, const std::string& fenText, const std::string& moveText, const std::vector<int8_t>& vec);
 
@@ -81,11 +135,13 @@ public:
 
 
 private:
-    void searchPosition(SQLite::Database& db, const std::string& query);
+    void convertPgn2Sql(const ParaRecord&);
+    void bench(const std::string& path, int cpu, const std::set<Option>& optionSet);
+    void query(const std::string& dbPath, int cpu, const std::vector<std::string>& queries, const std::set<Option>& optionSet);
 
-//    void searchPositions(SQLite::Database& db, std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*)> checkToStop);
+    void searchPosition(SQLite::Database& db, const std::string& query);
     
-    static SQLite::Database* createDb(const std::string& path);
+    SQLite::Database* createDb(const std::string& path);
     static std::string encodeString(const std::string& name);
 
     void setDatabasePath(const std::string& path);
@@ -97,7 +153,7 @@ private:
     int getSiteNameId(char* name);
     int getPlayerNameId(char* name, int elo);
 
-    int getNameId(char* name, int elo, int& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, int>& idMap);
+    IDInteger getNameId(char* name, int elo, IDInteger& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, IDInteger>& idMap);
 
     void printStats() const;
 
@@ -112,6 +168,8 @@ private:
 
     static int standardizeFEN(char *fenBuf);
 
+    int addNewField(const char* fieldName);
+
 private:
     SearchField searchField;
     const size_t blockSz = 8 * 1024 * 1024;
@@ -123,7 +181,7 @@ private:
 
     std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*)> checkToStop = nullptr;
 
-    std::unordered_map<std::string, int> playerIdMap, eventIdMap, siteIdMap;
+    std::unordered_map<std::string, IDInteger> playerIdMap, eventIdMap, siteIdMap;
 
     bslib::ChessVariant chessVariant = bslib::ChessVariant::standard;
 
@@ -141,12 +199,36 @@ private:
     mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
 
-    mutable std::mutex parsingMutex;
+    std::unordered_map<std::string, int> fieldOrderMap;
+    mutable std::mutex parsingMutex, tagFieldMutex;
+    std::set<std::string> extraFieldSet;
+
+    int tagIdx_Moves, tagIdx_MovesBlob, insertGameStatementIdxSz;
+    IDInteger gameCnt, eventCnt, playerCnt, siteCnt;
+
+    bool createoption_site_discard = true;
+    bool createoption_comment_discard = true;
+    int  createoption_EncodeMoveSize = 1;
+    bool createoption_KeepMovesField = false;
+    bool createoption_AcceptNewField = false;
+    int64_t createoption_gameNumberLimit;
+    uint createoption_lowElo;
+
+    bool createoption_elo_limit = true;
+    bool createoption_elo_discard_no_elo = true;
     
+    enum {
+        query_flag_stop_at_first_result     = 1 << 0,
+        query_flag_print_all                = 1 << 1,
+        query_flag_print_fen                = 1 << 2,
+        query_flag_print_pgn                = 1 << 3,
+    };
+    int query_flag;
+
     /// For stats
     std::chrono::steady_clock::time_point startTime;
-    int gameCnt, eventCnt, playerCnt, siteCnt, hashHit;
-    int64_t errCnt, posCnt, succCount; // hashCnt,
+    int64_t hashHit;
+    int64_t blockCnt, processedPgnSz, errCnt, posCnt, succCount;
 };
 
 

@@ -365,9 +365,10 @@ namespace bslib {
             ParseMoveListFlag_quick_check       = 1 << 0,
             ParseMoveListFlag_create_fen        = 1 << 1,
             ParseMoveListFlag_create_bitboard   = 1 << 2,
-            ParseMoveListFlag_parseComment      = 1 << 3,
+            ParseMoveListFlag_discardComment    = 1 << 3,
+            ParseMoveListFlag_parseComment      = 1 << 4,
             
-            ParseMoveListFlag_move_size_1_byte  = 1 << 4, // for the 2nd function one only
+            ParseMoveListFlag_move_size_1_byte  = 1 << 5, // for the 2nd function one only
         };
         
         virtual bool fromMoveList(int64_t gameId, const std::string&, Notation, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> = nullptr);

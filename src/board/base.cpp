@@ -748,7 +748,7 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
 
             case State::comment:
                 if (ch == '}') {
-                    if (!comment.empty()) {
+                    if ((flag & ParseMoveListFlag_discardComment) == 0 && !comment.empty()) {
                         auto k = moveStringVec.size();
                         auto it = commentMap.find(k);
                         if (it != commentMap.end()) {
@@ -762,7 +762,7 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
                     break;
                 }
                 
-                if (flag & ParseMoveListFlag_parseComment) {
+                if ((flag & ParseMoveListFlag_discardComment) == 0) {
                     comment += ch;
                 }
                 break;
@@ -831,15 +831,21 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
         }
         
         /// Parse comment before making move for parsing pv
-        auto parsedComment = false;
+        auto hasComment = false;
         
         Hist tmphist;
-        if (flag & ParseMoveListFlag_parseComment) {
+        if (!commentMap.empty()) {
             auto it = commentMap.find(i + 1);
             if (it != commentMap.end()) {
-                //histList.back().comment = it->second;
-                _parseComment(it->second, tmphist);
-                parsedComment = true;
+                if (flag & ParseMoveListFlag_parseComment) {
+                    _parseComment(it->second, tmphist);
+                } else {
+                    if (!tmphist.comment.empty()) {
+                        tmphist.comment + ", ";
+                    }
+                    tmphist.comment += it->second;
+                }
+                hasComment = true;
             }
         }
 
@@ -868,7 +874,7 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
         }
         
         assert(!histList.empty());
-        if (parsedComment) {
+        if (hasComment) {
             histList.back().comment = tmphist.comment;
             histList.back().esVec = tmphist.esVec;
         }
