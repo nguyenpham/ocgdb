@@ -69,7 +69,7 @@ However, it has some advantages:
 - Come with many strong, matrual SQL engines and libraries
 
 
-## #Overcome drawbacks
+### Overcome drawbacks
 We confirm we have got all necessary information and overcomed all drawbacks of using SQL/SQLite. The chess game databases work very well and they are one of the smallest and fastest ones in chess game database world.
 
 
@@ -87,7 +87,7 @@ For examples of file names:
 Names of tables, columns... should be Camel style, less space and close to PGN tag names as much as possible. 
 For examples: ```White, BlackElo, PlyCount, GameCount, FEN```
 
-## #Some important Table names
+### Some important Table names
 - Events: for event names
 - Sites: for site names
 - Players: for player names
@@ -95,14 +95,14 @@ For examples: ```White, BlackElo, PlyCount, GameCount, FEN```
 - Comments: for comments of moves
 - Info: for brief information such as GameCount, playerCount, EventCount...
 
-## # Field names
+### Field names
 PGN standard requires some name tags (compulsory), the database should have those fields too. If one is an index field, uses suffix ID.
 An important field is Moves to keep all moves in text form.
 
 For examples of field names:
 ```EventID, WhiteID, BlackElo, Round, Result, Date, FEN, Moves```
 
-## # Field values
+### Field values
 Except for fields of identicals such EventID, SiteID, WhiteID, BlackID, values of other fields could be NULL.
 
 
@@ -211,11 +211,11 @@ white6 = 5
 ```
 
 
-## # The Parser
+### The Parser
 Because the language is very simple and input strings are typically so short, we implement its parser in a simple, straightforward way, using the recursive method. From an input string (query), the parser will create an evaluation tree. That tree will be evaluated at every chess position with the parameters as a set of bitboards of that position. The position and its game will be picked up as the result of the evaluation of the tree is true (not zero).
 
 
-## # Matching
+### Matching
 
 ```
 SELECT g.ID, g.Round, Date, w.Name White, WhiteElo, b.Name Black, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves FROM Games g INNER JOIN Players w ON WhiteID = w.ID INNER JOIN Players b ON BlackID = b.ID WHERE g.Moves LIKE '1.d4 Nf6 2.Nf3 d5 3.e3 Bf5 4.c4 c6 5.Nc3 e6%'
