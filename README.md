@@ -250,6 +250,19 @@ make
 In macOS, Windows, you can run and compile with Xcode/Visual Studio with the project files in the folder ```projects```.
 
 
+## Usage
+
+Users may run the program:
+- for creating SQLite databases from PGN files:
+```
+ocgdb -pgn c:\games\big.png -db c:\db\big.ocgdb.db3 -cpu 4 -encode 2
+```
+
+- for querying positions:
+```
+ocgdb -db c:\db\big.ocgdb.db3 -cpu 4 -q "Q=3" -q"P[d4, e5, f4, g4] = 4 and kb7"
+```
+
 ## History
 * 23/01/2022: Version Alpha
 * 20/11/2021: Improve/clean code, improve speed for benchmark

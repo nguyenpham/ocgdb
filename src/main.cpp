@@ -24,12 +24,12 @@ int main(int argc, const char * argv[]) {
     
     // for creating
     paraRecord.columnMovesMode = ocgdb::ColumnMovesMode::moves2;
-//    paraRecord.optionSet.insert(ocgdb::Option::comment_discard);
-//    paraRecord.optionSet.insert(ocgdb::Option::site_discard);
+    paraRecord.optionSet.insert(ocgdb::Option::comment_discard);
+    paraRecord.optionSet.insert(ocgdb::Option::site_discard);
 //    paraRecord.gameNumberLimit = 0xff;
     
     // for querying
-//    paraRecord.optionSet.insert(ocgdb::Option::query_print_all);
+    paraRecord.optionSet.insert(ocgdb::Option::query_print_all);
     paraRecord.optionSet.insert(ocgdb::Option::query_print_fen);
 
     auto keepMovesField = false, setupMovesFields = false;
