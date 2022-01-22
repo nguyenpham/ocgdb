@@ -15,6 +15,10 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
+#include <assert.h>
+#include <mutex>
+#include <functional>
+#include <cstring>
 
 #include "types.h"
 #include "funcs.h"

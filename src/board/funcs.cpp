@@ -10,6 +10,8 @@
 
 #include <sstream>
 #include <iomanip>
+#include <cstring>
+#include <assert.h>
 
 #include "funcs.h"
 

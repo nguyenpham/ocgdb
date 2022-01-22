@@ -212,7 +212,7 @@ private:
     bool createoption_KeepMovesField = false;
     bool createoption_AcceptNewField = false;
     int64_t createoption_gameNumberLimit;
-    uint createoption_lowElo;
+    uint32_t createoption_lowElo;
 
     bool createoption_elo_limit = true;
     bool createoption_elo_discard_no_elo = true;

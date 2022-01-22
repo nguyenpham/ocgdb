@@ -223,10 +223,11 @@ SELECT g.ID, g.Round, Date, w.Name White, WhiteElo, b.Name Black, BlackElo, Resu
 
 
 ##Sample databases
-There are two sample databases in the folder samples:
+There are two sample databases in the samples project at:
+https://github.com/nguyenpham/ocgdb-samples
 
 - carlsen.ocgdc.db3 with over 2000 games, moves keeps as text and stored in Moves
-- mb-3.45.ocgdb.db3.zip: the MillionBase database (by Ed Schröder) of 3.45 million games, encoded moves as two bytes (Moves2)
+- mb-3.45.ocgdb.db3 the MillionBase database (by Ed Schröder) of 3.45 million games, encoded moves as two bytes (Moves2)
 
 You may open it with any SQLite browsers/tools and make some queries to understand its structures, speed, advantages, and disadvantages.
 
@@ -245,11 +246,12 @@ Run make file in the subfolder ```src```:
 cd src
 make
 ```
-In macOS, you can run and compile with Xcode with the project file in the folder ```projects```.
+
+In macOS, Windows, you can run and compile with Xcode/Visual Studio with the project files in the folder ```projects```.
 
 
 ## History
-* 21/01/2022: Version Alpha
+* 23/01/2022: Version Alpha
 * 20/11/2021: Improve/clean code, improve speed for benchmark
 * 16/11/2021: Improve speed for converter, convert 3.45 million games under a minute
 * 8/11/2021: Improve speed for converter, from 6 to over 247 times faster
