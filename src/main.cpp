@@ -107,16 +107,16 @@ int main(int argc, const char * argv[]) {
         std::cerr << "Usage:" << std::endl;
         std::cerr << " ocgdb [<options>]" << std::endl;
         std::cerr << std::endl;
-        std::cerr << " -pgn <file>           PGN game database file" << std::endl;
+        std::cerr << " -pgn <file>           PGN game database file, repeat to add multi files" << std::endl;
         std::cerr << " -db <file>            create database, extension should be .ocgdb.db3" << std::endl;
         std::cerr << "                       use :memory: to create in-memory database" << std::endl;
-        std::cerr << " -cpu <n>              number of threads, omit for all cores, works with -pgn, -bench" << std::endl;
+        std::cerr << " -cpu <n>              number of threads, omit for all cores, works with -pgn, -bench, -query" << std::endl;
         std::cerr << " -elo <n>              low limit of Elo" << std::endl;
         std::cerr << " -keepmoves            keep field Moves when creating db, works with -pgn, -db" << std::endl;
         std::cerr << " -encode <n>           n must be 0 (not binary moves), 1 or 2 for field Moves1 or Moves2 when creating db" << std::endl;
 
         std::cerr << " -bench                benchmarch querying games speed, works with -db and -cpu" << std::endl;
-        std::cerr << " -q <query>            querying positions, works with -db and -cpu" << std::endl;
+        std::cerr << " -q <query>            querying positions, repeat to add multi queries, works with -db and -cpu" << std::endl;
         std::cerr << std::endl;
         std::cerr << "Examples:" << std::endl;
         std::cerr << " ocgdb -pgn c:\\games\\big.png -db c:\\db\\big.ocgdb.db3 -cpu 4 -encode 2" << std::endl;

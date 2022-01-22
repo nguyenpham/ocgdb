@@ -445,10 +445,6 @@ int Builder::addNewField(const char* fieldName)
     bslib::Funcs::toLower(s);
     
     if (extraFieldSet.find(s) == extraFieldSet.end()) {
-        extraFieldSet.insert(s);
-        extraFieldSet.insert(s0);
-        insertGameStatementIdxSz++;
-
         s = fieldName;
         try {
             mDb->exec("ALTER TABLE Games ADD COLUMN " + s + " TEXT");
@@ -466,6 +462,10 @@ int Builder::addNewField(const char* fieldName)
             fieldOrderMap[s] = order;
             fieldOrderMap[s0] = order;
         }
+
+        extraFieldSet.insert(s);
+        extraFieldSet.insert(s0);
+        insertGameStatementIdxSz++;
 
         assert(order > 0);
         return order;
