@@ -239,17 +239,10 @@ void Builder::printStats() const
 {
     int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
     
-//    int64_t moveCnt = 0;
-//    for(auto && t : threadMap) {
-//        moveCnt += t.second.hdpLen;
-//    }
-
     std::cout << "#games: " << gameCnt
               << ", elapsed: " << elapsed << "ms "
               << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
               << ", speed: " << gameCnt * 1000ULL / elapsed << " games/s"
-//              << ", #moves: " << moveCnt << ", average moves/game: " << moveCnt / std::max<int64_t>(1LL, gameCnt)
-
               << ", #blocks: " << blockCnt << ", processed size: " << processedPgnSz / (1024 * 1024ULL) << " MB"
               << std::endl;
 }
@@ -646,7 +639,7 @@ uint64_t Builder::processPgnFile(const std::string& path)
                 transactionCnt--;
                 if (transactionCnt <= 0) {
                     mDb->exec("COMMIT");
-                    std::cout << "COMMIT TRANSACTION, #playerIdMap: " << playerIdMap.size() << ", #eventIdMap: " << eventIdMap.size() << std::endl;
+                    std::cout << "COMMIT TRANSACTION" << std::endl;
                 }
 
                 if (idx && (idx & 0xf) == 0) {
