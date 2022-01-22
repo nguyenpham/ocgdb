@@ -3,7 +3,7 @@
 Version Alpha
 
 
-##Features/Highlights of the Standard
+## Features/Highlights of the Standard
 - Developed based on SQL in general, SQLite in particular
 - It has an open data structure: very easy to understand, change, convert to/from other formats
 - Terms, names, types… are followed PGN standard as much as possible
@@ -20,7 +20,7 @@ Version Alpha
 We believe it is one of the fastest (in terms of speeds of creating and querying/searching), smallest (in terms of database sizes), strongest (in terms of game numbers), and smartest (in terms of querying/position-searching) chess game database programs. It could compete for all parameters, results with the best chess game database formats and their programs/tools.
 
 
-##Overview
+## Overview
 
 Almost all popular/published chess game databases are in binary formats. Those formats have some advantages such as being fast and compact. However, they also have some drawbacks:
  
@@ -55,7 +55,7 @@ Thus we think we need a new format that could be used to exchange databases betw
 - Almost free for all (MIT/or less restriction license)
 
 
-##SQL/SQLite
+## SQL/SQLite
 We have picked up SQL/SQLite as the main tools/direction to develop the new database. Using SQL for the chess game database is not new, someone has tried already (and gave up). We have known it has some reason drawbacks such as slow and large on size.
 
 However, it has some advantages:
@@ -69,11 +69,11 @@ However, it has some advantages:
 - Come with many strong, matrual SQL engines and libraries
 
 
-###Overcome drawbacks
+## #Overcome drawbacks
 We confirm we have got all necessary information and overcomed all drawbacks of using SQL/SQLite. The chess game databases work very well and they are one of the smallest and fastest ones in chess game database world.
 
 
-##File name extension
+## File name extension
 It should keep the normal extension of a database. For example, the one for SQLite should have the extension .db3. It should have upper/extra extension .ocgdb to distinguish it from other databases.
 For examples of file names:
 
@@ -87,7 +87,7 @@ For examples of file names:
 Names of tables, columns... should be Camel style, less space and close to PGN tag names as much as possible. 
 For examples: ```White, BlackElo, PlyCount, GameCount, FEN```
 
-###Some important Table names
+## #Some important Table names
 - Events: for event names
 - Sites: for site names
 - Players: for player names
@@ -95,14 +95,14 @@ For examples: ```White, BlackElo, PlyCount, GameCount, FEN```
 - Comments: for comments of moves
 - Info: for brief information such as GameCount, playerCount, EventCount...
 
-### Field names
+## # Field names
 PGN standard requires some name tags (compulsory), the database should have those fields too. If one is an index field, uses suffix ID.
 An important field is Moves to keep all moves in text form.
 
 For examples of field names:
 ```EventID, WhiteID, BlackElo, Round, Result, Date, FEN, Moves```
 
-### Field values
+## # Field values
 Except for fields of identicals such EventID, SiteID, WhiteID, BlackID, values of other fields could be NULL.
 
 
@@ -117,7 +117,7 @@ All moves of a game could be stored in some forms in some specific fields as the
 - Moves2: similar to Moves1 but each move is encoded as 2 bytes
 
 
-##Converting speed
+## Converting speed
 We tested on an iMac 3.6 GHz Quad-Core i7, 16 GB RAM (the year 2017), converting a PGN file with 3.45 million games, size 2.42 GB.
 
 Convert into a db3 file (.db3, stored on the hard disk), required 29 seconds:
@@ -211,18 +211,18 @@ white6 = 5
 ```
 
 
-### The Parser
+## # The Parser
 Because the language is very simple and input strings are typically so short, we implement its parser in a simple, straightforward way, using the recursive method. From an input string (query), the parser will create an evaluation tree. That tree will be evaluated at every chess position with the parameters as a set of bitboards of that position. The position and its game will be picked up as the result of the evaluation of the tree is true (not zero).
 
 
-### Matching
+## # Matching
 
 ```
 SELECT g.ID, g.Round, Date, w.Name White, WhiteElo, b.Name Black, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves FROM Games g INNER JOIN Players w ON WhiteID = w.ID INNER JOIN Players b ON BlackID = b.ID WHERE g.Moves LIKE '1.d4 Nf6 2.Nf3 d5 3.e3 Bf5 4.c4 c6 5.Nc3 e6%'
 ```
 
 
-##Sample databases
+## Sample databases
 There are two sample databases in the samples project at:
 https://github.com/nguyenpham/ocgdb-samples
 
@@ -232,11 +232,11 @@ https://github.com/nguyenpham/ocgdb-samples
 You may open it with any SQLite browsers/tools and make some queries to understand its structures, speed, advantages, and disadvantages.
 
 
-##SQL commands
+## SQL commands
 The file SqlCmd.md contains some SQL commands to create databases and tables, examples to insert, and query tables.
 
 
-##Code
+## Code
 All samples, tools are C++ 17.
 
 ## Compile
