@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <set>
+#include <unordered_map>
 
 #include <iomanip> // for setfill, setw
 
@@ -224,6 +225,10 @@ namespace bslib {
             result.result = ResultType::noresult;
         }
 
+        virtual std::string toString() const {
+            return "";
+        }
+
         bool isValid(const Move& move) const {
             return move.isValid() && isPositionValid(move.from) && isPositionValid(move.dest);
         }
@@ -363,12 +368,13 @@ namespace bslib {
 
         enum ParseMoveListFlag {
             ParseMoveListFlag_quick_check       = 1 << 0,
-            ParseMoveListFlag_create_fen        = 1 << 1,
-            ParseMoveListFlag_create_bitboard   = 1 << 2,
-            ParseMoveListFlag_discardComment    = 1 << 3,
-            ParseMoveListFlag_parseComment      = 1 << 4,
+            ParseMoveListFlag_create_san        = 1 << 1,
+            ParseMoveListFlag_create_fen        = 1 << 2,
+            ParseMoveListFlag_create_bitboard   = 1 << 3,
+            ParseMoveListFlag_discardComment    = 1 << 4,
+            ParseMoveListFlag_parseComment      = 1 << 5,
             
-            ParseMoveListFlag_move_size_1_byte  = 1 << 5, // for the 2nd function one only
+            ParseMoveListFlag_move_size_1_byte  = 1 << 6, // for the 2nd function one only
         };
         
         virtual bool fromMoveList(int64_t gameId, const std::string&, Notation, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> = nullptr);
@@ -386,6 +392,7 @@ namespace bslib {
         static std::string toMoveListString(const std::vector<Hist>& histList, ChessVariant variant, Notation notation, int itemPerLine, bool moveCounter, CommentComputerInfoType computingInfo, bool pawnUnit, int precision);
 
         virtual std::string toSimplePgn() const;
+        virtual std::string toPgn(const std::unordered_map<std::string, std::string> tags) const;
 
         virtual int16_t move2i16(int from, int dest, int promotion, bool haveComment) const = 0;
         virtual void i16ToMove(int data, int& from, int& dest, int& promotion, bool& haveComment) const = 0;

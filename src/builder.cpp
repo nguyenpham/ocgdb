@@ -29,29 +29,29 @@ Builder* builder = nullptr;
 
 bool ParaRecord::isValid() const
 {
-    if (dbPath.empty()) {
+    if (dbPath.empty() && task != Task::query) {
         errorString = "Must have a database (.db3) path. Mising or wrong parameter -db";
         return false;
     }
     
+    auto hasPgn = false;
+    for(auto && s : pgnPaths) {
+        if (!s.empty()) {
+            hasPgn = true;
+            break;
+        }
+    }
+
     errorString.clear();
     auto ok = false;
     switch (task) {
-        case Task::createSQLdatabase:
+        case Task::create:
         {
             if (cpuNumber <= 0) {
                 errorString = "CPU number must be greater than zero";
                 break;
             }
 
-            auto hasPgn = false;
-            for(auto && s : pgnPaths) {
-                if (!s.empty()) {
-                    hasPgn = true;
-                    break;
-                }
-            }
-            
             if (!hasPgn) {
                 errorString = "Must have at least one PGN path. Mising or wrong parameter -pgn";
                 break;
@@ -62,6 +62,10 @@ bool ParaRecord::isValid() const
         }
             
         case Task::query:
+            if (dbPath.empty() && !hasPgn) {
+                errorString = "Must have a database (.db3) path or a PGN path. Mising or wrong parameter -db and -pgn";
+                return false;
+            }
             if (queries.empty()) {
                 errorString = "Must have at least one query. Mising or wrong parameter -q";
                 break;
@@ -83,6 +87,21 @@ bool ParaRecord::isValid() const
     return ok;
 }
 
+static const std::map<std::string, int> optionNameMap = {
+    // creating
+    {"moves", 0},
+    {"moves1", 1},
+    {"moves2", 2},
+    {"acceptnewtags", 3},
+    {"discardcomments", 4},
+    {"discardsites", 5},
+    {"discardnoelo", 6},
+    // query
+    {"printall", 7},
+    {"printfen", 8},
+    {"printpgn", 9},
+};
+
 std::string ParaRecord::toString() const
 {
     std::string s;
@@ -93,19 +112,7 @@ std::string ParaRecord::toString() const
         "bench"
 
     };
-    
-    const std::string optionNames[] = {
-        "comment_discard",
-        "site_discard",
-        "accept_newTags",
-        "player_limit_elo",
-        "player_discard_no_elo",
-        "query_stop_at_first_result",
-        "query_print_all",
-        "query_print_fen",
-        "query_print_pgn",
-    };
-    
+        
     s = "\tTask: " + taskNames[static_cast<int>(task)] + "\n";
     
     s += "\tPGN paths:\n";
@@ -125,18 +132,40 @@ std::string ParaRecord::toString() const
         "Moves", "Moves1", "Moves2",
         "Moves + Moves1", "Moves + Moves2"
     };
-    s += "\tMove columns (for creating): " + moveModeNames[static_cast<int>(columnMovesMode)] + "\n";
 
     s += "\tOptions: ";
     
-    for(auto && o : optionSet) {
-        s += optionNames[static_cast<int>(o)] + "; ";
+    for(auto && it : optionNameMap) {
+        if (optionFlag & (1 << it.second)) {
+            s += it.first + ";";
+        }
     }
+
     s += "\n";
-    s += "\tgameNumberLimit: " + std::to_string(gameNumberLimit) + "\n";
-    s += "\tcpu: " + std::to_string(cpuNumber) + ", low Elo: " + std::to_string(lowElo) + "\n";
-    
+    s += "\tgameNumberLimit: " + std::to_string(gameNumberLimit) + "\n"
+        + "\tresultNumberLimit: " + std::to_string(resultNumberLimit) + "\n"
+        + "\tcpu: " + std::to_string(cpuNumber)
+        + ", min Elo: " + std::to_string(limitElo)
+        + ", min game length: " + std::to_string(limitLen)
+        + "\n";
+
     return s;
+}
+
+
+void ParaRecord::setupOptions(const std::string& optionString)
+{
+    optionFlag = 0;
+    auto vec = bslib::Funcs::splitString(optionString, ';');
+    
+    for(auto && s : vec) {
+        auto it = optionNameMap.find(s);
+        if (it == optionNameMap.end()) {
+            std::cerr << "Error: Don't know option string: " << it->first << std::endl;
+        } else {
+            optionFlag |= 1 << it->second;
+        }
+    }
 }
 
 static const char* tagNames[] = {
@@ -166,12 +195,12 @@ void ThreadRecord::init(SQLite::Database* mDb)
     
     errCnt = 0;
     
-    assert(mDb);
     board = Builder::createBoard(bslib::ChessVariant::standard);
-
-    insertCommentStatement = new SQLite::Statement(*mDb, "INSERT INTO Comments (GameID, Ply, Comment) VALUES (?, ?, ?)");
-
     buf = new int8_t[1024 * 2];
+
+    if (mDb) {
+        insertCommentStatement = new SQLite::Statement(*mDb, "INSERT INTO Comments (GameID, Ply, Comment) VALUES (?, ?, ?)");
+    }
 }
 
 ThreadRecord::~ThreadRecord()
@@ -255,14 +284,14 @@ bslib::BoardCore* Builder::createBoard(bslib::ChessVariant variant)
 void Builder::runTask(const ParaRecord& param)
 {
     switch (param.task) {
-        case Task::createSQLdatabase:
+        case Task::create:
             convertPgn2Sql(param);
             break;
         case Task::bench:
-            bench(param.dbPath, param.cpuNumber, param.optionSet);
+            bench(param);
             break;
         case Task::query:
-            query(param.dbPath, param.cpuNumber, param.queries, param.optionSet);
+            query(param, param.queries);
             break;
 
         default:
@@ -270,7 +299,7 @@ void Builder::runTask(const ParaRecord& param)
     }
 }
 
-void Builder::convertPgn2Sql(const ParaRecord& paraRecord)
+void Builder::convertPgn2Sql(const ParaRecord& _paraRecord)
 {
     // Prepare
     setDatabasePath(paraRecord.dbPath);
@@ -279,47 +308,21 @@ void Builder::convertPgn2Sql(const ParaRecord& paraRecord)
     std::remove(paraRecord.dbPath.c_str());
 
     startTime = getNow();
-    
+
     // options
     {
-        createoption_AcceptNewField = paraRecord.optionSet.find(Option::accept_newTags) != paraRecord.optionSet.end();
-        createoption_site_discard = paraRecord.optionSet.find(Option::site_discard) != paraRecord.optionSet.end();
-        createoption_comment_discard = paraRecord.optionSet.find(Option::comment_discard) != paraRecord.optionSet.end();
+        paraRecord = _paraRecord;
 
-        createoption_elo_limit = paraRecord.optionSet.find(Option::player_limit_elo) != paraRecord.optionSet.end();
-        createoption_elo_discard_no_elo = paraRecord.optionSet.find(Option::player_discard_no_elo) != paraRecord.optionSet.end();
-
-        createoption_KeepMovesField = false;
-        createoption_EncodeMoveSize = 0;
+        int movebit = paraRecord.optionFlag & (create_flag_moves|create_flag_moves1|create_flag_moves2);
         
-        switch (paraRecord.columnMovesMode) {
-            case ColumnMovesMode::moves:
-                createoption_KeepMovesField = true;
-                break;
-            case ColumnMovesMode::moves1:
-                createoption_EncodeMoveSize = 1;
-                break;
-            case ColumnMovesMode::moves2:
-                createoption_EncodeMoveSize = 2;
-                break;
-            case ColumnMovesMode::moves_moves1:
-                createoption_KeepMovesField = true;
-                createoption_EncodeMoveSize = 1;
-                break;
-            case ColumnMovesMode::moves_moves2:
-                createoption_KeepMovesField = true;
-                createoption_EncodeMoveSize = 2;
-                break;
-
-            default:
-                break;
-        }
-
-        createoption_gameNumberLimit = paraRecord.gameNumberLimit;
-        createoption_lowElo = paraRecord.lowElo;
-
-        if (!createoption_KeepMovesField && createoption_EncodeMoveSize != 1 && createoption_EncodeMoveSize != 2) {
+        if (!movebit) {
             std::cout << "WARNING: there is not any column for storing moves" << std::endl;
+        } else if (movebit != create_flag_moves && movebit != create_flag_moves1 && movebit != create_flag_moves2) {
+            std::cout << "WARNING: redundant! There are more than one column for storing moves" << std::endl;
+            
+            if ((paraRecord.optionFlag & (create_flag_moves1 | create_flag_moves2)) == (create_flag_moves1 | create_flag_moves2)) {
+                std::cout << "WARNING: redundant! There are two binary columns for storing moves. Use Moves2, discard Move1" << std::endl;
+            }
         }
         
     }
@@ -328,12 +331,11 @@ void Builder::convertPgn2Sql(const ParaRecord& paraRecord)
     {
         gameCnt = 0;
         eventCnt = playerCnt = siteCnt = 1;
-        errCnt = posCnt = 0;
+        errCnt = 0;
         
-        auto cpu = paraRecord.cpuNumber;
-        if (cpu < 0) cpu = std::thread::hardware_concurrency();
-        pool = new thread_pool(cpu);
-        
+        playerIdMap.reserve(8 * 1024 * 1024);
+        eventIdMap.reserve(128 * 1024);
+        siteIdMap.reserve(128 * 1024);
 
         extraFieldSet.clear();
         fieldOrderMap.clear();
@@ -346,23 +348,19 @@ void Builder::convertPgn2Sql(const ParaRecord& paraRecord)
         fieldOrderMap["UTCDate"] = TagIdx_Date;
 
         tagIdx_Moves = -1; tagIdx_MovesBlob = -1;
-        if (createoption_KeepMovesField) {
+        if (paraRecord.optionFlag & create_flag_moves) {
             tagIdx_Moves = idx++;
             fieldOrderMap["Moves"] = tagIdx_Moves;
             extraFieldSet.insert("Moves");
         }
-        if (createoption_EncodeMoveSize == 1 || createoption_EncodeMoveSize == 2) {
+        if (paraRecord.optionFlag & (create_flag_moves1 | create_flag_moves2)) {
             tagIdx_MovesBlob = idx++;
-            std::string s = "Moves" + std::to_string(createoption_EncodeMoveSize);
+            std::string s = (paraRecord.optionFlag & create_flag_moves2) ? "Moves2" : "Moves1";
             fieldOrderMap[s] = tagIdx_MovesBlob;
             extraFieldSet.insert(s);
         }
         insertGameStatementIdxSz = idx;
 
-        playerIdMap.reserve(8 * 1024 * 1024);
-        eventIdMap.reserve(128 * 1024);
-        siteIdMap.reserve(128 * 1024);
-        
         
         // Create database
         mDb = createDb(paraRecord.dbPath);
@@ -370,19 +368,11 @@ void Builder::convertPgn2Sql(const ParaRecord& paraRecord)
             return;
         }
 
-        // prepared statements
-        playerInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Players (ID, Name, Elo) VALUES (?, ?, ?)");
-        eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Events (ID, Name) VALUES (?, ?)");
-        siteInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Sites (ID, Name) VALUES (?, ?)");
-    
-        std::cout << "Thread count: " << pool->get_thread_count()
-        << std::endl;
+        auto cpu = paraRecord.cpuNumber;
+        if (cpu < 0) cpu = std::thread::hardware_concurrency();
+        pool = new thread_pool(cpu);
         
-        std::cout << "Move encoding size: "
-        << createoption_EncodeMoveSize
-        << (createoption_KeepMovesField ? ", keep field Moves" : " without field Moves")
-        << std::endl;
-
+        std::cout << "Thread count: " << pool->get_thread_count() << std::endl;
     }
 
     uint64_t cnt = 0;
@@ -522,7 +512,12 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
                         if (hasEvent && p - buffer > 2) {
                             *(p - 2) = 0;
                             
-                            threadAddGame(tagMap, moves);
+//                            threadAddGame(tagMap, moves);
+                            if (paraRecord.task == Task::create) {
+                                threadAddGame(tagMap, moves);
+                            } else {
+                                threadQueryGame(tagMap, moves);
+                            }
                         }
 
                         tagMap.clear();
@@ -597,16 +592,18 @@ void Builder::processDataBlock(char* buffer, long sz, bool connectBlock)
     if (connectBlock) {
         processHalfBegin(event, (long)sz - (event - buffer));
     } else if (moves) {
-        threadAddGame(tagMap, moves);
+        if (paraRecord.task == Task::create) {
+            threadAddGame(tagMap, moves);
+        } else {
+            threadQueryGame(tagMap, moves);
+        }
     }
 }
 
 uint64_t Builder::processPgnFile(const std::string& path)
 {
     std::cout << "Processing PGN file: '" << path << "'" << std::endl;
-    
-    // Begin transaction
-//    SQLite::Transaction transaction(*mDb);
+
     auto transactionCnt = 0;
 
     {
@@ -617,7 +614,7 @@ uint64_t Builder::processPgnFile(const std::string& path)
         auto size = bslib::Funcs::getFileSize(stream);
         
         blockCnt = processedPgnSz = 0;
-        for (size_t sz = 0, idx = 0; sz < size && gameCnt < createoption_gameNumberLimit; idx++) {
+        for (size_t sz = 0, idx = 0; sz < size && gameCnt < paraRecord.gameNumberLimit; idx++) {
             auto k = std::min(blockSz, size - sz);
             if (k == 0) {
                 break;
@@ -625,7 +622,7 @@ uint64_t Builder::processPgnFile(const std::string& path)
             
             buffer[k] = 0;
             if (fread(buffer, k, 1, stream)) {
-                if (transactionCnt <= 0) {
+                if (mDb && transactionCnt <= 0) {
                     transactionCnt = 400;
                     mDb->exec("BEGIN");
                     std::cout << "BEGIN TRANSACTION" << std::endl;
@@ -637,7 +634,7 @@ uint64_t Builder::processPgnFile(const std::string& path)
                 pool->wait_for_tasks();
 
                 transactionCnt--;
-                if (transactionCnt <= 0) {
+                if (mDb && transactionCnt <= 0) {
                     mDb->exec("COMMIT");
                     std::cout << "COMMIT TRANSACTION" << std::endl;
                 }
@@ -663,12 +660,9 @@ uint64_t Builder::processPgnFile(const std::string& path)
         }
     }
     
-    if (transactionCnt > 0) {
+    if (mDb && transactionCnt > 0) {
         mDb->exec("COMMIT");
     }
-
-    // Commit transaction
-//    transaction.commit();
 
     printStats();
 
@@ -733,11 +727,12 @@ SQLite::Database* Builder::createDb(const std::string& path)
            "Date TEXT, Round INTEGER, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, "\
         "Result INTEGER, TimeControl TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT";
         
-        if (createoption_KeepMovesField) {
+        if (paraRecord.optionFlag & create_flag_moves) {
             sqlstring0 += ", Moves TEXT";
         }
-        if (createoption_EncodeMoveSize == 1 || createoption_EncodeMoveSize == 2) {
-            sqlstring0 += ", Moves" + std::to_string(createoption_EncodeMoveSize) + " BLOB DEFAULT NULL";
+        if (paraRecord.optionFlag & (create_flag_moves1 | create_flag_moves2)) {
+            auto sz = (paraRecord.optionFlag & create_flag_moves2) ? 2 : 1;
+            sqlstring0 += ", Moves" + std::to_string(sz) + " BLOB DEFAULT NULL";
         }
 
         std::string sqlstring1 =
@@ -753,6 +748,11 @@ SQLite::Database* Builder::createDb(const std::string& path)
         mDb->exec("PRAGMA journal_mode=OFF");
 //        mDb->exec("PRAGMA synchronous=OFF");
 //        mDb->exec("PRAGMA cache_size=64000");
+
+        // prepared statements
+        playerInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Players (ID, Name, Elo) VALUES (?, ?, ?)");
+        eventInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Events (ID, Name) VALUES (?, ?)");
+        siteInsertStatement = new SQLite::Statement(*mDb, "INSERT INTO Sites (ID, Name) VALUES (?, ?)");
 
         return mDb;
     }
@@ -851,9 +851,20 @@ void doAddGame(const std::unordered_map<char*, char*>& itemMap, const char* move
     builder->addGame(itemMap, moveText);
 }
 
+void doQueryGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText)
+{
+    assert(builder);
+    builder->queryGame(itemMap, moveText);
+}
+
 void Builder::threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText)
 {
     pool->submit(doAddGame, itemMap, moveText);
+}
+
+void Builder::threadQueryGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText)
+{
+    pool->submit(doQueryGame, itemMap, moveText);
 }
 
 static void standardizeDate(char* date)
@@ -914,7 +925,7 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
                 }
                 case TagIdx_Site:
                 {
-                    if (createoption_site_discard) {
+                    if (paraRecord.optionFlag & create_flag_discard_sites) {
                         intMap[TagIdx_Site] = 1; // empty
                         break;
                     }
@@ -981,6 +992,9 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
                 case TagIdx_PlyCount:
                 {
                     plyCount = std::atoi(s);
+                    if (paraRecord.limitLen > plyCount) {
+                        return false;
+                    }
                     break;
                 }
 
@@ -1019,15 +1033,15 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
             }
         }
         
-        if (createoption_elo_discard_no_elo && (whiteElo <= 0 || blackElo <= 0)) {
+        if ((paraRecord.optionFlag & create_flag_discard_no_elo) && (whiteElo <= 0 || blackElo <= 0)) {
             return false;
         }
         
-        if (createoption_elo_limit && (whiteElo < createoption_lowElo || blackElo < createoption_lowElo)) {
+        if (paraRecord.limitElo > 0 && (whiteElo < paraRecord.limitElo || blackElo < paraRecord.limitElo)) {
             return false;
         }
         
-        if (createoption_AcceptNewField && strcmp(it.first, "SetUp") != 0) {
+        if ((paraRecord.optionFlag & create_flag_accept_new_tags) && strcmp(it.first, "SetUp") != 0) {
             if (t->insertGameStatement) {
                 delete t->insertGameStatement;
                 t->insertGameStatement = nullptr;
@@ -1061,7 +1075,7 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
         intMap[TagIdx_GameID] = gameID;
 
         if (tagIdx_Moves >= 0) {
-            assert(createoption_KeepMovesField);
+            assert(paraRecord.optionFlag & create_flag_moves);
 
             // trim left
             while(*moveText <= ' ') moveText++;
@@ -1070,26 +1084,34 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
 
         // Parse moves
         if (tagIdx_MovesBlob >= 0) {
-            assert(createoption_EncodeMoveSize == 1 || createoption_EncodeMoveSize == 2);
+            assert(paraRecord.optionFlag & (create_flag_moves1 | create_flag_moves2));
             //assert(t->board);
             t->board->newGame(fenString);
 
             int flag = bslib::BoardCore::ParseMoveListFlag_quick_check;
             
-            if (createoption_comment_discard) {
+            if (paraRecord.optionFlag & create_flag_discard_comments) {
                 flag |= bslib::BoardCore::ParseMoveListFlag_discardComment;
             }
 
             t->board->fromMoveList(gameID, moveText, bslib::Notation::san, flag);
 
             plyCount = t->board->getHistListSize();
+
+            if (paraRecord.limitLen > plyCount) {
+                return false;
+            }
+
             if (plyCount > 0) {
                 auto p = t->buf;
                 for(auto i = 0; i < plyCount; i++) {
                     auto h = t->board->_getHistPointerAt(i);
                     auto move = h->move;
                     
-                    if (createoption_EncodeMoveSize == 1) {
+                    if (paraRecord.optionFlag & create_flag_moves2) { // 2 bytes encoding
+                        *(int16_t*)p = bslib::ChessBoard::encode2Bytes(move);
+                        p += 2;
+                    } else if (paraRecord.optionFlag & create_flag_moves1) {
                         auto pair = bslib::ChessBoard::encode1Byte(move);
                         assert(pair.second == 1 || pair.second == 2);
                         if (pair.second == 1) {
@@ -1101,9 +1123,6 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
                             assert(*(p + 1) == static_cast<int8_t>(pair.first >> 8));
                             p += 2;
                         }
-                    } else if (createoption_EncodeMoveSize == 2) { // 2 bytes encoding
-                        *(int16_t*)p = bslib::ChessBoard::encode2Bytes(move);
-                        p += 2;
                     }
                     
                     if (!h->comment.empty()) {
@@ -1144,6 +1163,46 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
         std::cout << "SQLite exception: " << e.what() << std::endl;
         t->errCnt++;
         return false;
+    }
+
+    return true;
+}
+
+bool Builder::queryGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText)
+{
+    auto threadId = std::this_thread::get_id();
+    auto t = &threadMap[threadId];
+    t->init(mDb);
+    assert(t->board);
+
+    std::string fenString;
+    for(auto && it : itemMap) {
+        if (strcmp(it.first, "FEN") == 0) {
+            fenString = it.second;
+            break;
+        }
+    }
+
+    IDInteger gameID;
+    {
+        std::lock_guard<std::mutex> dolock(gameMutex);
+        ++gameCnt;
+        gameID = gameCnt;
+    }
+
+    // Parse moves
+    {
+        //assert(t->board);
+        t->board->newGame(fenString);
+
+        int flag = bslib::BoardCore::ParseMoveListFlag_quick_check
+                    | bslib::BoardCore::ParseMoveListFlag_discardComment
+                    | bslib::BoardCore::ParseMoveListFlag_create_bitboard;
+
+        if (paraRecord.optionFlag & query_flag_print_pgn) {
+            flag |= bslib::BoardCore::ParseMoveListFlag_create_san;
+        }
+        t->board->fromMoveList(gameID, moveText, bslib::Notation::san, flag, checkToStop);
     }
 
     return true;
@@ -1291,8 +1350,9 @@ void Builder::parsePGNGame(int64_t gameID, const std::string& fenText,
 }
 
 
-void Builder::searchPosition(SQLite::Database& db, const std::string& query)
+void Builder::searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, const std::string& query)
 {
+    assert(paraRecord.task != Task::create);
     auto parser = new Parser;
     if (!parser->parse(query.c_str())) {
         std::cerr << "Error: " << parser->getErrorString() << std::endl;
@@ -1303,10 +1363,10 @@ void Builder::searchPosition(SQLite::Database& db, const std::string& query)
     auto startTime = getNow();
     
     // check if there at least a move fields (Moves, Moves1 or Moves2)
-    {
+    if (db) {
         searchField = SearchField::none;
 
-        SQLite::Statement stmt(db, "PRAGMA table_info(Games)");
+        SQLite::Statement stmt(*db, "PRAGMA table_info(Games)");
         while (stmt.executeStep()) {
             std::string fieldName = stmt.getColumn(1).getText();
             
@@ -1339,13 +1399,14 @@ void Builder::searchPosition(SQLite::Database& db, const std::string& query)
         if (parser->evaluate(bitboardVec)) {
             succCount++;
             
-            if ((query_flag & query_flag_print_all) || (succCount & 0xffff) == 0) {
+            if (paraRecord.optionFlag & query_flag_print_all) {
                 std::cout << succCount << ". gameId: " << gameId;
-                if (query_flag & query_flag_print_fen) {
+                if (paraRecord.optionFlag & query_flag_print_fen) {
                     std::cout << ", fen: " << board->getFen();
                 }
-                if (query_flag & query_flag_print_pgn) {
-                    std::cout << ", pgn:\n " << board->toSimplePgn();
+                if (paraRecord.optionFlag & query_flag_print_pgn) {
+                    std::unordered_map<std::string, std::string> tags;
+                    std::cout << "\n\n" << board->toPgn(tags);
                 }
                 std::cout << std::endl;
             }
@@ -1367,40 +1428,48 @@ void Builder::searchPosition(SQLite::Database& db, const std::string& query)
     << ", searchField: " << moveFieldName
     << std::endl;
 
-    succCount = 0;
+    succCount = 0; gameCnt = 0;
 
-    SQLite::Statement statement(db, "SELECT * FROM Games");
-    int64_t cnt = 0;
-    for (; statement.executeStep(); cnt++) {
-        auto gameID = statement.getColumn("ID").getInt64();
-        auto fenText = statement.getColumn("FEN").getText();
-        
-        std::string moveText;
-        std::vector<int8_t> moveVec;
-
-        if (searchField == SearchField::moves) {
-            moveText = statement.getColumn("Moves").getText();
-        } else {
-            auto c = statement.getColumn(moveFieldName.c_str());
-            auto moveBlob = static_cast<const int8_t*>(c.getBlob());
+    if (db) {
+        SQLite::Statement statement(*db, "SELECT * FROM Games");
+        for (; statement.executeStep(); gameCnt++) {
+            auto gameID = statement.getColumn("ID").getInt64();
+            auto fenText = statement.getColumn("FEN").getText();
             
-            if (!moveBlob) {
-                continue;
+            std::string moveText;
+            std::vector<int8_t> moveVec;
+
+            if (searchField == SearchField::moves) {
+                moveText = statement.getColumn("Moves").getText();
+            } else {
+                auto c = statement.getColumn(moveFieldName.c_str());
+                auto moveBlob = static_cast<const int8_t*>(c.getBlob());
+                
+                if (!moveBlob) {
+                    continue;
+                }
+                auto sz = c.size();
+                
+                for(auto i = 0; i < sz; ++i) {
+                    moveVec.push_back(moveBlob[i]);
+                }
             }
-            auto sz = c.size();
-            
-            for(auto i = 0; i < sz; ++i) {
-                moveVec.push_back(moveBlob[i]);
+            threadParsePGNGame(gameID, fenText, moveText, moveVec);
+
+            if (succCount >= paraRecord.resultNumberLimit) {
+                break;
             }
         }
-        threadParsePGNGame(gameID, fenText, moveText, moveVec);
+        pool->wait_for_tasks();
 
-        if (succCount && (query_flag & query_flag_stop_at_first_result)) {
-            break;
+    } else {
+        assert(!pgnPaths.empty());
+        for(auto && path : pgnPaths) {
+            processPgnFile(path);
         }
     }
-    pool->wait_for_tasks();
 
+    // Done, retrieve some last stats
     int64_t parsedGameCnt = 0, allHdpLen = 0;
     for(auto && t : threadMap) {
         parsedGameCnt += t.second.gameCnt;
@@ -1411,6 +1480,7 @@ void Builder::searchPosition(SQLite::Database& db, const std::string& query)
     
     std::cout << std::endl << query << " DONE. Elapsed: " << elapsed << " ms, "
               << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+              << ", total games: " << gameCnt
               << ", total results: " << succCount
               << ", time per results: " << elapsed / std::max<int64_t>(1, succCount)  << " ms"
               << std::endl << std::endl << std::endl;
@@ -1418,7 +1488,7 @@ void Builder::searchPosition(SQLite::Database& db, const std::string& query)
     delete parser;
 }
 
-void Builder::bench(const std::string& dbPath, int cpu, const std::set<Option>& optionSet)
+void Builder::bench(const ParaRecord& paraRecord)
 {
     std::cout << "Benchmark position searching..." << std::endl;
 
@@ -1430,37 +1500,46 @@ void Builder::bench(const std::string& dbPath, int cpu, const std::set<Option>& 
         "white6 = 5",                        // There are 5 white pieces on row 6
     };
 
-    query(dbPath, cpu, queries, optionSet);
+    query(paraRecord, queries);
 }
 
-void Builder::query(const std::string& dbPath, int cpu, const std::vector<std::string>& queries, const std::set<Option>& optionSet)
+void Builder::query(const ParaRecord& _paraRecord, const std::vector<std::string>& queries)
 {
-    SQLite::Database db(dbPath, SQLite::OPEN_READWRITE);
-
-    query_flag = 0;
+    assert(paraRecord.task != Task::create);
     
-    if (optionSet.find(Option::query_stop_at_first_result) != optionSet.end()) {
-        query_flag |= query_flag_stop_at_first_result;
-    }
-    if (optionSet.find(Option::query_print_fen) != optionSet.end()) {
-        query_flag |= query_flag_print_fen;
-    }
-    if (optionSet.find(Option::query_print_pgn) != optionSet.end()) {
-        query_flag |= query_flag_print_pgn;
-    }
-    if (optionSet.find(Option::query_print_all) != optionSet.end()) {
-        query_flag |= query_flag_print_all;
-    }
+    paraRecord = _paraRecord;
+    gameCnt = 0;
+    eventCnt = playerCnt = siteCnt = 1;
+    errCnt = 0;
 
     // Reading all data, parsing moves, multi threads
+    auto cpu = paraRecord.cpuNumber;
+    if (cpu < 0) cpu = std::thread::hardware_concurrency();
     pool = new thread_pool(cpu);
     std::cout << "Thread count: " << pool->get_thread_count() << std::endl;
 
-    for(auto && s : queries) {
-        searchPosition(db, s);
+    auto ok = false;
+    if (paraRecord.dbPath.empty()) {
+        if (!paraRecord.pgnPaths.empty()) {
+            ok = true;
+            for(auto && s : queries) {
+                searchPosition(nullptr, paraRecord.pgnPaths, s);
+            }
+        }
+    } else {
+        ok = true;
+        SQLite::Database db(paraRecord.dbPath, SQLite::OPEN_READWRITE);
+
+        for(auto && s : queries) {
+            searchPosition(&db, std::vector<std::string>(), s);
+        }
     }
 
     delete pool;
+    
+    if (!ok) {
+        std::cout << "Error: there is no path for database nor PGN files" << std::endl;
+    }
 
     std::cout << "Completed! " << std::endl;
 }

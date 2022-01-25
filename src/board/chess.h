@@ -32,7 +32,7 @@ namespace bslib {
         ChessBoard(const ChessBoard&);
         virtual ~ChessBoard() override;
 
-        virtual std::string toString() const;
+        virtual std::string toString() const override;
         virtual bool isValid() const override;
 
         virtual int columnCount() const override;

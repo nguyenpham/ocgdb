@@ -12,9 +12,16 @@
 #include "builder.h"
 #include "board/chess.h"
 
+void print_usage();
+
 int main(int argc, const char * argv[]) {
-    std::cout << "Open Chess Game Database Standard, Database Builder, (C) 2021\n";
+    std::cout << "Open Chess Game Database Standard (OCGDB), Database Builder, (C) 2022 - version: " << ocgdb::VersionString << "\n" << std::endl;
     
+    if (argc < 2) {
+        print_usage();
+        return 0;
+    }
+
     // init
     {
         bslib::ChessBoard::staticInit();
@@ -22,27 +29,10 @@ int main(int argc, const char * argv[]) {
 
     ocgdb::ParaRecord paraRecord;
     
-    // for creating
-    paraRecord.columnMovesMode = ocgdb::ColumnMovesMode::moves2;
-    paraRecord.optionSet.insert(ocgdb::Option::comment_discard);
-    paraRecord.optionSet.insert(ocgdb::Option::site_discard);
-//    paraRecord.gameNumberLimit = 0xff;
-    
-    // for querying
-    paraRecord.optionSet.insert(ocgdb::Option::query_print_all);
-    paraRecord.optionSet.insert(ocgdb::Option::query_print_fen);
-
-    auto keepMovesField = false, setupMovesFields = false;
-    auto encodeSize = 0;
     for(auto i = 1; i < argc; i++) {
         auto str = std::string(argv[i]);
         if (str == "-bench") {
             paraRecord.task = ocgdb::Task::bench;
-            continue;
-        }
-        if (str == "-keepmoves") {
-            keepMovesField = true;
-            setupMovesFields = true;
             continue;
         }
 
@@ -62,12 +52,20 @@ int main(int argc, const char * argv[]) {
             continue;
         }
         if (str == "-elo") {
-            paraRecord.lowElo = std::atoi(argv[++i]);
+            paraRecord.limitElo = std::atoi(argv[++i]);
             continue;
         }
-        if (str == "-encode") {
-            encodeSize = std::atoi(argv[++i]);
-            setupMovesFields = true;
+        if (str == "-o") {
+            auto optionString = std::string(argv[++i]);
+            paraRecord.setupOptions(optionString);
+            continue;
+        }
+        if (str == "-plycount") {
+            paraRecord.limitLen = std::atoi(argv[++i]);
+            continue;
+        }
+        if (str == "-resultcount") {
+            paraRecord.resultNumberLimit = std::atoi(argv[++i]);
             continue;
         }
         if (str == "-q") {
@@ -78,19 +76,7 @@ int main(int argc, const char * argv[]) {
         }
     }
     
-    if (setupMovesFields) {
-        paraRecord.columnMovesMode = ocgdb::ColumnMovesMode::none;
-
-        if (encodeSize == 1) {
-            paraRecord.columnMovesMode = keepMovesField ? ocgdb::ColumnMovesMode::moves_moves1 : ocgdb::ColumnMovesMode::moves1;
-        } else if (encodeSize == 2) {
-            paraRecord.columnMovesMode = keepMovesField ? ocgdb::ColumnMovesMode::moves_moves2 : ocgdb::ColumnMovesMode::moves2;
-        } else if (keepMovesField) {
-            paraRecord.columnMovesMode = ocgdb::ColumnMovesMode::moves;
-        }
-    }
-
-    std::cout << "Paras:\n" << paraRecord.toString() << std::endl;
+    std::cout << "All parameters:\n" << paraRecord.toString() << std::endl;
 
     if (paraRecord.isValid()) {
         ocgdb::Builder oc;
@@ -103,26 +89,40 @@ int main(int argc, const char * argv[]) {
         std::cerr << "Error: " << errorString << "\n" << std::endl;
     }
 
-    {
-        std::cerr << "Usage:" << std::endl;
-        std::cerr << " ocgdb [<options>]" << std::endl;
-        std::cerr << std::endl;
-        std::cerr << " -pgn <file>           PGN game database file, repeat to add multi files" << std::endl;
-        std::cerr << " -db <file>            create database, extension should be .ocgdb.db3" << std::endl;
-        std::cerr << "                       use :memory: to create in-memory database" << std::endl;
-        std::cerr << " -cpu <n>              number of threads, omit for all cores, works with -pgn, -bench, -query" << std::endl;
-        std::cerr << " -elo <n>              low limit of Elo" << std::endl;
-        std::cerr << " -keepmoves            keep field Moves when creating db, works with -pgn, -db" << std::endl;
-        std::cerr << " -encode <n>           n must be 0 (not binary moves), 1 or 2 for field Moves1 or Moves2 when creating db" << std::endl;
-
-        std::cerr << " -bench                benchmarch querying games speed, works with -db and -cpu" << std::endl;
-        std::cerr << " -q <query>            querying positions, repeat to add multi queries, works with -db and -cpu" << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "Examples:" << std::endl;
-        std::cerr << " ocgdb -pgn c:\\games\\big.png -db c:\\db\\big.ocgdb.db3 -cpu 4 -encode 2" << std::endl;
-        std::cerr << " ocgdb -pgn c:\\games\\big.png -db :memory: -keepmoves" << std::endl;
-        std::cerr << " ocgdb -bench -db c:\\db\\big.ocgdb.db3 -cpu 4" << std::endl;
-        std::cerr << " ocgdb -db c:\\db\\big.ocgdb.db3 -cpu 4 -q \"Q=3\" -q\"P[d4, e5, f4, g4] = 4 and kb7\"" << std::endl;
-    }
+    print_usage();
     return 1;
+}
+
+void print_usage()
+{
+    std::cerr << "Usage:" << std::endl;
+    std::cerr << " ocgdb [<parameters>]" << std::endl;
+    std::cerr << std::endl;
+    std::cerr << " -pgn <file>           PGN game database file, repeat to add multi files" << std::endl;
+    std::cerr << " -db <file>            create database, extension should be .ocgdb.db3" << std::endl;
+    std::cerr << "                       use :memory: to create in-memory database" << std::endl;
+    std::cerr << " -cpu <n>              number of threads, omit for all cores, works with -pgn, -bench, -query" << std::endl;
+    std::cerr << " -bench                benchmarch querying games speed, works with -db and -cpu" << std::endl;
+    std::cerr << " -q <query>            querying positions, repeat to add multi queries, works with -db and -cpu" << std::endl;
+    std::cerr << " -elo <n>              discard games with Elo under n (for creating)" << std::endl;
+    std::cerr << " -plycount <n>         discard games with ply-count under n (for creating)" << std::endl;
+    std::cerr << " -resultcount <n>      stop querying if the number of results above n (for querying)" << std::endl;
+    std::cerr << " -o [<options>;]       options" << std::endl;
+    std::cerr << "    moves              create text move field Moves" << std::endl;
+    std::cerr << "    moves1             create binary move field Moves, 1-byte encoding" << std::endl;
+    std::cerr << "    moves2             create binary move field Moves, 2-byte encoding" << std::endl;
+    std::cerr << "    acceptnewtag       create a new field for a new PGN tag (for creating)" << std::endl;
+    std::cerr << "    discardcomments    discard all comments (for creating)" << std::endl;
+    std::cerr << "    discardsites       discard all Site tag (for creating)" << std::endl;
+    std::cerr << "    discardnoelo       discard games without player Elos (for creating)" << std::endl;
+    std::cerr << "    printall           print all results (for querying)" << std::endl;
+    std::cerr << "    printfen           print FENs of results (for querying)" << std::endl;
+    std::cerr << "    printpgn           print simple PGNs of results (for querying)" << std::endl;
+
+    std::cerr << std::endl;
+    std::cerr << "Examples:" << std::endl;
+    std::cerr << " ocgdb -pgn big.png -db big.ocgdb.db3 -cpu 4 -o moves" << std::endl;
+    std::cerr << " ocgdb -pgn big.png -db :memory: -elo 2100 -o moves;moves1;discardsites" << std::endl;
+    std::cerr << " ocgdb -bench -db big.ocgdb.db3 -cpu 4" << std::endl;
+    std::cerr << " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"Q=3\" -q\"P[d4, e5, f4, g4] = 4 and kb7\"" << std::endl;
 }

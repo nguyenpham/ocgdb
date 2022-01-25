@@ -24,6 +24,8 @@
 
 namespace ocgdb {
 
+const std::string VersionString = "Beta";
+
 // Current limit is about 4 billion, we can change later by changing this define
 #define IDInteger uint32_t
 
@@ -36,23 +38,23 @@ enum class ColumnMovesMode
 
 enum class Task
 {
-    createSQLdatabase,
+    create,
     query,
     bench
 };
 
-enum class Option
-{
-    comment_discard,
-    site_discard,
-    accept_newTags,
-    player_limit_elo,
-    player_discard_no_elo,
+enum {
+    create_flag_moves                   = 1 << 0,
+    create_flag_moves1                  = 1 << 1,
+    create_flag_moves2                  = 1 << 2,
+    create_flag_accept_new_tags         = 1 << 3,
+    create_flag_discard_comments        = 1 << 4,
+    create_flag_discard_sites           = 1 << 5,
+    create_flag_discard_no_elo          = 1 << 6,
 
-    query_stop_at_first_result,
-    query_print_all,
-    query_print_fen,
-    query_print_pgn,
+    query_flag_print_all                = 1 << 7,
+    query_flag_print_fen                = 1 << 8,
+    query_flag_print_pgn                = 1 << 9,
 };
 
 class ParaRecord
@@ -62,14 +64,13 @@ public:
     std::string dbPath;
 
     std::vector<std::string> queries;
-    std::set<Option> optionSet;
+    int optionFlag;
 
-    Task task = Task::createSQLdatabase;
-    int cpuNumber = -1, lowElo = 0;
+    Task task = Task::create;
+    int cpuNumber = -1, limitElo = 0, limitLen = 0;
     int64_t gameNumberLimit = 0xffffffffffffULL; // stop when the number of games reached that limit
-    
-    ColumnMovesMode columnMovesMode = ColumnMovesMode::moves;
-    
+    int64_t resultNumberLimit = 0xffffffffffffULL; // stop when the number of results reached that limit
+
     mutable std::string errorString;
     
     std::string getErrorString() const {
@@ -77,6 +78,8 @@ public:
     }
     std::string toString() const;
     bool isValid() const;
+    
+    void setupOptions(const std::string& optionString);
 };
 
 class ThreadRecord
@@ -118,6 +121,7 @@ public:
     
 public:
     bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
+    bool queryGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
 
     static bslib::BoardCore* createBoard(bslib::ChessVariant variant);
 
@@ -125,6 +129,7 @@ public:
 
     void parsePGNGame(int64_t gameID, const std::string& fenText, const std::string& moveText, const std::vector<int8_t>& vec);
 
+private:
     enum class SearchField
     {
         none,
@@ -136,10 +141,10 @@ public:
 
 private:
     void convertPgn2Sql(const ParaRecord&);
-    void bench(const std::string& path, int cpu, const std::set<Option>& optionSet);
-    void query(const std::string& dbPath, int cpu, const std::vector<std::string>& queries, const std::set<Option>& optionSet);
+    void bench(const ParaRecord& paraRecord);
+    void query(const ParaRecord& paraRecord, const std::vector<std::string>& queries);
 
-    void searchPosition(SQLite::Database& db, const std::string& query);
+    void searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, const std::string& query);
     
     SQLite::Database* createDb(const std::string& path);
     static std::string encodeString(const std::string& name);
@@ -165,6 +170,7 @@ private:
 
     void queryGameData(SQLite::Database& db, int gameIdx);
     void threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
+    void threadQueryGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
 
     static int standardizeFEN(char *fenBuf);
 
@@ -196,6 +202,7 @@ private:
     SQLite::Statement *benchStatement = nullptr;
 
     thread_pool* pool = nullptr;
+
     mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
 
@@ -206,29 +213,11 @@ private:
     int tagIdx_Moves, tagIdx_MovesBlob, insertGameStatementIdxSz;
     IDInteger gameCnt, eventCnt, playerCnt, siteCnt;
 
-    bool createoption_site_discard = true;
-    bool createoption_comment_discard = true;
-    int  createoption_EncodeMoveSize = 1;
-    bool createoption_KeepMovesField = false;
-    bool createoption_AcceptNewField = false;
-    int64_t createoption_gameNumberLimit;
-    uint32_t createoption_lowElo;
-
-    bool createoption_elo_limit = true;
-    bool createoption_elo_discard_no_elo = true;
-    
-    enum {
-        query_flag_stop_at_first_result     = 1 << 0,
-        query_flag_print_all                = 1 << 1,
-        query_flag_print_fen                = 1 << 2,
-        query_flag_print_pgn                = 1 << 3,
-    };
-    int query_flag;
+    ParaRecord paraRecord;
 
     /// For stats
     std::chrono::steady_clock::time_point startTime;
-    int64_t hashHit;
-    int64_t blockCnt, processedPgnSz, errCnt, posCnt, succCount;
+    int64_t blockCnt, processedPgnSz, errCnt, succCount;
 };
 
 

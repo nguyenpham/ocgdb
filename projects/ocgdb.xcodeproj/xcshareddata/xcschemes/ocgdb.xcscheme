@@ -65,7 +65,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/mb-3.45.pgn"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/345.ocgdb.db3"
@@ -73,11 +73,11 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/mb-3.45.ocgdb.db3"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db :memory:"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/lichess_db_standard_rated_2021-08.pgn"
@@ -108,12 +108,20 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-q &quot;white6 = 3&quot;"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-cpu 4"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-cpu 1"
             isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o moves;moves1;discardsites;printall;printfen;printpgn"
+            isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>

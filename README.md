@@ -1,20 +1,23 @@
 # Open Chess Game Database Standard (OCGDB)
 
-Version Alpha
+Version Beta
 
 
-## Features/Highlights of the Standard
-- Developed based on SQL in general, SQLite in particular
-- It has an open data structure: very easy to understand, change, convert to/from other formats
-- Terms, names, types… are followed PGN standard as much as possible
-- Basic tables: Games, Events, Sites, Players, Comments. Other tables: Info
-- Main columns of the table Games: EvenID, SiteID, WhiteID, WhiteElo, BlackID, Result, Date, ECO, FEN, Moves/Moves1/Moves2
-- FEN (in the table Games) is for the starting position. If the game started from origin position, it could be empty or NULL
-- Moves are stored in table Games with a few choices: as text in column Moves, or binary forms in column Moves1 (for 1-byte encoding) or column Moves2 (for 2-bytes encoding)
-- It could query game header information via SQL/SQL search engines
-- It could do approximate-position-searching with the support from the belonging code and Position Query Language (PQL)
-- There are no or very high limit about the number of games. Some tests show it worked well with databases of over 90 million games and could work with much larger numbers
-- It could serve for any purposes of chess game databases from web to desktop, mobiphone apps
+## Brief main ideas/techniques
+- Use SQL/SQLite as the backbone/framework for storing data and querying general information
+- Approximate position searching: a) Parse games on the fly b) Use Position Query Language (PQL) for querying widely and dynamically
+- Names, tables follow to PGN tags
+
+
+## Why OCGDB? Features/Highlights
+- Open databases: users could easily understand data structures, modify, convert to or from other database formats
+- It supports the highest numbers of games (tested with 94 million games, estimated it could work with billions of games)
+- It is based on SQL which is the strongest query language for querying general information. Users can query without using chess specific programs
+- It has its own query language (PQL) for approximate-position-searching thus it can cover very widely
+- It could use widely, from mobile, desktop, console to web applications 
+- It is one of programs that could create the smallest chess game databases
+- It is one of the fastest chess game database programs when generating databases and searching
+- MIT license: you may use it for any applications/purposes unlimitedly without worrying about license conditions
 
 
 We believe it is one of the fastest (in terms of speeds of creating and querying/searching), smallest (in terms of database sizes), strongest (in terms of game numbers), and smartest (in terms of querying/position-searching) chess game database programs. It could compete for all parameters, results with the best chess game database formats and their programs/tools.
@@ -135,6 +138,27 @@ Convert a PGN file of 94 million games from Lichess:
 
 ```
 #games: 93679650, elapsed: 5209214ms 1:26:49, speed: 17983 games/s, #blocks: 25777, processed size: 206208 MB
+```
+
+## Retrieve data
+Query database and extract some important data fields:
+
+```
+for (auto cnt = 0; statement.executeStep(); cnt++) {
+    auto gameID = statement.getColumn("ID").getInt64(); assert(gameID > 0);
+    auto fenText = statement.getColumn("FEN").getText();
+    auto moveText = statement.getColumn("Moves").getText();
+}
+```
+
+Query database, extract some data fields and parse into chessboard, using multi-threads:
+```
+for auto cnt = 0; statement.executeStep(); cnt++) {
+    auto gameID = statement.getColumn("ID").getInt64();
+    auto fenText = statement.getColumn("FEN").getText();
+    auto moveText = statement.getColumn("Moves").getText();
+    threadParsePGNGame(gameID, fenText, moveText);
+}
 ```
 
 ## Position query language (PQL)
@@ -264,6 +288,7 @@ ocgdb -db c:\db\big.ocgdb.db3 -cpu 4 -q "Q=3" -q"P[d4, e5, f4, g4] = 4 and kb7"
 ```
 
 ## History
+* 25/01/2022: Version Beta
 * 23/01/2022: Version Alpha
 * 20/11/2021: Improve/clean code, improve speed for benchmark
 * 16/11/2021: Improve speed for converter, convert 3.45 million games under a minute

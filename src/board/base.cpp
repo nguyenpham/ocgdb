@@ -887,6 +887,13 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
             histList.back().bitboardVec = bitboardVec;
         }
         
+        if (flag & ParseMoveListFlag_create_san) {
+            if (notation == Notation::san) {
+                histList.back().sanString = ss;
+            } else {
+                // missing function
+            }
+        }
     }
     
     // last position
@@ -1079,6 +1086,32 @@ std::string BoardCore::toSimplePgn() const
     }
 
     stringStream << "\n" << toMoveListString(Notation::san, 1000, false,
+                                             CommentComputerInfoType::standard);
+    return stringStream.str();
+}
+
+std::string BoardCore::toPgn(const std::unordered_map<std::string, std::string> tags) const
+{
+    std::ostringstream stringStream;
+    
+    auto it = tags.find("Event");
+    stringStream    << "[Event \""
+                    << (it != tags.end() ? it->second : "event")
+                    << "\"]\n";
+
+    for(auto && it : tags) {
+        if (it.first != "Event") {
+            stringStream    << "[" << it.first << "\""
+                            << it.second
+                            << "\"]\n";
+        }
+    }
+    if (!startFen.empty()) {
+        stringStream << "[FEN \"" << startFen << "\"]\n";
+    }
+
+    stringStream << "\n" << toMoveListString(Notation::san,
+                                             8, true,
                                              CommentComputerInfoType::standard);
     return stringStream.str();
 }
