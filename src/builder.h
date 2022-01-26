@@ -40,7 +40,8 @@ enum class Task
 {
     create,
     query,
-    bench
+    bench,
+    getgame
 };
 
 enum {
@@ -67,7 +68,7 @@ public:
     int optionFlag;
 
     Task task = Task::create;
-    int cpuNumber = -1, limitElo = 0, limitLen = 0;
+    int cpuNumber = -1, limitElo = 0, limitLen = 0, gameID = -1;
     int64_t gameNumberLimit = 0xffffffffffffULL; // stop when the number of games reached that limit
     int64_t resultNumberLimit = 0xffffffffffffULL; // stop when the number of results reached that limit
 
@@ -129,6 +130,8 @@ public:
 
     void parsePGNGame(int64_t gameID, const std::string& fenText, const std::string& moveText, const std::vector<int8_t>& vec);
 
+    static void queryGameDataByID(SQLite::Database& db, int gameIdx);
+
 private:
     enum class SearchField
     {
@@ -143,6 +146,7 @@ private:
     void convertPgn2Sql(const ParaRecord&);
     void bench(const ParaRecord& paraRecord);
     void query(const ParaRecord& paraRecord, const std::vector<std::string>& queries);
+    void getGame(const ParaRecord&);
 
     void searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, const std::string& query);
     
@@ -166,9 +170,6 @@ private:
     void processHalfBegin(char* buffer, long len);
     void processHalfEnd(char* buffer, long len);
 
-    void updateBoard(bslib::BoardCore*, const std::vector<uint64_t>& bbvec);
-
-    void queryGameData(SQLite::Database& db, int gameIdx);
     void threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
     void threadQueryGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
 
@@ -185,7 +186,7 @@ private:
 
     void threadParsePGNGame(int64_t gameID, const std::string& fenText, const std::string& moveText, const std::vector<int8_t>&);
 
-    std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*)> checkToStop = nullptr;
+    std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*, const std::unordered_map<char*, char*>*)> checkToStop = nullptr;
 
     std::unordered_map<std::string, IDInteger> playerIdMap, eventIdMap, siteIdMap;
 

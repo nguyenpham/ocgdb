@@ -671,7 +671,13 @@ void BoardCore::_parseComment_standard(const std::string& comment, Hist& hist)
     hist.comment = str;
 }
 
-bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation notation, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> shouldStop)
+
+bool BoardCore::fromMoveList(int64_t gameId,
+                             const std::unordered_map<char*, char*>* itemMap,
+                             const std::string& str,
+                             Notation notation,
+                             int flag,
+                             std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const std::unordered_map<char*, char*>*)> shouldStop)
 {
     std::lock_guard<std::mutex> dolock(dataMutex);
 
@@ -856,7 +862,7 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
             bitboardVec = posToBitboards();
             assert(!bitboardVec.empty());
 
-            if (shouldStop && shouldStop(gameId, bitboardVec, this)) {
+            if (shouldStop && shouldStop(gameId, bitboardVec, this, itemMap)) {
                 hit = true;
                 break;
             }
@@ -899,7 +905,7 @@ bool BoardCore::fromMoveList(int64_t gameId, const std::string& str, Notation no
     // last position
     if (shouldStop && !hit) {
         bitboardVec = posToBitboards();
-        if (shouldStop(gameId, bitboardVec, this)) {
+        if (shouldStop(gameId, bitboardVec, this, itemMap)) {
             hit = true;
         }
     }
@@ -943,7 +949,10 @@ bool BoardCore::_quickCheck_rook(int from, int dest, bool checkMiddle) const
 }
 
 bool BoardCore::fromMoveList(int64_t gameId,
-                             const std::vector<int8_t>& moveVec, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> shouldStop)
+                             const std::unordered_map<char*, char*>* itemMap, 
+                             const std::vector<int8_t>& moveVec,
+                             int flag,
+                             std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const std::unordered_map<char*, char*>*)> shouldStop)
 {
     assert(!moveVec.empty());
     
@@ -963,7 +972,7 @@ bool BoardCore::fromMoveList(int64_t gameId,
             bitboardVec = posToBitboards();
             assert(!bitboardVec.empty());
 
-            if (shouldStop && shouldStop(gameId, bitboardVec, this)) {
+            if (shouldStop && shouldStop(gameId, bitboardVec, this, itemMap)) {
                 hit = true;
                 break;
             }
@@ -997,7 +1006,7 @@ bool BoardCore::fromMoveList(int64_t gameId,
     // last position
     if (shouldStop && !hit) {
         bitboardVec = posToBitboards();
-        if (shouldStop(gameId, bitboardVec, this)) {
+        if (shouldStop(gameId, bitboardVec, this, itemMap)) {
             hit = true;
         }
     }
@@ -1090,23 +1099,33 @@ std::string BoardCore::toSimplePgn() const
     return stringStream.str();
 }
 
-std::string BoardCore::toPgn(const std::unordered_map<std::string, std::string> tags) const
+std::string BoardCore::toPgn(const std::unordered_map<char*, char*>* tags) const
 {
-    std::ostringstream stringStream;
+    std::string headString, eventString;
+    auto haveFEN = false;
     
-    auto it = tags.find("Event");
-    stringStream    << "[Event \""
-                    << (it != tags.end() ? it->second : "event")
-                    << "\"]\n";
+    if (tags) {
+        for(auto && it : *tags) {
+            auto tag = std::string(it.first);
+            auto s = "[" + tag + " \"" + std::string(it.second) + "\"]\n";
 
-    for(auto && it : tags) {
-        if (it.first != "Event") {
-            stringStream    << "[" << it.first << "\""
-                            << it.second
-                            << "\"]\n";
+            if (tag == "Event") {
+                eventString = s;
+            } else {
+                headString += s;
+                if (tag == "FEN") haveFEN = true;
+            }
         }
     }
-    if (!startFen.empty()) {
+
+    if (eventString.empty()) {
+        eventString = "[Event \"\"]\n";
+    }
+    
+    std::ostringstream stringStream;    
+    stringStream << eventString << headString;
+    
+    if (!haveFEN && !startFen.empty()) {
         stringStream << "[FEN \"" << startFen << "\"]\n";
     }
 

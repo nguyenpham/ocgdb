@@ -74,6 +74,11 @@ int main(int argc, const char * argv[]) {
             paraRecord.queries.push_back(query);
             continue;
         }
+        if (str == "-g") {
+            paraRecord.task = ocgdb::Task::getgame;
+            paraRecord.gameID = std::atoi(argv[++i]);
+            continue;
+        }
     }
     
     std::cout << "All parameters:\n" << paraRecord.toString() << std::endl;
@@ -104,6 +109,8 @@ void print_usage()
     std::cerr << " -cpu <n>              number of threads, omit for all cores, works with -pgn, -bench, -query" << std::endl;
     std::cerr << " -bench                benchmarch querying games speed, works with -db and -cpu" << std::endl;
     std::cerr << " -q <query>            querying positions, repeat to add multi queries, works with -db and -cpu" << std::endl;
+    std::cerr << " -g <id>               get game with game ID number, works with -db" << std::endl;
+
     std::cerr << " -elo <n>              discard games with Elo under n (for creating)" << std::endl;
     std::cerr << " -plycount <n>         discard games with ply-count under n (for creating)" << std::endl;
     std::cerr << " -resultcount <n>      stop querying if the number of results above n (for querying)" << std::endl;
@@ -125,4 +132,5 @@ void print_usage()
     std::cerr << " ocgdb -pgn big.png -db :memory: -elo 2100 -o moves;moves1;discardsites" << std::endl;
     std::cerr << " ocgdb -bench -db big.ocgdb.db3 -cpu 4" << std::endl;
     std::cerr << " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"Q=3\" -q\"P[d4, e5, f4, g4] = 4 and kb7\"" << std::endl;
+    std::cerr << " ocgdb -db big.ocgdb.db3 -g 4432" << std::endl;
 }

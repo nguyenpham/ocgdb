@@ -377,9 +377,9 @@ namespace bslib {
             ParseMoveListFlag_move_size_1_byte  = 1 << 6, // for the 2nd function one only
         };
         
-        virtual bool fromMoveList(int64_t gameId, const std::string&, Notation, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> = nullptr);
+        virtual bool fromMoveList(int64_t gameId, const std::unordered_map<char*, char*>* itemMap, const std::string&, Notation, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const std::unordered_map<char*, char*>*)> = nullptr);
 
-        virtual bool fromMoveList(int64_t gameId, const std::vector<int8_t>& moveVec, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*)> = nullptr);
+        virtual bool fromMoveList(int64_t gameId, const std::unordered_map<char*, char*>* itemMap, const std::vector<int8_t>& moveVec, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const std::unordered_map<char*, char*>*)> = nullptr);
 
         std::vector<HistBasic> parsePv(const std::string& pvString, bool isCoordinateOnly);
         std::vector<HistBasic> _parsePv(const std::string& pvString, bool isCoordinateOnly);
@@ -392,7 +392,7 @@ namespace bslib {
         static std::string toMoveListString(const std::vector<Hist>& histList, ChessVariant variant, Notation notation, int itemPerLine, bool moveCounter, CommentComputerInfoType computingInfo, bool pawnUnit, int precision);
 
         virtual std::string toSimplePgn() const;
-        virtual std::string toPgn(const std::unordered_map<std::string, std::string> tags) const;
+        virtual std::string toPgn(const std::unordered_map<char*, char*>* tags = nullptr) const;
 
         virtual int16_t move2i16(int from, int dest, int promotion, bool haveComment) const = 0;
         virtual void i16ToMove(int data, int& from, int& dest, int& promotion, bool& haveComment) const = 0;

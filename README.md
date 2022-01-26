@@ -10,13 +10,14 @@ Version Beta
 
 
 ## Why OCGDB? Features/Highlights
-- Open databases: users could easily understand data structures, modify, convert to or from other database formats
-- It supports the highest numbers of games (tested with 94 million games, estimated it could work with billions of games)
-- It is based on SQL which is the strongest query language for querying general information. Users can query without using chess specific programs
+- Open databases: users could easily understand data structures, modify, convert to, or from other database formats
+- It is the format supporting the highest numbers of games (tested with 94 million games, estimated it could work with billions of games)
+- It is based on SQL - the strongest query language for querying general information. Users can query without using chess specific programs
 - It has its own query language (PQL) for approximate-position-searching thus it can cover very widely
-- It could use widely, from mobile, desktop, console to web applications 
-- It is one of programs that could create the smallest chess game databases
-- It is one of the fastest chess game database programs when generating databases and searching
+- It could use for all database purposes, from mobile, desktop, console to web applications 
+- It is one of the formats/programs that could create the smallest chess game databases
+- It is one of the fastest chess game database formats/programs when generating databases and searching
+- 75% of code are SQLite and some other popular open-source libraries that are tested so widely and carefully. The rest 25% (about chess) is tested carefully too. Using this code is quite safe and can save a lot of headache and effort
 - MIT license: you may use it for any applications/purposes unlimitedly without worrying about license conditions
 
 
