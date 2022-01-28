@@ -60,6 +60,14 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-export"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-pgn /Users/nguyenpham/Downloads/carlsen.ocgdb.db3.pgn"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-bench"
             isEnabled = "NO">
          </CommandLineArgument>
@@ -88,14 +96,6 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-encode 2"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-keepmoves -encode 0"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
             argument = "-q &quot;Q = 3&quot;"
             isEnabled = "NO">
          </CommandLineArgument>
@@ -108,16 +108,16 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-q &quot;white6 = 3&quot;"
+            argument = "-q &quot;white6 = 4&quot;"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-g 100"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-cpu 4"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-cpu 1"
@@ -125,6 +125,22 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves;moves1;discardsites;printall;printfen;printpgn"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o printall;printfen;printpgn"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o moves"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o moves2"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-debug"
             isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>

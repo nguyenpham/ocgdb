@@ -3,9 +3,9 @@
 Version Beta
 
 
-## Brief main ideas/techniques
+## Brief of main ideas/techniques
 - Use SQL/SQLite as the backbone/framework for storing data and querying general information
-- Approximate position searching: a) Parse games on the fly b) Use Position Query Language (PQL) for querying widely and dynamically
+- Approximate position searching: a) parse games on the fly b) use Position Query Language (PQL) for querying widely and dynamically
 - Names, tables follow to PGN tags
 
 
@@ -17,7 +17,7 @@ Version Beta
 - It could use for all database purposes, from mobile, desktop, console to web applications 
 - It is one of the formats/programs that could create the smallest chess game databases
 - It is one of the fastest chess game database formats/programs when generating databases and searching
-- 75% of code are SQLite and some other popular open-source libraries that are tested so widely and carefully. The rest 25% (about chess) is tested carefully too. Using this code is quite safe and can save a lot of headache and effort
+- 75% of code is SQLite and some other popular open-source libraries that are tested so widely and carefully. The rest 25% (about chess) is tested carefully too. Using this code is quite safe and can save a lot of headache and effort. Furthermore, those databases are in SQL, developers may easily, quickly develop themselves all code to work with that databases
 - MIT license: you may use it for any applications/purposes unlimitedly without worrying about license conditions
 
 
@@ -34,7 +34,7 @@ Almost all popular/published chess game databases are in binary formats. Those f
 - Hard to support by web apps: processing large binary files is not a strong point of scripting languages/web apps
 - License compatibility: code for those binary formats are mostly from GPL to more restricted, thus some programs may get hard to adapt or even can't support 
 
-Typically a binary format is sticked to a specific chess software and the exchange between formats is very limited.
+Typically a binary format is attached to a specific chess software and the exchange between formats is very limited.
 
 The advantages of being binary formats were very important in the past when computers were weak and Internet speed was slow. However, they become less important nowadays since computers become much stronger and Internet is much faster. That has been making other formats become more attractive.
 
@@ -280,12 +280,22 @@ In macOS, Windows, you can run and compile with Xcode/Visual Studio with the pro
 Users may run the program:
 - for creating SQLite databases from PGN files:
 ```
-ocgdb -pgn c:\games\big.png -db c:\db\big.ocgdb.db3 -cpu 4 -encode 2
+ocgdb -pgn c:\games\big.png -db c:\db\big.ocgdb.db3 -cpu 4 -o moves
+```
+
+- for exporting a SQLite database into a PGN file:
+```
+ocgdb -pgn c:\games\big.png -db c:\db\big.ocgdb.db3 -cpu 4 -export
 ```
 
 - for querying positions:
 ```
 ocgdb -db c:\db\big.ocgdb.db3 -cpu 4 -q "Q=3" -q"P[d4, e5, f4, g4] = 4 and kb7"
+```
+
+- for extract a game with its ID number:
+```
+ocgdb -db c:\db\big.ocgdb.db3 -g 1321"
 ```
 
 ## History
