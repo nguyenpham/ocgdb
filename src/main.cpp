@@ -13,9 +13,10 @@
 #include "board/chess.h"
 
 void print_usage();
+extern bool debugMode;
 
 int main(int argc, const char * argv[]) {
-    std::cout << "Open Chess Game Database Standard (OCGDB), Database Builder, (C) 2022 - version: " << ocgdb::VersionString << "\n" << std::endl;
+    std::cout << "Open Chess Game Database Standard (OCGDB), (C) 2022 - version: " << ocgdb::VersionString << "\n" << std::endl;
     
     if (argc < 2) {
         print_usage();
@@ -33,6 +34,14 @@ int main(int argc, const char * argv[]) {
         auto str = std::string(argv[i]);
         if (str == "-bench") {
             paraRecord.task = ocgdb::Task::bench;
+            continue;
+        }
+        if (str == "-export") {
+            paraRecord.task = ocgdb::Task::export_;
+            continue;
+        }
+        if (str == "-debug") {
+            debugMode = true;
             continue;
         }
 
@@ -81,8 +90,10 @@ int main(int argc, const char * argv[]) {
         }
     }
     
-    std::cout << "All parameters:\n" << paraRecord.toString() << std::endl;
-
+    if (debugMode) {
+        std::cout << "All parameters:\n" << paraRecord.toString() << std::endl;
+    }
+    
     if (paraRecord.isValid()) {
         ocgdb::Builder oc;
         oc.runTask(paraRecord);
@@ -107,6 +118,7 @@ void print_usage()
     std::cerr << " -db <file>            create database, extension should be .ocgdb.db3" << std::endl;
     std::cerr << "                       use :memory: to create in-memory database" << std::endl;
     std::cerr << " -cpu <n>              number of threads, omit for all cores, works with -pgn, -bench, -query" << std::endl;
+    std::cerr << " -export               export from a database into a PGN file, works with -db and -pgn" << std::endl;
     std::cerr << " -bench                benchmarch querying games speed, works with -db and -cpu" << std::endl;
     std::cerr << " -q <query>            querying positions, repeat to add multi queries, works with -db and -cpu" << std::endl;
     std::cerr << " -g <id>               get game with game ID number, works with -db" << std::endl;

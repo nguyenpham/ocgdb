@@ -143,7 +143,7 @@ namespace bslib {
         std::vector<int> _attackByQueen(int from, int dest, const Piece& movePiece);
         std::vector<int> _attackByPawn(int from, int dest, const Piece& movePiece, const Piece& cap, int enpassant);
         std::vector<int> _attackByKnight(int dest, const Piece& movePiece);
-        bool createSanStringForLastMove();
+        virtual bool createSanStringForLastMove() override;
 
         virtual bool isValidPromotion(int promotion, Side) const override {
             return promotion > KING && promotion < static_cast<int>(PieceTypeStd::pawn);

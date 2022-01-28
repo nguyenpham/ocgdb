@@ -24,7 +24,7 @@
 
 namespace ocgdb {
 
-const std::string VersionString = "Beta";
+const std::string VersionString = "Beta 2";
 
 // Current limit is about 4 billion, we can change later by changing this define
 #define IDInteger uint32_t
@@ -39,6 +39,7 @@ enum class ColumnMovesMode
 enum class Task
 {
     create,
+    export_,
     query,
     bench,
     getgame
@@ -120,19 +121,6 @@ public:
 
     void runTask(const ParaRecord&);
     
-public:
-    bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
-    bool queryGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
-
-    static bslib::BoardCore* createBoard(bslib::ChessVariant variant);
-
-    std::set<IDInteger> gameIdSet;
-
-    void parsePGNGame(int64_t gameID, const std::string& fenText, const std::string& moveText, const std::vector<int8_t>& vec);
-
-    static void queryGameDataByID(SQLite::Database& db, int gameIdx);
-
-private:
     enum class SearchField
     {
         none,
@@ -142,10 +130,27 @@ private:
     };
 
 
+public:
+    bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
+    bool queryGame(const bslib::PgnRecord&);
+
+    static bslib::BoardCore* createBoard(bslib::ChessVariant variant);
+
+    std::set<IDInteger> gameIdSet;
+
+    void searchPosition(int64_t gameID,
+                        const bslib::PgnRecord& record,
+                        const std::vector<int8_t>& moveVec);
+
+    static void getGameDataByID(SQLite::Database& db, int gameIdx, SearchField);
+
+
 private:
     void convertPgn2Sql(const ParaRecord&);
+    void convertSql2Pgn(const ParaRecord&);
+
     void bench(const ParaRecord& paraRecord);
-    void query(const ParaRecord& paraRecord, const std::vector<std::string>& queries);
+    void searchPostion(const ParaRecord& paraRecord, const std::vector<std::string>& queries);
     void getGame(const ParaRecord&);
 
     void searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, const std::string& query);
@@ -171,12 +176,16 @@ private:
     void processHalfEnd(char* buffer, long len);
 
     void threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
+    void threadQueryGame(const bslib::PgnRecord& record);
     void threadQueryGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
 
     static int standardizeFEN(char *fenBuf);
 
     int addNewField(const char* fieldName);
+    static SearchField getMoveField(SQLite::Database* db);
 
+    static bool queryGameData(SQLite::Statement& query, SQLite::Statement* queryComments, std::string* toPgnString, bslib::BoardCore* board, char* tmpBuf, SearchField);
+    
 private:
     SearchField searchField;
     const size_t blockSz = 8 * 1024 * 1024;
@@ -184,9 +193,11 @@ private:
     char* halfBuf = nullptr;
     long halfBufSz = 0;
 
-    void threadParsePGNGame(int64_t gameID, const std::string& fenText, const std::string& moveText, const std::vector<int8_t>&);
+    void threadSearchPosition(int64_t gameID,
+                              const bslib::PgnRecord& record,
+                              const std::vector<int8_t>& moveVec);
 
-    std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*, const std::unordered_map<char*, char*>*)> checkToStop = nullptr;
+    std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*, const bslib::PgnRecord*)> checkToStop = nullptr;
 
     std::unordered_map<std::string, IDInteger> playerIdMap, eventIdMap, siteIdMap;
 

@@ -673,12 +673,12 @@ void BoardCore::_parseComment_standard(const std::string& comment, Hist& hist)
 
 
 bool BoardCore::fromMoveList(int64_t gameId,
-                             const std::unordered_map<char*, char*>* itemMap,
-                             const std::string& str,
+                             const PgnRecord* record,
                              Notation notation,
                              int flag,
-                             std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const std::unordered_map<char*, char*>*)> shouldStop)
+                             std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const PgnRecord*)> shouldStop)
 {
+    assert(record);
     std::lock_guard<std::mutex> dolock(dataMutex);
 
     enum class State {
@@ -686,21 +686,22 @@ bool BoardCore::fromMoveList(int64_t gameId,
     };
     
     auto st = State::none;
-    
-    auto level = 0;
-    auto ok = true;
-    
+        
     std::vector<std::string> moveStringVec;
     std::map<size_t, std::string> commentMap;
     std::map<size_t, std::string> eSymMap;
 
     std::string moveString, comment, esym;
 
+    auto level = 0;
+    auto ok = true;
     char ch = 0, prevch = 0;
-    for(size_t i = 0; i < str.length() && ok; i++) {
+
+    const char *p = record->moveText ? record->moveText : record->moveString.c_str();
+    for(size_t i = 0, len = strlen(p); i < len && ok; i++) {
         
         prevch = ch;
-        ch = str.at(i);
+        ch = p[i];
         switch (st) {
             case State::none:
                 if (isalpha(ch)) {
@@ -813,10 +814,6 @@ bool BoardCore::fromMoveList(int64_t gameId,
         commentMap[moveStringVec.size()] = comment;
     }
 
-//    if (moveCount) {
-//        *moveCount = static_cast<int>(moveStringVec.size());
-//    }
-
     std::string fenString;
     std::vector<uint64_t> bitboardVec;
     
@@ -862,12 +859,11 @@ bool BoardCore::fromMoveList(int64_t gameId,
             bitboardVec = posToBitboards();
             assert(!bitboardVec.empty());
 
-            if (shouldStop && shouldStop(gameId, bitboardVec, this, itemMap)) {
+            if (shouldStop && shouldStop(gameId, bitboardVec, this, record)) {
                 hit = true;
                 break;
             }
         }
-
 
         if (flag & ParseMoveListFlag_quick_check) {
             if (!_quickCheckMake(move.from, move.dest, move.promotion, false)) {
@@ -905,7 +901,7 @@ bool BoardCore::fromMoveList(int64_t gameId,
     // last position
     if (shouldStop && !hit) {
         bitboardVec = posToBitboards();
-        if (shouldStop(gameId, bitboardVec, this, itemMap)) {
+        if (shouldStop(gameId, bitboardVec, this, record)) {
             hit = true;
         }
     }
@@ -949,10 +945,10 @@ bool BoardCore::_quickCheck_rook(int from, int dest, bool checkMiddle) const
 }
 
 bool BoardCore::fromMoveList(int64_t gameId,
-                             const std::unordered_map<char*, char*>* itemMap, 
+                             const PgnRecord* record,
                              const std::vector<int8_t>& moveVec,
                              int flag,
-                             std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const std::unordered_map<char*, char*>*)> shouldStop)
+                             std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const PgnRecord*)> shouldStop)
 {
     assert(!moveVec.empty());
     
@@ -972,7 +968,7 @@ bool BoardCore::fromMoveList(int64_t gameId,
             bitboardVec = posToBitboards();
             assert(!bitboardVec.empty());
 
-            if (shouldStop && shouldStop(gameId, bitboardVec, this, itemMap)) {
+            if (shouldStop && shouldStop(gameId, bitboardVec, this, record)) {
                 hit = true;
                 break;
             }
@@ -1001,12 +997,16 @@ bool BoardCore::fromMoveList(int64_t gameId,
         if (flag & ParseMoveListFlag_create_bitboard) {
             histList.back().bitboardVec = bitboardVec;
         }
+
+        if (flag & ParseMoveListFlag_create_san) {
+            createSanStringForLastMove();
+        }
     }
 
     // last position
     if (shouldStop && !hit) {
         bitboardVec = posToBitboards();
-        if (shouldStop(gameId, bitboardVec, this, itemMap)) {
+        if (shouldStop(gameId, bitboardVec, this, record)) {
             hit = true;
         }
     }
@@ -1099,39 +1099,53 @@ std::string BoardCore::toSimplePgn() const
     return stringStream.str();
 }
 
-std::string BoardCore::toPgn(const std::unordered_map<char*, char*>* tags) const
+std::string BoardCore::toPgn(const PgnRecord* record) const
 {
-    std::string headString, eventString;
+    std::string headString, eventString, resultString, moveText;
     auto haveFEN = false;
     
-    if (tags) {
-        for(auto && it : *tags) {
-            auto tag = std::string(it.first);
-            auto s = "[" + tag + " \"" + std::string(it.second) + "\"]\n";
+    if (record) {
+        for(auto && it : record->tags) {
+            auto tag = it.first, ss = it.second;
+            auto s = "[" + tag + " \"" + ss + "\"]\n";
 
             if (tag == "Event") {
                 eventString = s;
             } else {
                 headString += s;
                 if (tag == "FEN") haveFEN = true;
+                if (tag == "Result") resultString = ss;
             }
         }
+        
+        moveText = record->moveText ? record->moveText : record->moveString;
     }
-
+    
     if (eventString.empty()) {
         eventString = "[Event \"\"]\n";
     }
-    
-    std::ostringstream stringStream;    
+
+    std::ostringstream stringStream;
     stringStream << eventString << headString;
     
     if (!haveFEN && !startFen.empty()) {
         stringStream << "[FEN \"" << startFen << "\"]\n";
     }
+    
+    auto parsed = false;
+    if (moveText.empty()) {
+        parsed = true;
+        moveText = toMoveListString(Notation::san,
+                                    8, true,
+                                    CommentComputerInfoType::standard);
+    }
 
-    stringStream << "\n" << toMoveListString(Notation::san,
-                                             8, true,
-                                             CommentComputerInfoType::standard);
+    stringStream << "\n" << moveText;
+    
+    if (parsed && !resultString.empty()) {
+        stringStream << " " << resultString;
+    }
+
     return stringStream.str();
 }
 
