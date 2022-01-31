@@ -672,11 +672,10 @@ void BoardCore::_parseComment_standard(const std::string& comment, Hist& hist)
 }
 
 
-bool BoardCore::fromMoveList(int64_t gameId,
-                             const PgnRecord* record,
+bool BoardCore::fromMoveList(const PgnRecord* record,
                              Notation notation,
                              int flag,
-                             std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const PgnRecord*)> shouldStop)
+                             std::function<bool(const std::vector<uint64_t>&, const BoardCore*, const PgnRecord*)> shouldStop)
 {
     assert(record);
     std::lock_guard<std::mutex> dolock(dataMutex);
@@ -859,7 +858,7 @@ bool BoardCore::fromMoveList(int64_t gameId,
             bitboardVec = posToBitboards();
             assert(!bitboardVec.empty());
 
-            if (shouldStop && shouldStop(gameId, bitboardVec, this, record)) {
+            if (shouldStop && shouldStop(bitboardVec, this, record)) {
                 hit = true;
                 break;
             }
@@ -901,7 +900,7 @@ bool BoardCore::fromMoveList(int64_t gameId,
     // last position
     if (shouldStop && !hit) {
         bitboardVec = posToBitboards();
-        if (shouldStop(gameId, bitboardVec, this, record)) {
+        if (shouldStop(bitboardVec, this, record)) {
             hit = true;
         }
     }
@@ -944,11 +943,10 @@ bool BoardCore::_quickCheck_rook(int from, int dest, bool checkMiddle) const
     return true;
 }
 
-bool BoardCore::fromMoveList(int64_t gameId,
-                             const PgnRecord* record,
+bool BoardCore::fromMoveList(const PgnRecord* record,
                              const std::vector<int8_t>& moveVec,
                              int flag,
-                             std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const PgnRecord*)> shouldStop)
+                             std::function<bool(const std::vector<uint64_t>& bitboardVec, const BoardCore*, const PgnRecord*)> shouldStop)
 {
     assert(!moveVec.empty());
     
@@ -968,7 +966,7 @@ bool BoardCore::fromMoveList(int64_t gameId,
             bitboardVec = posToBitboards();
             assert(!bitboardVec.empty());
 
-            if (shouldStop && shouldStop(gameId, bitboardVec, this, record)) {
+            if (shouldStop && shouldStop(bitboardVec, this, record)) {
                 hit = true;
                 break;
             }
@@ -985,6 +983,10 @@ bool BoardCore::fromMoveList(int64_t gameId,
             auto q = reinterpret_cast<const uint16_t*>(moveVec.data() + i);
             move = ChessBoard::decode2Bytes(*q);
             i += 2;
+        }
+
+        if (!isValid(move)) {
+            break;
         }
 
         auto theSide = side;
@@ -1006,7 +1008,7 @@ bool BoardCore::fromMoveList(int64_t gameId,
     // last position
     if (shouldStop && !hit) {
         bitboardVec = posToBitboards();
-        if (shouldStop(gameId, bitboardVec, this, record)) {
+        if (shouldStop(bitboardVec, this, record)) {
             hit = true;
         }
     }

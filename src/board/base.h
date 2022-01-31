@@ -386,9 +386,10 @@ namespace bslib {
             ParseMoveListFlag_move_size_1_byte  = 1 << 6, // for the 2nd function one only
         };
         
-        virtual bool fromMoveList(int64_t gameId, const PgnRecord* record, Notation, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const PgnRecord*)> = nullptr);
+        virtual bool fromMoveList(const PgnRecord* record, Notation, int flag,
+                                  std::function<bool(const std::vector<uint64_t>&, const BoardCore*, const PgnRecord*)> = nullptr);
 
-        virtual bool fromMoveList(int64_t gameId, const PgnRecord*, const std::vector<int8_t>& moveVec, int flag, std::function<bool(int64_t, const std::vector<uint64_t>& bitboardVec, const BoardCore*, const PgnRecord*)> = nullptr);
+        virtual bool fromMoveList(const PgnRecord*, const std::vector<int8_t>& moveVec, int flag, std::function<bool(const std::vector<uint64_t>& bitboardVec, const BoardCore*, const PgnRecord*)> = nullptr);
 
         std::vector<HistBasic> parsePv(const std::string& pvString, bool isCoordinateOnly);
         std::vector<HistBasic> _parsePv(const std::string& pvString, bool isCoordinateOnly);

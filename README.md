@@ -162,7 +162,7 @@ for auto cnt = 0; statement.executeStep(); cnt++) {
 }
 ```
 
-## Position query language (PQL)
+## Position Query Language (PQL)
 The EBNF (Extended Backus Naur Form) of the language is as the below:
 
 ```
@@ -207,11 +207,18 @@ R == 3        the total of White Rooks must be 3
 q[5-7] >= 2     the total of Black Queens from row 5 to row 7 must be equal or larger than 2
 ```
 
+### Comments
+Any text after // will be trimmed out.
+
+
 Some other examples:
 
 ```
 // find all positions having 3 White Queens
 Q = 3
+
+// 3 White Queens, written in revert way
+3 = Q
 
 // Find all positions having two Black Rooks in the middle squares
 r[e4, e5, d4, d5] = 2
@@ -293,7 +300,7 @@ ocgdb -pgn c:\games\big.png -db c:\db\big.ocgdb.db3 -cpu 4 -export
 ocgdb -db c:\db\big.ocgdb.db3 -cpu 4 -q "Q=3" -q"P[d4, e5, f4, g4] = 4 and kb7"
 ```
 
-- for extract a game with its ID number:
+- for extracting a game with ID number:
 ```
 ocgdb -db c:\db\big.ocgdb.db3 -g 1321"
 ```

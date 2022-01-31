@@ -186,6 +186,12 @@ void ParaRecord::setupOptions(const std::string& optionString)
             std::cerr << "Error: Don't know option string: " << it->first << std::endl;
         } else {
             optionFlag |= 1 << it->second;
+            
+            if (s == "printpgn" || s == "printfen") {
+                auto it2 = optionNameMap.find("printall");
+                assert(it2 != optionNameMap.end());
+                optionFlag |= 1 << it2->second;
+            }
         }
     }
 }
@@ -415,6 +421,11 @@ void Builder::convertPgn2Sql(const ParaRecord& _paraRecord)
         cnt += processPgnFile(path);
     }
     
+    {
+        delete pool;
+        pool = nullptr;
+    }
+
     // completing
     {
         auto str = std::string("INSERT INTO Info (Name, Value) VALUES ('GameCount', '") + std::to_string(gameCnt) + "')";
@@ -738,7 +749,7 @@ SQLite::Database* Builder::createDb(const std::string& path)
 
         mDb->exec("DROP TABLE IF EXISTS Info");
         mDb->exec("CREATE TABLE Info (Name TEXT UNIQUE NOT NULL, Value TEXT)");
-        mDb->exec("INSERT INTO Info (Name, Value) VALUES ('Version', '0.1')");
+        mDb->exec("INSERT INTO Info (Name, Value) VALUES ('Version', '0.9')");
         mDb->exec("INSERT INTO Info (Name, Value) VALUES ('Variant', 'standard')");
         mDb->exec("INSERT INTO Info (Name, Value) VALUES ('License', 'free')");
 
@@ -945,7 +956,11 @@ static const int lichessURLLength = 20;
 bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText)
 {
     auto threadId = std::this_thread::get_id();
-    auto t = &threadMap[threadId];
+    ThreadRecord* t;
+    {
+        std::lock_guard<std::mutex> dolock(threadMapMutex);
+        t = &threadMap[threadId];
+    }
     t->init(mDb);
     assert(t->board);
 
@@ -1148,7 +1163,8 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
 
             bslib::PgnRecord record;
             record.moveText = moveText;
-            t->board->fromMoveList(gameID, &record, bslib::Notation::san, flag);
+            record.gameID = gameID;
+            t->board->fromMoveList(&record, bslib::Notation::san, flag);
 
             plyCount = t->board->getHistListSize();
 
@@ -1248,7 +1264,7 @@ bool Builder::queryGame(const bslib::PgnRecord& record)
         if (paraRecord.optionFlag & query_flag_print_pgn) {
             flag |= bslib::BoardCore::ParseMoveListFlag_create_san;
         }
-        t->board->fromMoveList(gameID, &record, bslib::Notation::san, flag, checkToStop);
+        t->board->fromMoveList(&record, bslib::Notation::san, flag, checkToStop);
     }
 
     return true;
@@ -1265,23 +1281,20 @@ int popCount(uint64_t x) {
 }
 
 
-void doSearchPostion(int64_t gameID,
-                     const bslib::PgnRecord& record,
+void doSearchPostion(const bslib::PgnRecord& record,
                      const std::vector<int8_t>& moveVec)
 {
     assert(builder);
-    builder->searchPosition(gameID, record, moveVec);
+    builder->searchPosition(record, moveVec);
 }
 
-void Builder::threadSearchPosition(int64_t gameID,
-                                   const bslib::PgnRecord& record,
+void Builder::threadSearchPosition(const bslib::PgnRecord& record,
                                    const std::vector<int8_t>& moveVec)
 {
-    pool->submit(doSearchPostion, gameID, record, moveVec);
+    pool->submit(doSearchPostion, record, moveVec);
 }
 
-void Builder::searchPosition(int64_t gameID,
-                             const bslib::PgnRecord& record,
+void Builder::searchPosition(const bslib::PgnRecord& record,
                              const std::vector<int8_t>& moveVec)
 {
     assert(!record.moveString.empty() || record.moveText || !moveVec.empty());
@@ -1303,7 +1316,7 @@ void Builder::searchPosition(int64_t gameID,
     int flag = bslib::BoardCore::ParseMoveListFlag_create_bitboard;
     if (searchField == SearchField::moves) { // there is a text move only
         flag |= bslib::BoardCore::ParseMoveListFlag_quick_check;
-        t->board->fromMoveList(gameID, &record, bslib::Notation::san, flag, checkToStop);
+        t->board->fromMoveList(&record, bslib::Notation::san, flag, checkToStop);
 
     } else {
         if (searchField == SearchField::moves1) {
@@ -1312,10 +1325,8 @@ void Builder::searchPosition(int64_t gameID,
         
         if (paraRecord.optionFlag & query_flag_print_pgn) {
             flag |= bslib::BoardCore::ParseMoveListFlag_create_san;
-            t->board->fromMoveList(gameID, &record, moveVec, flag, checkToStop);
-        } else {
-            t->board->fromMoveList(gameID, nullptr, moveVec, flag, checkToStop);
         }
+        t->board->fromMoveList(&record, moveVec, flag, checkToStop);
     }
 
     t->gameCnt++;
@@ -1360,16 +1371,13 @@ void extractHeader(SQLite::Statement& query, bslib::PgnRecord& record)
             continue;
         }
 
-        if (name == "ID" || name == "Moves" || name == "Moves1" || name == "Moves2") {
+        // Ignore all ID columns and Moves, Moves1, Moves2
+        if (name == "EventID" || name == "SiteID"
+            || name == "WhiteID" || name == "BlackID"
+            || name == "Moves" || name == "Moves1" || name == "Moves2") {
             continue;
         }
         
-        // Ignore all ID column such as ID, WhiteID, BlackID, EventID...
-        auto nameLen = name.size();
-        if (nameLen >= 2 && strcmp(name.c_str() + nameLen - 2, "ID") == 0) {
-            continue;
-        }
-
         std::string str;
         
         switch (c.getType())
@@ -1415,8 +1423,42 @@ void extractHeader(SQLite::Statement& query, bslib::PgnRecord& record)
     }
 }
 
-void Builder::searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, const std::string& query)
+void Builder::searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, std::string query)
 {
+    // remove comments by //
+    if (query.find("//") != std::string::npos) {
+        while(true) {
+            auto p = query.find("//");
+            if (p == std::string::npos) {
+                break;
+            }
+            
+            auto q = p + 2;
+            for(; q < query.size(); q++) {
+                auto ch = query.at(q);
+                if (ch == '\n') {
+                    q++;
+                    break;
+                }
+            }
+            
+            auto s = query.substr(0, p);
+            if (q >= query.size()) {
+                query = s;
+                break;
+            } else {
+                auto s2 = query.substr(q);
+                query = s + s2;
+            }
+        }
+    }
+    
+    bslib::Funcs::trim(query);
+
+    if (query.empty()) {
+        return;
+    }
+
     assert(paraRecord.task != Task::create);
     auto parser = new Parser;
     if (!parser->parse(query.c_str())) {
@@ -1438,14 +1480,14 @@ void Builder::searchPosition(SQLite::Database* db, const std::vector<std::string
     }
     
 
-    checkToStop = [=](int64_t gameId, const std::vector<uint64_t>& bitboardVec, const bslib::BoardCore* board, const bslib::PgnRecord* record) -> bool {
+    checkToStop = [=](const std::vector<uint64_t>& bitboardVec, const bslib::BoardCore* board, const bslib::PgnRecord* record) -> bool {
         assert(board && bitboardVec.size() >= 11);
         
         if (parser->evaluate(bitboardVec)) {
             succCount++;
             
             if (paraRecord.optionFlag & query_flag_print_all) {
-                std::cout << succCount << ". gameId: " << gameId;
+                std::cout << succCount << ". gameId: " << (record ? record->gameID : -1);
                 if (paraRecord.optionFlag & query_flag_print_fen) {
                     std::cout << ", fen: " << board->getFen();
                 }
@@ -1482,7 +1524,7 @@ void Builder::searchPosition(SQLite::Database* db, const std::vector<std::string
         SQLite::Statement statement(*db, str);
         for (; statement.executeStep(); gameCnt++) {
             bslib::PgnRecord record;
-            auto gameID = statement.getColumn("ID").getInt64();
+            record.gameID = statement.getColumn("ID").getInt();
             record.fenText = statement.getColumn("FEN").getText();
             
             std::vector<int8_t> moveVec;
@@ -1508,7 +1550,7 @@ void Builder::searchPosition(SQLite::Database* db, const std::vector<std::string
             if (paraRecord.optionFlag & query_flag_print_pgn) {
                 extractHeader(statement, record);
             }
-            threadSearchPosition(gameID, record, moveVec);
+            threadSearchPosition(record, moveVec);
 
             if (succCount >= paraRecord.resultNumberLimit) {
                 break;
@@ -1590,6 +1632,7 @@ void Builder::searchPostion(const ParaRecord& _paraRecord, const std::vector<std
     }
 
     delete pool;
+    pool = nullptr;
     
     if (!ok) {
         std::cout << "Error: there is no path for database nor PGN files" << std::endl;
@@ -1632,7 +1675,7 @@ bool Builder::queryGameData(SQLite::Statement& query, SQLite::Statement* queryCo
                 moveVec.push_back(moveBlob[i]);
             }
             
-            board->fromMoveList(record.gameID, &record, moveVec, flag, nullptr);
+            board->fromMoveList(&record, moveVec, flag, nullptr);
             
             if (queryComments) {
                 queryComments->reset();
@@ -1656,7 +1699,7 @@ bool Builder::queryGameData(SQLite::Statement& query, SQLite::Statement* queryCo
         if (toPgnString) {
             flag |= bslib::BoardCore::ParseMoveListFlag_create_san;
         }
-        board->fromMoveList(record.gameID, &record, bslib::Notation::san, flag, nullptr);
+        board->fromMoveList(&record, bslib::Notation::san, flag, nullptr);
     }
     
     if (toPgnString) {

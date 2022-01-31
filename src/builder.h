@@ -24,17 +24,17 @@
 
 namespace ocgdb {
 
-const std::string VersionString = "Beta 2";
+const std::string VersionString = "Beta 3";
 
 // Current limit is about 4 billion, we can change later by changing this define
 #define IDInteger uint32_t
 
-enum class ColumnMovesMode
-{
-    none,
-    moves, moves1, moves2,
-    moves_moves1, moves_moves2
-};
+//enum class ColumnMovesMode
+//{
+//    none,
+//    moves, moves1, moves2,
+//    moves_moves1, moves_moves2
+//};
 
 enum class Task
 {
@@ -138,8 +138,7 @@ public:
 
     std::set<IDInteger> gameIdSet;
 
-    void searchPosition(int64_t gameID,
-                        const bslib::PgnRecord& record,
+    void searchPosition(const bslib::PgnRecord& record,
                         const std::vector<int8_t>& moveVec);
 
     static void getGameDataByID(SQLite::Database& db, int gameIdx, SearchField);
@@ -153,7 +152,7 @@ private:
     void searchPostion(const ParaRecord& paraRecord, const std::vector<std::string>& queries);
     void getGame(const ParaRecord&);
 
-    void searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, const std::string& query);
+    void searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, std::string query);
     
     SQLite::Database* createDb(const std::string& path);
     static std::string encodeString(const std::string& name);
@@ -193,11 +192,10 @@ private:
     char* halfBuf = nullptr;
     long halfBufSz = 0;
 
-    void threadSearchPosition(int64_t gameID,
-                              const bslib::PgnRecord& record,
+    void threadSearchPosition(const bslib::PgnRecord& record,
                               const std::vector<int8_t>& moveVec);
 
-    std::function<bool(int64_t gameId, const std::vector<uint64_t>&, const bslib::BoardCore*, const bslib::PgnRecord*)> checkToStop = nullptr;
+    std::function<bool(const std::vector<uint64_t>&, const bslib::BoardCore*, const bslib::PgnRecord*)> checkToStop = nullptr;
 
     std::unordered_map<std::string, IDInteger> playerIdMap, eventIdMap, siteIdMap;
 
@@ -215,7 +213,7 @@ private:
 
     thread_pool* pool = nullptr;
 
-    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex;
+    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, threadMapMutex;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
 
     std::unordered_map<std::string, int> fieldOrderMap;
