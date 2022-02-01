@@ -419,6 +419,8 @@ void Builder::convertPgn2Sql(const ParaRecord& _paraRecord)
 {
     std::cout   << "Convert PGN files into a database..." << std::endl;
 
+    paraRecord = _paraRecord;
+
     // Prepare
     assert(!paraRecord.dbPaths.empty());
     auto dbPath = paraRecord.dbPaths.front();
@@ -431,8 +433,6 @@ void Builder::convertPgn2Sql(const ParaRecord& _paraRecord)
 
     // options
     {
-        paraRecord = _paraRecord;
-
         int movebit = paraRecord.optionFlag & (create_flag_moves|create_flag_moves1|create_flag_moves2);
         
         if (!movebit) {
