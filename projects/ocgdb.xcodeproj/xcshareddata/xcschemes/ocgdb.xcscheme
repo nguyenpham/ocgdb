@@ -53,7 +53,7 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/Carlsen.pgn"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/carlsen.ocgdb.db3"
@@ -125,7 +125,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-g 33 -g 35"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-cpu 4"
@@ -141,7 +141,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o printall;printfen;printpgn"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves"
@@ -149,7 +149,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves2"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves;moves2"

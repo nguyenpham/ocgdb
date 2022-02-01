@@ -745,7 +745,6 @@ uint64_t Builder::processPgnFile(const std::string& path)
             }
             
             buffer[k] = 0;
-//            if (fread(buffer, k, 1, stream)) {
             if (file.read(buffer, k)) {
                 if (mDb && transactionCnt <= 0) {
                     transactionCnt = 400;

@@ -13,6 +13,21 @@
 #include <cstring>
 #include <assert.h>
 
+#ifdef _WIN32
+
+//#include <windows.h>
+//#include <direct.h>
+//#include <stdlib.h> // for full path
+//#include <filesystem>
+
+#else
+
+//#include <glob.h>
+//#include <dirent.h>
+#include <sys/stat.h>
+//#include <unistd.h>
+#endif
+
 #include "funcs.h"
 
 using namespace bslib;
@@ -352,7 +367,7 @@ size_t Funcs::getFileSize(const std::string& path)
 }
 
 #else
-i64 Funcs::getFileSize(const std::string& fileName)
+size_t Funcs::getFileSize(const std::string& fileName)
 {
     struct stat st;
     if (stat(fileName.c_str(), &st) != 0) {
