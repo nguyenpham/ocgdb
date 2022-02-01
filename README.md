@@ -217,7 +217,7 @@ Some other examples:
 // find all positions having 3 White Queens
 Q = 3
 
-// 3 White Queens, written in revert way
+// 3 White Queens, written in inverted way
 3 = Q
 
 // Find all positions having two Black Rooks in the middle squares
@@ -293,6 +293,11 @@ ocgdb -pgn c:\games\big.png -db c:\db\big.ocgdb.db3 -cpu 4 -o moves
 - for exporting a SQLite database into a PGN file:
 ```
 ocgdb -pgn c:\games\big.png -db c:\db\big.ocgdb.db3 -cpu 4 -export
+```
+
+- for checking duplicate games of a SQLite database:
+```
+ocgdb -db c:\db\big.ocgdb.db3 -cpu 4 -dup o printall;remove
 ```
 
 - for querying positions:

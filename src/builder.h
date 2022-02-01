@@ -29,20 +29,15 @@ const std::string VersionString = "Beta 3";
 // Current limit is about 4 billion, we can change later by changing this define
 #define IDInteger uint32_t
 
-//enum class ColumnMovesMode
-//{
-//    none,
-//    moves, moves1, moves2,
-//    moves_moves1, moves_moves2
-//};
-
 enum class Task
 {
     create,
     export_,
+    merge,
     query,
     bench,
-    getgame
+    getgame,
+    dup
 };
 
 enum {
@@ -57,19 +52,22 @@ enum {
     query_flag_print_all                = 1 << 7,
     query_flag_print_fen                = 1 << 8,
     query_flag_print_pgn                = 1 << 9,
+
+    dup_flag_remove                     = 1 << 10,
 };
 
 class ParaRecord
 {
 public:
-    std::vector<std::string> pgnPaths;
-    std::string dbPath;
+    std::vector<std::string> pgnPaths, dbPaths;
 
     std::vector<std::string> queries;
     int optionFlag;
 
     Task task = Task::create;
-    int cpuNumber = -1, limitElo = 0, limitLen = 0, gameID = -1;
+    int cpuNumber = -1, limitElo = 0, limitLen = 0;
+    std::vector<int> gameIDVec;
+    
     int64_t gameNumberLimit = 0xffffffffffffULL; // stop when the number of games reached that limit
     int64_t resultNumberLimit = 0xffffffffffffULL; // stop when the number of results reached that limit
 
@@ -92,14 +90,19 @@ public:
 
     bool createInsertGameStatement(SQLite::Database* mDb, const std::unordered_map<std::string, int>&);
     
+    void deleteAllStatements();
+
+    void resetStats();
+    
 public:
-    int64_t errCnt = 0, gameCnt = 0, hdpLen = 0;
+    int64_t errCnt = 0, gameCnt = 0, hdpLen = 0, dupCnt = 0, delCnt = 0;
     int insertGameStatementIdxSz = -1;
 
     bslib::BoardCore *board = nullptr;
     int8_t* buf = nullptr;
     SQLite::Statement *insertGameStatement = nullptr;
     SQLite::Statement *insertCommentStatement = nullptr;
+    SQLite::Statement *removeGameStatement = nullptr;
 };
 
 
@@ -141,12 +144,15 @@ public:
     void searchPosition(const bslib::PgnRecord& record,
                         const std::vector<int8_t>& moveVec);
 
-    static void getGameDataByID(SQLite::Database& db, int gameIdx, SearchField);
-
+    static void getGameDataByID(SQLite::Database& db, const std::vector<int> gameIDVec, SearchField);
+    void checkDuplicates(const bslib::PgnRecord&, const std::vector<int8_t>& moveVec);
 
 private:
     void convertPgn2Sql(const ParaRecord&);
     void convertSql2Pgn(const ParaRecord&);
+
+    void mergeDatabases(const ParaRecord&);
+    void findDuplicatedGames(const ParaRecord&);
 
     void bench(const ParaRecord& paraRecord);
     void searchPostion(const ParaRecord& paraRecord, const std::vector<std::string>& queries);
@@ -185,6 +191,9 @@ private:
 
     static bool queryGameData(SQLite::Statement& query, SQLite::Statement* queryComments, std::string* toPgnString, bslib::BoardCore* board, char* tmpBuf, SearchField);
     
+    void threadCheckDupplication(const bslib::PgnRecord&, const std::vector<int8_t>& moveVec);
+    void createPool();
+
 private:
     SearchField searchField;
     const size_t blockSz = 8 * 1024 * 1024;
@@ -202,6 +211,7 @@ private:
     bslib::ChessVariant chessVariant = bslib::ChessVariant::standard;
 
     std::string dbPath;
+
     SQLite::Database* mDb = nullptr;
 
     /// Prepared statements
@@ -213,12 +223,15 @@ private:
 
     thread_pool* pool = nullptr;
 
-    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, threadMapMutex;
+    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, threadMapMutex, dupHashKeyMutex;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
 
     std::unordered_map<std::string, int> fieldOrderMap;
     mutable std::mutex parsingMutex, tagFieldMutex;
     std::set<std::string> extraFieldSet;
+    
+    std::unordered_map<int64_t, int> hashGameIDMap;
+    std::set<int64_t> hashSet;
 
     int tagIdx_Moves, tagIdx_MovesBlob, insertGameStatementIdxSz;
     IDInteger gameCnt, eventCnt, playerCnt, siteCnt;

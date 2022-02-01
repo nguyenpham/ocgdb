@@ -44,16 +44,23 @@ int main(int argc, const char * argv[]) {
             debugMode = true;
             continue;
         }
+//        if (str == "-merge") {
+//            paraRecord.task = ocgdb::Task::merge;
+//            continue;
+//        }
+        if (str == "-dup") {
+            paraRecord.task = ocgdb::Task::dup;
+            continue;
+        }
 
         if (i + 1 >= argc) continue;
 
         if (str == "-pgn") {
-            auto pgnPath = std::string(argv[++i]);
-            paraRecord.pgnPaths.push_back(pgnPath);
+            paraRecord.pgnPaths.push_back(std::string(argv[++i]));
             continue;
         }
         if (str == "-db") {
-            paraRecord.dbPath = std::string(argv[++i]);
+            paraRecord.dbPaths.push_back(std::string(argv[++i]));
             continue;
         }
         if (str == "-cpu") {
@@ -85,7 +92,7 @@ int main(int argc, const char * argv[]) {
         }
         if (str == "-g") {
             paraRecord.task = ocgdb::Task::getgame;
-            paraRecord.gameID = std::atoi(argv[++i]);
+            paraRecord.gameIDVec.push_back(std::atoi(argv[++i]));
             continue;
         }
     }
@@ -115,17 +122,19 @@ void print_usage()
     std::cerr << " ocgdb [<parameters>]" << std::endl;
     std::cerr << std::endl;
     std::cerr << " -pgn <file>           PGN game database file, repeat to add multi files" << std::endl;
-    std::cerr << " -db <file>            create database, extension should be .ocgdb.db3" << std::endl;
+    std::cerr << " -db <file>            database file, extension should be .ocgdb.db3, repeat to add multi files" << std::endl;
     std::cerr << "                       use :memory: to create in-memory database" << std::endl;
-    std::cerr << " -cpu <n>              number of threads, omit for all cores, works with -pgn, -bench, -query" << std::endl;
+//    std::cerr << " -merge                merge databases into the first one, works with -db, -cpu" << std::endl;
+    std::cerr << " -dup                  check duplicate games in databases, works with -db, -cpu, -o printall;remove" << std::endl;
     std::cerr << " -export               export from a database into a PGN file, works with -db and -pgn" << std::endl;
     std::cerr << " -bench                benchmarch querying games speed, works with -db and -cpu" << std::endl;
     std::cerr << " -q <query>            querying positions, repeat to add multi queries, works with -db and -cpu" << std::endl;
-    std::cerr << " -g <id>               get game with game ID number, works with -db" << std::endl;
+    std::cerr << " -g <id>               get game with game ID number, works with -db, repeat to add multi IDs" << std::endl;
 
     std::cerr << " -elo <n>              discard games with Elo under n (for creating)" << std::endl;
     std::cerr << " -plycount <n>         discard games with ply-count under n (for creating)" << std::endl;
     std::cerr << " -resultcount <n>      stop querying if the number of results above n (for querying)" << std::endl;
+    std::cerr << " -cpu <n>              number of threads, omit for all cores, works with -pgn, -bench, -query" << std::endl;
     std::cerr << " -o [<options>;]       options" << std::endl;
     std::cerr << "    moves              create text move field Moves" << std::endl;
     std::cerr << "    moves1             create binary move field Moves, 1-byte encoding" << std::endl;
@@ -134,9 +143,10 @@ void print_usage()
     std::cerr << "    discardcomments    discard all comments (for creating)" << std::endl;
     std::cerr << "    discardsites       discard all Site tag (for creating)" << std::endl;
     std::cerr << "    discardnoelo       discard games without player Elos (for creating)" << std::endl;
-    std::cerr << "    printall           print all results (for querying)" << std::endl;
+    std::cerr << "    printall           print all results (for querying, checking duplications)" << std::endl;
     std::cerr << "    printfen           print FENs of results (for querying)" << std::endl;
     std::cerr << "    printpgn           print simple PGNs of results (for querying)" << std::endl;
+    std::cerr << "    remove             remove duplicate games (for checking duplicates)" << std::endl;
 
     std::cerr << std::endl;
     std::cerr << "Examples:" << std::endl;
@@ -144,5 +154,6 @@ void print_usage()
     std::cerr << " ocgdb -pgn big.png -db :memory: -elo 2100 -o moves;moves1;discardsites" << std::endl;
     std::cerr << " ocgdb -bench -db big.ocgdb.db3 -cpu 4" << std::endl;
     std::cerr << " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"Q=3\" -q\"P[d4, e5, f4, g4] = 4 and kb7\"" << std::endl;
-    std::cerr << " ocgdb -db big.ocgdb.db3 -g 4432" << std::endl;
+    std::cerr << " ocgdb -db big.ocgdb.db3 -g 423 -g 4432" << std::endl;
+    std::cerr << " ocgdb -db big.ocgdb.db3 -dup -o remove;printall" << std::endl;
 }

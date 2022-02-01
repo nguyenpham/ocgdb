@@ -38,7 +38,7 @@ static const std::string fullGameQueryString =
 
 bool ParaRecord::isValid() const
 {
-    if (dbPath.empty() && task != Task::query) {
+    if (dbPaths.empty() && task != Task::query) {
         errorString = "Must have a database (.db3) path. Mising or wrong parameter -db";
         return false;
     }
@@ -64,6 +64,25 @@ bool ParaRecord::isValid() const
             ok = true;
             break;
         }
+        case Task::merge:
+        {
+            if (dbPaths.size() < 2) {
+                errorString = "Must have from 2 database (.db3) paths. Mising or wrong parameter -db";
+                return false;
+            }
+            ok = true;
+            break;
+        }
+        case Task::dup:
+        {
+            if (dbPaths.empty()) {
+                errorString = "Must have at least a database (.db3) path. Mising or wrong parameter -db";
+                return false;
+            }
+            ok = true;
+            break;
+        }
+
         case Task::export_:
         {
             if (!hasPgn || pgnPaths.size() != 1) {
@@ -76,7 +95,7 @@ bool ParaRecord::isValid() const
         }
 
         case Task::query:
-            if (dbPath.empty() && !hasPgn) {
+            if (dbPaths.empty() && !hasPgn) {
                 errorString = "Must have a database (.db3) path or a PGN path. Mising or wrong parameter -db and -pgn";
                 return false;
             }
@@ -86,13 +105,12 @@ bool ParaRecord::isValid() const
             }
         case Task::bench:
         {
-
             ok = true;
             break;
         }
         case Task::getgame:
         {
-            if (gameID <= 0) {
+            if (gameIDVec.empty()) {
                 errorString = "gameID must be greater than zero";
                 break;
             }
@@ -106,6 +124,13 @@ bool ParaRecord::isValid() const
     }
     return ok;
 }
+static const std::string searchFieldNames[] = {
+    "",
+    "Moves",
+    "Moves1",
+    "Moves2",
+    ""
+};
 
 static const std::map<std::string, int> optionNameMap = {
     // creating
@@ -120,6 +145,8 @@ static const std::map<std::string, int> optionNameMap = {
     {"printall", 7},
     {"printfen", 8},
     {"printpgn", 9},
+
+    {"remove", 10},
 };
 
 std::string ParaRecord::toString() const
@@ -129,9 +156,11 @@ std::string ParaRecord::toString() const
     const std::string taskNames[] = {
         "create SQL database",
         "export",
+        "merge",
         "query",
         "bench",
-        "get game"
+        "get game",
+        "duplicate"
 
     };
         
@@ -142,7 +171,10 @@ std::string ParaRecord::toString() const
         s += "\t\t" + path + "\n";
     }
     
-    s += "\tDatabase path: " + dbPath + "\n";
+    s += "\tDatabase paths:\n";
+    for(auto && path : dbPaths) {
+        s += "\t\t" + path + "\n";
+    }
 
     s += "\tQueries:\n";
     for(auto && query : queries) {
@@ -235,10 +267,23 @@ ThreadRecord::~ThreadRecord()
 {
     if (buf) delete buf;
     if (board) delete board;
-    if (insertGameStatement) delete insertGameStatement;
-    if (insertCommentStatement) delete insertCommentStatement;
+    deleteAllStatements();
 }
 
+void ThreadRecord::deleteAllStatements()
+{
+    if (insertGameStatement) delete insertGameStatement;
+    if (insertCommentStatement) delete insertCommentStatement;
+    if (removeGameStatement) delete removeGameStatement;
+    insertGameStatement = nullptr;
+    insertCommentStatement = nullptr;
+    removeGameStatement = nullptr;
+}
+
+void ThreadRecord::resetStats()
+{
+    errCnt = gameCnt = hdpLen = dupCnt = delCnt = 0;
+}
 
 bool ThreadRecord::createInsertGameStatement(SQLite::Database* mDb, const std::unordered_map<std::string, int>& fieldOrderMap)
 {
@@ -299,11 +344,27 @@ void Builder::printStats() const
     std::cout << "#games: " << gameCnt
               << ", elapsed: " << elapsed << "ms "
               << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-              << ", speed: " << gameCnt * 1000ULL / elapsed << " games/s";
+              << ", speed: " << gameCnt * 1000ULL / elapsed
+              << " games/s";
     
     
-    if (paraRecord.task == Task::create) {
-        std::cout << ", #blocks: " << blockCnt << ", processed size: " << processedPgnSz / (1024 * 1024ULL) << " MB";
+    switch (paraRecord.task) {
+        case Task::create:
+            std::cout << ", #blocks: " << blockCnt << ", processed size: " << processedPgnSz / (1024 * 1024ULL) << " MB";
+            break;
+        case Task::dup:
+        {
+            int64_t dupCnt = 0, delCnt = 0;
+            for(auto && t : threadMap) {
+                dupCnt += t.second.dupCnt;
+                delCnt += t.second.delCnt;
+            }
+            std::cout << ", #duplicates: " << dupCnt << ", #removed: " << delCnt;
+            break;
+        }
+
+        default:
+            break;
     }
 
     std::cout << std::endl;
@@ -320,8 +381,14 @@ void Builder::runTask(const ParaRecord& param)
         case Task::create:
             convertPgn2Sql(param);
             break;
+        case Task::merge:
+            mergeDatabases(param);
+            break;
         case Task::export_:
             convertSql2Pgn(param);
+            break;
+        case Task::dup:
+            findDuplicatedGames(param);
             break;
         case Task::bench:
             bench(param);
@@ -338,15 +405,27 @@ void Builder::runTask(const ParaRecord& param)
     }
 }
 
+void Builder::createPool()
+{
+    auto cpu = paraRecord.cpuNumber;
+    if (cpu < 0) cpu = std::thread::hardware_concurrency();
+    pool = new thread_pool(cpu);
+    
+    std::cout << "Thread count: " << pool->get_thread_count() << std::endl;
+
+}
+
 void Builder::convertPgn2Sql(const ParaRecord& _paraRecord)
 {
     std::cout   << "Convert PGN files into a database..." << std::endl;
 
     // Prepare
-    setDatabasePath(paraRecord.dbPath);
+    assert(!paraRecord.dbPaths.empty());
+    auto dbPath = paraRecord.dbPaths.front();
+    setDatabasePath(dbPath);
     
     // remove old db file if existed
-    std::remove(paraRecord.dbPath.c_str());
+    std::remove(dbPath.c_str());
 
     startTime = getNow();
 
@@ -404,16 +483,12 @@ void Builder::convertPgn2Sql(const ParaRecord& _paraRecord)
 
         
         // Create database
-        mDb = createDb(paraRecord.dbPath);
+        mDb = createDb(dbPath);
         if (!mDb) {
             return;
         }
 
-        auto cpu = paraRecord.cpuNumber;
-        if (cpu < 0) cpu = std::thread::hardware_concurrency();
-        pool = new thread_pool(cpu);
-        
-        std::cout << "Thread count: " << pool->get_thread_count() << std::endl;
+        createPool();
     }
 
     uint64_t cnt = 0;
@@ -1544,7 +1619,6 @@ void Builder::searchPosition(SQLite::Database* db, const std::vector<std::string
                 for(auto i = 0; i < sz; ++i) {
                     moveVec.push_back(moveBlob[i]);
                 }
-                
             }
             
             if (paraRecord.optionFlag & query_flag_print_pgn) {
@@ -1609,13 +1683,10 @@ void Builder::searchPostion(const ParaRecord& _paraRecord, const std::vector<std
     errCnt = 0;
 
     // Reading all data, parsing moves, multi threads
-    auto cpu = paraRecord.cpuNumber;
-    if (cpu < 0) cpu = std::thread::hardware_concurrency();
-    pool = new thread_pool(cpu);
-    std::cout << "Thread count: " << pool->get_thread_count() << std::endl;
+    createPool();
 
     auto ok = false;
-    if (paraRecord.dbPath.empty()) {
+    if (paraRecord.dbPaths.empty()) {
         if (!paraRecord.pgnPaths.empty()) {
             ok = true;
             for(auto && s : queries) {
@@ -1624,16 +1695,13 @@ void Builder::searchPostion(const ParaRecord& _paraRecord, const std::vector<std
         }
     } else {
         ok = true;
-        SQLite::Database db(paraRecord.dbPath, SQLite::OPEN_READWRITE);
+        SQLite::Database db(paraRecord.dbPaths.front(), SQLite::OPEN_READWRITE);
 
         for(auto && s : queries) {
             searchPosition(&db, std::vector<std::string>(), s);
         }
     }
 
-    delete pool;
-    pool = nullptr;
-    
     if (!ok) {
         std::cout << "Error: there is no path for database nor PGN files" << std::endl;
     }
@@ -1712,14 +1780,12 @@ bool Builder::queryGameData(SQLite::Statement& query, SQLite::Statement* queryCo
 /*
  This function is just an example how to query and extract data from a record with a given game ID
  */
-void Builder::getGameDataByID(SQLite::Database& db, int gameID, SearchField searchField)
+void Builder::getGameDataByID(SQLite::Database& db, const std::vector<int> gameIDVec, SearchField searchField)
 {
-    std::cout   << "Get PGN game with ID: " << gameID << std::endl;
 
     std::string str = fullGameQueryString + " WHERE g.ID = ?";
 
     SQLite::Statement query(db, str);
-    query.bind(1, gameID);
 
     SQLite::Statement* queryComments = nullptr;
     if (searchField == SearchField::moves1 || searchField == SearchField::moves1) {
@@ -1729,10 +1795,16 @@ void Builder::getGameDataByID(SQLite::Database& db, int gameID, SearchField sear
     char * buf = (char*) malloc(1024 * 8);
     auto board = Builder::createBoard(bslib::ChessVariant::standard);
     std::string toPgnString;
-    if (queryGameData(query, queryComments, &toPgnString, board, buf, searchField)) {
-        std::cout << "PGN:\n" << toPgnString << std::endl;
-    } else {
-        std::cerr << "Error: Cannot retrieve record with the game ID: " << gameID << std::endl;
+    
+    for(auto && gameID : gameIDVec) {
+        std::cout   << "Get PGN game with ID: " << gameID << std::endl;
+        query.bind(1, gameID);
+        if (queryGameData(query, queryComments, &toPgnString, board, buf, searchField)) {
+            std::cout << "PGN:\n" << toPgnString << std::endl;
+        } else {
+            std::cerr << "Error: Cannot retrieve record with the game ID: " << gameID << std::endl;
+        }
+        query.reset();
     }
 
     delete buf;
@@ -1747,9 +1819,9 @@ void Builder::getGameDataByID(SQLite::Database& db, int gameID, SearchField sear
 void Builder::getGame(const ParaRecord& _paraRecord)
 {
     paraRecord = _paraRecord;
-    SQLite::Database db(paraRecord.dbPath, SQLite::OPEN_READWRITE);
+    SQLite::Database db(paraRecord.dbPaths.front(), SQLite::OPEN_READWRITE);
     auto searchField = getMoveField(&db);
-    getGameDataByID(db, paraRecord.gameID, searchField);
+    getGameDataByID(db, paraRecord.gameIDVec, searchField);
 }
 
 
@@ -1757,9 +1829,10 @@ void Builder::convertSql2Pgn(const ParaRecord& _paraRecord)
 {
     paraRecord = _paraRecord;
     auto pgnPath = paraRecord.pgnPaths.front();
+    auto dbPath = paraRecord.dbPaths.empty() ? "" : paraRecord.dbPaths.front();
 
     std::cout   << "Convert a database into a PGN file...\n"
-                << "DB path : " << paraRecord.dbPath
+                << "DB path : " << dbPath
                 << "\nPGN path: " << pgnPath
                 << std::endl;
 
@@ -1770,7 +1843,7 @@ void Builder::convertSql2Pgn(const ParaRecord& _paraRecord)
     auto board = Builder::createBoard(bslib::ChessVariant::standard);
     std::string toPgnString;
 
-    SQLite::Database db(paraRecord.dbPath, SQLite::OPEN_READWRITE);
+    SQLite::Database db(dbPath, SQLite::OPEN_READWRITE);
 
     assert(!paraRecord.pgnPaths.empty());
     
@@ -1801,6 +1874,211 @@ void Builder::convertSql2Pgn(const ParaRecord& _paraRecord)
     if (queryComments) delete queryComments;
     delete buf;
     delete board;
+
+    printStats();
+    std::cout << "Completed! " << std::endl;
+}
+
+
+void Builder::mergeDatabases(const ParaRecord& _paraRecord)
+{
+}
+
+
+void doCheckDupplication(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
+{
+    assert(builder);
+    builder->checkDuplicates(record, moveVec);
+}
+
+void Builder::threadCheckDupplication(const bslib::PgnRecord& record,
+                                   const std::vector<int8_t>& moveVec)
+{
+    pool->submit(doCheckDupplication, record, moveVec);
+}
+
+void Builder::checkDuplicates(const bslib::PgnRecord& record,
+                             const std::vector<int8_t>& moveVec)
+{
+    assert(!record.moveString.empty() || record.moveText || !moveVec.empty());
+    assert(record.gameID > 0);
+
+    auto threadId = std::this_thread::get_id();
+    ThreadRecord* t;
+    
+    {
+        std::lock_guard<std::mutex> dolock(parsingMutex);
+        t = &threadMap[threadId];
+    }
+
+    if (!t->board) {
+        t->board = Builder::createBoard(bslib::ChessVariant::standard);
+    }
+    assert(t->board);
+    
+    t->board->newGame(record.fenText);
+    
+    int flag = bslib::BoardCore::ParseMoveListFlag_quick_check;
+    if (searchField == SearchField::moves) { // there is a text move only
+        t->board->fromMoveList(&record, bslib::Notation::san, flag, nullptr);
+    } else {
+        if (searchField == SearchField::moves1) {
+            flag |= bslib::BoardCore::ParseMoveListFlag_move_size_1_byte;
+        }
+        
+        t->board->fromMoveList(&record, moveVec, flag, nullptr);
+    }
+
+    t->gameCnt++;
+    
+    auto lastHashKey = t->board->hashKey;
+    {
+        std::lock_guard<std::mutex> dolock(dupHashKeyMutex);
+
+        if (paraRecord.optionFlag & query_flag_print_all) {
+            auto it = hashGameIDMap.find(lastHashKey);
+            if (it == hashGameIDMap.end()) {
+                hashGameIDMap[lastHashKey] = record.gameID;
+                return;
+            }
+            std::cerr << "Duplicate games detected between IDs " << it->second << " and " << record.gameID << std::endl;
+        } else {
+            auto it = hashSet.find(lastHashKey);
+            if (it == hashSet.end()) {
+                hashSet.insert(lastHashKey);
+                return;
+            }
+        }
+    }
+    
+    t->dupCnt++;
+    if (paraRecord.optionFlag & dup_flag_remove) {
+        if (!t->removeGameStatement) {
+            assert(mDb);
+            t->removeGameStatement = new SQLite::Statement(*mDb, "DELETE FROM Games WHERE ID = ?");
+        }
+        
+        t->removeGameStatement->reset();
+        t->removeGameStatement->bind(1, record.gameID);
+        t->removeGameStatement->exec();
+        t->delCnt++;
+    }
+}
+
+void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
+{
+    paraRecord = _paraRecord;
+    createPool();
+    
+    for(auto && dbPath : paraRecord.dbPaths) {
+        std::cout   << "Detect duplicate games...\n"
+                    << "DB path : " << dbPath
+                    << std::endl;
+
+        startTime = getNow();
+
+        mDb = new SQLite::Database(dbPath, SQLite::OPEN_READWRITE);
+        if (!mDb) {
+            std::cerr << "Error: can't open database " << dbPath << std::endl;
+            continue;
+        }
+
+        if (paraRecord.optionFlag & dup_flag_remove) {
+            mDb->exec("PRAGMA journal_mode=OFF");
+            mDb->exec("BEGIN");
+        }
+        
+        for(auto && t : threadMap) {
+            t.second.resetStats();
+        }
+
+        searchField = getMoveField(mDb);
+        if (searchField == SearchField::none) {
+            continue;
+        }
+        
+        std::string moveName = searchFieldNames[static_cast<int>(searchField)];
+        assert(!moveName.empty());
+        
+        int flag = bslib::BoardCore::ParseMoveListFlag_quick_check | bslib::BoardCore::ParseMoveListFlag_discardComment;
+        if (searchField == SearchField::moves1) {
+            flag |= bslib::BoardCore::ParseMoveListFlag_move_size_1_byte;
+        }
+
+        std::string sqlString = "SELECT ID, FEN, " + moveName + " FROM Games";
+        auto statement = new SQLite::Statement(*mDb, sqlString);
+        
+        for (gameCnt = 0; statement->executeStep(); ++gameCnt) {
+            bslib::PgnRecord record;
+            record.gameID = statement->getColumn("ID").getInt();
+            record.fenText = statement->getColumn("FEN").getText();
+            std::vector<int8_t> moveVec;
+
+            if (searchField == SearchField::moves) {
+                record.moveString = statement->getColumn("Moves").getText();
+                if (record.moveString.empty()) {
+                    continue;
+                }
+            } else {
+                auto c = statement->getColumn(moveName.c_str());
+                auto moveBlob = static_cast<const int8_t*>(c.getBlob());
+                
+                if (moveBlob) {
+                    auto sz = c.size();
+                    for(auto i = 0; i < sz; ++i) {
+                        moveVec.push_back(moveBlob[i]);
+                    }
+                }
+                
+                if (moveVec.empty()) {
+                    continue;
+                }
+            }
+
+            threadCheckDupplication(record, moveVec);
+            
+            if (gameCnt && (gameCnt & 0xffff) == 0) {
+                printStats();
+            }
+        }
+
+        pool->wait_for_tasks();
+        
+        delete statement;
+        statement = nullptr;
+        
+        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+        
+        std::cout << std::endl << " DONE. Elapsed: " << elapsed << " ms, "
+                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+                  << ", total games: " << gameCnt
+                  << ", total results: " << succCount
+                  << ", time per results: " << elapsed / std::max<int64_t>(1, succCount)  << " ms"
+                  << std::endl << std::endl << std::endl;
+
+        int64_t delCnt = 0;
+        {
+            for(auto && t : threadMap) {
+                t.second.deleteAllStatements();
+                delCnt += t.second.delCnt;
+            }
+            
+            // Update table Info
+            if (delCnt > 0) {
+                int64_t gCnt = gameCnt - delCnt;
+                
+                std::string sqlstr = "UPDATE Info SET Value = '" + std::to_string(gCnt) + "' WHERE Name = 'GameCount'";
+                std::cout << "sqlstr: " << sqlstr << std::endl;
+                mDb->exec(sqlstr);
+
+                mDb->exec("COMMIT");
+            }
+
+            if (mDb) delete mDb;
+            mDb = nullptr;
+        }
+    }
+
 
     printStats();
     std::cout << "Completed! " << std::endl;

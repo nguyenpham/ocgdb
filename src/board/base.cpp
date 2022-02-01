@@ -948,7 +948,7 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
                              int flag,
                              std::function<bool(const std::vector<uint64_t>& bitboardVec, const BoardCore*, const PgnRecord*)> shouldStop)
 {
-    assert(!moveVec.empty());
+//    assert(!moveVec.empty());
     
     std::lock_guard<std::mutex> dolock(dataMutex);
     
