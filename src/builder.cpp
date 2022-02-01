@@ -2068,7 +2068,7 @@ void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
                 int64_t gCnt = gameCnt - delCnt;
                 
                 std::string sqlstr = "UPDATE Info SET Value = '" + std::to_string(gCnt) + "' WHERE Name = 'GameCount'";
-                std::cout << "sqlstr: " << sqlstr << std::endl;
+//                std::cout << "sqlstr: " << sqlstr << std::endl;
                 mDb->exec(sqlstr);
 
                 mDb->exec("COMMIT");
