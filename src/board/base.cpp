@@ -694,7 +694,7 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
 
     auto level = 0;
     auto ok = true;
-    char ch = 0, prevch = 0;
+    unsigned char ch = 0, prevch = 0;
 
     const char *p = record->moveText ? record->moveText : record->moveString.c_str();
     for(size_t i = 0, len = strlen(p); i < len && ok; i++) {

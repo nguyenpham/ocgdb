@@ -728,10 +728,14 @@ uint64_t Builder::processPgnFile(const std::string& path)
 
     {
         char *buffer = (char*)malloc(blockSz + 16);
+        auto size = bslib::Funcs::getFileSize(path);
 
-        FILE *stream = fopen(path.c_str(), "r");
-        assert(stream != NULL);
-        auto size = bslib::Funcs::getFileSize(stream);
+        std::ifstream file(path, std::ios::binary);
+
+        if (!file || size == 0) {
+            std::cerr << "Error: Can't open file: '" << path << "'" << std::endl;
+            return 0;
+        }
         
         blockCnt = processedPgnSz = 0;
         for (size_t sz = 0, idx = 0; sz < size && gameCnt < paraRecord.gameNumberLimit; idx++) {
@@ -741,7 +745,8 @@ uint64_t Builder::processPgnFile(const std::string& path)
             }
             
             buffer[k] = 0;
-            if (fread(buffer, k, 1, stream)) {
+//            if (fread(buffer, k, 1, stream)) {
+            if (file.read(buffer, k)) {
                 if (mDb && transactionCnt <= 0) {
                     transactionCnt = 400;
                     mDb->exec("BEGIN");
@@ -766,7 +771,7 @@ uint64_t Builder::processPgnFile(const std::string& path)
             sz += k;
         }
 
-        fclose(stream);
+        file.close();
         free(buffer);
 
         if (halfBuf) {

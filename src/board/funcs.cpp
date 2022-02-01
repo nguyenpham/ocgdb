@@ -339,3 +339,26 @@ size_t Funcs::getFileSize(FILE * file)
 #endif
     return size;
 }
+
+
+#ifdef _WIN32
+size_t Funcs::getFileSize(const std::string& path)
+{
+    // Good to compile with Visual C++
+    struct __stat64 fileStat;
+    int err = _stat64(path.c_str(), &fileStat);
+    if (0 != err) return 0;
+    return fileStat.st_size;
+}
+
+#else
+i64 Funcs::getFileSize(const std::string& fileName)
+{
+    struct stat st;
+    if (stat(fileName.c_str(), &st) != 0) {
+        return 0;
+    }
+    return st.st_size;
+}
+
+#endif

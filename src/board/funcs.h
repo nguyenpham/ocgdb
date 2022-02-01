@@ -57,6 +57,8 @@ public:
     static char* trim(char*);
     
     static size_t getFileSize(FILE *);
+    static size_t getFileSize(const std::string& path);
+
 };
 
 }
