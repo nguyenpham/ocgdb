@@ -125,7 +125,7 @@ void print_usage()
     std::cerr << " -db <file>            database file, extension should be .ocgdb.db3, repeat to add multi files" << std::endl;
     std::cerr << "                       use :memory: to create in-memory database" << std::endl;
 //    std::cerr << " -merge                merge databases into the first one, works with -db, -cpu" << std::endl;
-    std::cerr << " -dup                  check duplicate games in databases, works with -db, -cpu, -o printall;remove" << std::endl;
+    std::cerr << " -dup                  check duplicate games in databases, works with -db, -cpu, -plycount, -o printall;remove" << std::endl;
     std::cerr << " -export               export from a database into a PGN file, works with -db and -pgn" << std::endl;
     std::cerr << " -bench                benchmarch querying games speed, works with -db and -cpu" << std::endl;
     std::cerr << " -q <query>            querying positions, repeat to add multi queries, works with -db and -cpu" << std::endl;

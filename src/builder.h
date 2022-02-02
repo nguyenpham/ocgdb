@@ -24,7 +24,7 @@
 
 namespace ocgdb {
 
-const std::string VersionString = "Beta 4";
+const std::string VersionString = "Beta 5";
 
 // Current limit is about 4 billion, we can change later by changing this define
 #define IDInteger uint32_t
@@ -62,7 +62,7 @@ public:
     std::vector<std::string> pgnPaths, dbPaths;
 
     std::vector<std::string> queries;
-    int optionFlag;
+    int optionFlag = 0;
 
     Task task = Task::create;
     int cpuNumber = -1, limitElo = 0, limitLen = 0;
@@ -98,11 +98,12 @@ public:
     int64_t errCnt = 0, gameCnt = 0, hdpLen = 0, dupCnt = 0, delCnt = 0;
     int insertGameStatementIdxSz = -1;
 
-    bslib::BoardCore *board = nullptr;
+    bslib::BoardCore *board = nullptr, *board2 = nullptr;
     int8_t* buf = nullptr;
     SQLite::Statement *insertGameStatement = nullptr;
     SQLite::Statement *insertCommentStatement = nullptr;
     SQLite::Statement *removeGameStatement = nullptr;
+    SQLite::Statement *getGameStatement = nullptr;
 };
 
 
@@ -223,15 +224,14 @@ private:
 
     thread_pool* pool = nullptr;
 
-    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, threadMapMutex, dupHashKeyMutex;
+    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, threadMapMutex, dupHashKeyMutex, printMutex;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
 
     std::unordered_map<std::string, int> fieldOrderMap;
     mutable std::mutex parsingMutex, tagFieldMutex;
     std::set<std::string> extraFieldSet;
     
-    std::unordered_map<int64_t, int> hashGameIDMap;
-    std::set<int64_t> hashSet;
+    std::unordered_map<int64_t, std::vector<int>> hashGameIDMap;
 
     int tagIdx_Moves, tagIdx_MovesBlob, insertGameStatementIdxSz;
     IDInteger gameCnt, eventCnt, playerCnt, siteCnt;

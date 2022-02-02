@@ -339,6 +339,9 @@ namespace bslib {
 
         void setHashKey(uint64_t key);
         
+        virtual uint64_t getHashKeyForCheckingDuplicates() const = 0;
+        bool equalMoveList(const BoardCore*) const;
+        
     public:
         bool fromOriginPosition() const;
         virtual std::string getStartingFen(FENCharactorSet = FENCharactorSet::standard) const;

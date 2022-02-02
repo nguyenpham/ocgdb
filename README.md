@@ -109,6 +109,14 @@ For examples of field names:
 ### Field values
 Except for fields of identicals such EventID, SiteID, WhiteID, BlackID, values of other fields could be NULL.
 
+### Popular fields in table Games
+We suggest beside ID, FEN and move fields, Games should have following fields according to popular PGN tags:
+
+```EventID, SiteID, Date, Round, WhiteID, WhiteElo, BlackID, BlackElo, Result, TimeControl, ECO, PlyCount```
+        
+### Other tag fields in table Games
+When a game has some tags that are not in the above list, users can choose to create new fields to store information of those tags or not.
+
 
 ## FEN field
 A FEN string of each game could be stored (FEN strings) in that field. If the game starts from start-position, it could be saved as a NULL string.
@@ -116,9 +124,16 @@ A FEN string of each game could be stored (FEN strings) in that field. If the ga
 
 ## Moves fields
 All moves of a game could be stored in some forms in some specific fields as the below:
-- Moves: all moves including all other information such as comments are stored as a single string
-- Moves1: each move (except Queen move) is encoded as a 1 byte when a Queen move is encoded as 2 bytes. All moves (of a game) are stored as a binary array and then saved into the database as a blob
-- Moves2: similar to Moves1 but each move is encoded as 2 bytes
+
+- Moves: all moves including all other information such as comments are stored as a single string. For example:
+  ```1.c4 e5 2.Nc3 Bb4 {A21: English, Kramnik-Shirov counterattack} 3.Nd5 Be7 4.Nxe7 Nxe7 5.d4 exd4 6.Qxd4 O-O 1/2-1/2```
+  
+- Moves2: each move is encoded as 2 bytes. The encode for chess: ```from | dest << 6 | promotion << 12```
+- Moves1: each move (except Queen move) is encoded as a 1 byte when a Queen move is encoded as 2 bytes
+
+All moves (of a game) in Moves1/Moves2 are stored as a binary array and then saved into the database as a blob.
+
+The algorithms of Moves and Moves2 are very simple, developers can easily encode and decode using their own code. In contrast, the algorithm of Moves1 is quite complicated, deeply integrated into our code/library. It is not easy for developers to write their own encode/decode. Even Moves1 can create the smallest databases, consider using Moves and/or Moves2 instead, just for being easy to use by other libraries.
 
 
 ## Converting speed
@@ -246,12 +261,6 @@ white6 = 5
 ### The Parser
 Because the language is very simple and input strings are typically so short, we implement its parser in a simple, straightforward way, using the recursive method. From an input string (query), the parser will create an evaluation tree. That tree will be evaluated at every chess position with the parameters as a set of bitboards of that position. The position and its game will be picked up as the result of the evaluation of the tree is true (not zero).
 
-
-### Matching
-
-```
-SELECT g.ID, g.Round, Date, w.Name White, WhiteElo, b.Name Black, BlackElo, Result, Timer, ECO, PlyCount, FEN, Moves FROM Games g INNER JOIN Players w ON WhiteID = w.ID INNER JOIN Players b ON BlackID = b.ID WHERE g.Moves LIKE '1.d4 Nf6 2.Nf3 d5 3.e3 Bf5 4.c4 c6 5.Nc3 e6%'
-```
 
 
 ## Sample databases

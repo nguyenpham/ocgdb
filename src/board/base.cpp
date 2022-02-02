@@ -167,6 +167,24 @@ void BoardCore::setHashKey(uint64_t key)
     hashKey = key;
 }
 
+bool BoardCore::equalMoveList(const BoardCore* oBoard) const
+{
+    assert(oBoard);
+    
+    auto n = histList.size();
+    if (n != oBoard->histList.size()) {
+        return false;
+    }
+    
+    for(size_t i = 0; i < n; ++i) {
+        if (histList.at(i).move != oBoard->histList.at(i).move) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 int BoardCore::attackerCnt() const
 {
     auto cnt = 0;

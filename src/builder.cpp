@@ -267,6 +267,7 @@ ThreadRecord::~ThreadRecord()
 {
     if (buf) delete buf;
     if (board) delete board;
+    if (board2) delete board2;
     deleteAllStatements();
 }
 
@@ -275,9 +276,11 @@ void ThreadRecord::deleteAllStatements()
     if (insertGameStatement) delete insertGameStatement;
     if (insertCommentStatement) delete insertCommentStatement;
     if (removeGameStatement) delete removeGameStatement;
+    if (getGameStatement) delete getGameStatement;
     insertGameStatement = nullptr;
     insertCommentStatement = nullptr;
     removeGameStatement = nullptr;
+    getGameStatement = nullptr;
 }
 
 void ThreadRecord::resetStats()
@@ -341,6 +344,8 @@ void Builder::printStats() const
 {
     int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
     
+    std::lock_guard<std::mutex> dolock(printMutex);
+
     std::cout << "#games: " << gameCnt
               << ", elapsed: " << elapsed << "ms "
               << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
@@ -848,8 +853,8 @@ SQLite::Database* Builder::createDb(const std::string& path)
         
         std::string sqlstring0 =
             "CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT, EventID INTEGER, SiteID INTEGER, "\
-           "Date TEXT, Round INTEGER, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, "\
-        "Result INTEGER, TimeControl TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT";
+           "Date TEXT, Round TEXT, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, "\
+        "Result TEXT, TimeControl TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT";
         
         if (paraRecord.optionFlag & create_flag_moves) {
             sqlstring0 += ", Moves TEXT";
@@ -1144,11 +1149,11 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
                     break;
                 }
 
-                case TagIdx_Round:
-                {
-                    intMap[TagIdx_Round] = std::atoi(s);
-                    break;
-                }
+//                case TagIdx_Round:
+//                {
+//                    intMap[TagIdx_Round] = std::atoi(s);
+//                    break;
+//                }
 
                 case TagIdx_Date:
                 {
@@ -1156,6 +1161,7 @@ bool Builder::addGame(const std::unordered_map<char*, char*>& itemMap, const cha
                 }
 
                 default:
+//                case TagIdx_Round:
 //                case TagIdx_Result:
 //                case TagIdx_Timer:
 //                case TagIdx_ECO:
@@ -1566,6 +1572,8 @@ void Builder::searchPosition(SQLite::Database* db, const std::vector<std::string
             succCount++;
             
             if (paraRecord.optionFlag & query_flag_print_all) {
+                std::lock_guard<std::mutex> dolock(printMutex);
+
                 std::cout << succCount << ". gameId: " << (record ? record->gameID : -1);
                 if (paraRecord.optionFlag & query_flag_print_fen) {
                     std::cout << ", fen: " << board->getFen();
@@ -1935,26 +1943,105 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record,
 
     t->gameCnt++;
     
-    auto lastHashKey = t->board->hashKey;
+    // Check game length
+    auto plyCount = t->board->getHistListSize();
+    if (plyCount < paraRecord.limitLen) {
+        return;
+    }
+    
+    auto hashKey = t->board->getHashKeyForCheckingDuplicates();
+    std::vector<int> gameIDVec;
     {
         std::lock_guard<std::mutex> dolock(dupHashKeyMutex);
 
-        if (paraRecord.optionFlag & query_flag_print_all) {
-            auto it = hashGameIDMap.find(lastHashKey);
-            if (it == hashGameIDMap.end()) {
-                hashGameIDMap[lastHashKey] = record.gameID;
-                return;
+        auto it = hashGameIDMap.find(hashKey);
+        if (it == hashGameIDMap.end()) {
+            hashGameIDMap[hashKey] = std::vector<int>{ record.gameID };
+            return;
+        }
+        gameIDVec = it->second;
+    }
+    
+    assert(gameIDVec.size() > 0);
+    // Further check, match all moves of all games
+    if (!t->getGameStatement) {
+        
+        auto moveName = searchFieldNames[static_cast<int>(searchField)];
+
+        std::string sqlString = "SELECT FEN, " + moveName + " FROM Games WHERE ID = ?";
+        t->getGameStatement = new SQLite::Statement(*mDb, sqlString);
+    }
+    if (!t->board2) {
+        t->board2 = Builder::createBoard(bslib::ChessVariant::standard);
+    }
+
+    auto theDupID = -1;
+    for(auto && dupID : gameIDVec) {
+        t->getGameStatement->reset();
+        t->getGameStatement->bind(1, dupID);
+        
+        if (!t->getGameStatement->executeStep()) {
+            return; // something wrong
+        }
+        {
+            bslib::PgnRecord record2;
+            record2.fenText = t->getGameStatement->getColumn("FEN").getText();
+            
+            if (record2.fenText != record.fenText) {
+                continue;
             }
-            std::cerr << "Duplicate games detected between IDs " << it->second << " and " << record.gameID << std::endl;
-        } else {
-            auto it = hashSet.find(lastHashKey);
-            if (it == hashSet.end()) {
-                hashSet.insert(lastHashKey);
-                return;
+
+            record2.gameID = dupID;
+            t->board2->newGame(record2.fenText);
+            
+            if (searchField == SearchField::moves) {
+                record2.moveString = t->getGameStatement->getColumn("Moves").getText();
+                if (record2.moveString.empty()) {
+                    continue;
+                }
+                
+                t->board2->fromMoveList(&record2, bslib::Notation::san, flag, nullptr);
+            } else {
+                std::vector<int8_t> moveVec;
+
+                auto moveName = searchFieldNames[static_cast<int>(searchField)];
+                auto c = t->getGameStatement->getColumn(moveName.c_str());
+                auto moveBlob = static_cast<const int8_t*>(c.getBlob());
+                
+                if (moveBlob) {
+                    auto sz = c.size();
+                    for(auto i = 0; i < sz; ++i) {
+                        moveVec.push_back(moveBlob[i]);
+                    }
+                }
+
+                t->board2->fromMoveList(&record2, moveVec, flag, nullptr);
             }
+        }
+        
+        if (t->board->equalMoveList(t->board2)) {
+            theDupID = dupID;
+            break;
         }
     }
     
+    if (theDupID < 0) {
+        std::lock_guard<std::mutex> dolock(dupHashKeyMutex);
+
+        auto it = hashGameIDMap.find(hashKey);
+        assert(it != hashGameIDMap.end());
+        it->second.push_back(theDupID);
+        return;
+    }
+    
+    if (paraRecord.optionFlag & query_flag_print_all) {
+        std::lock_guard<std::mutex> dolock(printMutex);
+        
+        std::cerr << "Duplicate games detected between IDs " << theDupID << " and " << record.gameID
+        << ", game length: " << plyCount
+        << std::endl;
+    }
+
     t->dupCnt++;
     if (paraRecord.optionFlag & dup_flag_remove) {
         if (!t->removeGameStatement) {
@@ -1987,6 +2074,30 @@ void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
             continue;
         }
 
+        searchField = getMoveField(mDb);
+        if (searchField == SearchField::none) {
+            continue;
+        }
+        
+
+        hashGameIDMap.clear();
+//        hashSet.clear();
+
+        // query for GameCount for setting reserve
+        if (paraRecord.optionFlag & query_flag_print_all) {
+            SQLite::Statement statement(*mDb, "SELECT * FROM Info WHERE Name = 'GameCount'");
+            
+            if (statement.executeStep()) {
+                auto s = statement.getColumn("Value").getText();
+                auto gameCount = std::stoi(s);
+                
+                // Just a large number to avoid rubish data
+                if (gameCount > 0 && gameCount < 1024 * 1024 * 1024) {
+                    hashGameIDMap.reserve(gameCount + 16);
+                }
+            }
+        }
+
         if (paraRecord.optionFlag & dup_flag_remove) {
             mDb->exec("PRAGMA journal_mode=OFF");
             mDb->exec("BEGIN");
@@ -1996,11 +2107,6 @@ void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
             t.second.resetStats();
         }
 
-        searchField = getMoveField(mDb);
-        if (searchField == SearchField::none) {
-            continue;
-        }
-        
         std::string moveName = searchFieldNames[static_cast<int>(searchField)];
         assert(!moveName.empty());
         
@@ -2009,11 +2115,20 @@ void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
             flag |= bslib::BoardCore::ParseMoveListFlag_move_size_1_byte;
         }
 
-        std::string sqlString = "SELECT ID, FEN, " + moveName + " FROM Games";
+        std::string sqlString = "SELECT ID, FEN, PlyCount, " + moveName + " FROM Games";
         auto statement = new SQLite::Statement(*mDb, sqlString);
         
         for (gameCnt = 0; statement->executeStep(); ++gameCnt) {
+            auto c = statement->getColumn("PlyCount");
+            if (!c.isNull()) {
+                auto plyCount = c.getInt();
+                if (plyCount < paraRecord.limitLen) {
+                    continue;
+                }
+            }
+
             bslib::PgnRecord record;
+
             record.gameID = statement->getColumn("ID").getInt();
             record.fenText = statement->getColumn("FEN").getText();
             std::vector<int8_t> moveVec;
@@ -2034,7 +2149,7 @@ void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
                     }
                 }
                 
-                if (moveVec.empty()) {
+                if (moveVec.empty() || moveVec.size() < paraRecord.limitLen) {
                     continue;
                 }
             }
@@ -2051,28 +2166,19 @@ void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
         delete statement;
         statement = nullptr;
         
-        int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
-        
-        std::cout << std::endl << " DONE. Elapsed: " << elapsed << " ms, "
-                  << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-                  << ", total games: " << gameCnt
-                  << ", total results: " << succCount
-                  << ", time per results: " << elapsed / std::max<int64_t>(1, succCount)  << " ms"
-                  << std::endl << std::endl << std::endl;
-
         int64_t delCnt = 0;
+        for(auto && t : threadMap) {
+            t.second.deleteAllStatements();
+            delCnt += t.second.delCnt;
+        }
+
         {
-            for(auto && t : threadMap) {
-                t.second.deleteAllStatements();
-                delCnt += t.second.delCnt;
-            }
             
             // Update table Info
             if (delCnt > 0) {
                 int64_t gCnt = gameCnt - delCnt;
                 
                 std::string sqlstr = "UPDATE Info SET Value = '" + std::to_string(gCnt) + "' WHERE Name = 'GameCount'";
-//                std::cout << "sqlstr: " << sqlstr << std::endl;
                 mDb->exec(sqlstr);
 
                 mDb->exec("COMMIT");

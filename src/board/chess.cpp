@@ -2376,6 +2376,17 @@ uint64_t polyglotRandom64[800] = {
 };
 
 
+// embede game length and result
+uint64_t ChessBoard::getHashKeyForCheckingDuplicates() const
+{
+    auto hk = hashKey;
+    
+    for(size_t i = 0, n = histList.size(); i < n; i += 5) {
+        hk ^= histList.at(i).hashKey;
+    }
+    return hk;
+}
+
 uint64_t ChessBoard::_posToBitboard[64];
 
 static const int toSFPos[] {
