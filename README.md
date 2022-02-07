@@ -117,6 +117,10 @@ We suggest beside ID, FEN and move fields, Games should have following fields ac
 ### Other tag fields in table Games
 When a game has some tags that are not in the above list, users can choose to create new fields to store information of those tags or not.
 
+### Field types
+Fields PlyCount, WhiteElo, BlackElo and ones for IDs (such as ID, EventID) should be INTEGER.
+Fields Moves1 and Moves2 should be BLOB.
+Other fields should be TEXT.
 
 ## FEN field
 A FEN string of each game could be stored (FEN strings) in that field. If the game starts from start-position, it could be saved as a NULL string.
@@ -125,15 +129,16 @@ A FEN string of each game could be stored (FEN strings) in that field. If the ga
 ## Moves fields
 All moves of a game could be stored in some forms in some specific fields as the below:
 
-- Moves: all moves including all other information such as comments are stored as a single string. For example:
+- Moves: type TEXT; all moves including all other information such as comments are stored as a single string. For example:
   ```1.c4 e5 2.Nc3 Bb4 {A21: English, Kramnik-Shirov counterattack} 3.Nd5 Be7 4.Nxe7 Nxe7 5.d4 exd4 6.Qxd4 O-O 1/2-1/2```
-  
-- Moves2: each move is encoded as 2 bytes. The encode for chess: ```from | dest << 6 | promotion << 12```
-- Moves1: each move (except Queen move) is encoded as a 1 byte when a Queen move is encoded as 2 bytes
+- Moves2: type BLOB; each move is encoded as 2 bytes. The encode for chess: ```from | dest << 6 | promotion << 12```
+- Moves1: type BLOB; each move (except Queen move) is encoded as a 1 byte when a Queen move is encoded as 2 bytes
 
 All moves (of a game) in Moves1/Moves2 are stored as a binary array and then saved into the database as a blob.
 
-The algorithms of Moves and Moves2 are very simple, developers can easily encode and decode using their own code. In contrast, the algorithm of Moves1 is quite complicated, deeply integrated into our code/library. It is not easy for developers to write their own encode/decode. Even Moves1 can create the smallest databases, consider using Moves and/or Moves2 instead, just for being easy to use by other libraries.
+The algorithms of Moves and Moves2 are very simple, developers can easily encode and decode using their own code.
+
+In contrast, the algorithm of Moves1 is quite complicated, deeply integrated into our code/library. It is not easy for developers to write their own encode/decode. Even Moves1 can create the smallest databases, users should consider using Moves and/or Moves2 instead, just for being easy to use by other libraries.
 
 
 ## Converting speed

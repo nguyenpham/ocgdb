@@ -833,7 +833,7 @@ SQLite::Database* Builder::createDb(const std::string& path)
 
         mDb->exec("DROP TABLE IF EXISTS Info");
         mDb->exec("CREATE TABLE Info (Name TEXT UNIQUE NOT NULL, Value TEXT)");
-        mDb->exec("INSERT INTO Info (Name, Value) VALUES ('Version', '0.9')");
+        mDb->exec("INSERT INTO Info (Name, Value) VALUES ('Version', '" + VersionDatabaseString + "')");
         mDb->exec("INSERT INTO Info (Name, Value) VALUES ('Variant', 'standard')");
         mDb->exec("INSERT INTO Info (Name, Value) VALUES ('License', 'free')");
 
@@ -1869,7 +1869,7 @@ void Builder::convertSql2Pgn(const ParaRecord& _paraRecord)
     SQLite::Statement query(db, fullGameQueryString);
 
     SQLite::Statement* queryComments = nullptr;
-    if (searchField == SearchField::moves1 || searchField == SearchField::moves1) {
+    if (searchField == SearchField::moves1 || searchField == SearchField::moves2) {
         queryComments = new SQLite::Statement(db, "SELECT * FROM Comments WHERE GameID = ?");
     }
     

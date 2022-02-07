@@ -25,6 +25,7 @@
 namespace ocgdb {
 
 const std::string VersionString = "Beta 5";
+const std::string VersionDatabaseString = "0.5";
 
 // Current limit is about 4 billion, we can change later by changing this define
 #define IDInteger uint32_t

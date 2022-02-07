@@ -2421,10 +2421,9 @@ void ChessBoard::staticInit()
         
         bishopStartPointsVec.push_back(0);
         
-        auto sfpos = toSFPos[i]; assert(sfpos >= 0 && sfpos < 64);
-        auto pos = fromSFPos[sfpos]; assert(pos >= 0 && pos < 64);
-        assert(pos == i);
-
+//        auto sfpos = toSFPos[i]; assert(sfpos >= 0 && sfpos < 64);
+//        auto pos = fromSFPos[sfpos]; assert(pos >= 0 && pos < 64);
+//        assert(pos == i);
     }
     
     // for encoding/decoding a bishop move into one byte
@@ -2459,8 +2458,6 @@ void ChessBoard::staticInit()
             bishopStartPointsVec[k] |= pos << 8;
         }
     }
-    
-    
 }
 
 // "e2", "a7"
