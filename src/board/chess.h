@@ -128,7 +128,7 @@ namespace bslib {
         static uint64_t posToBitboard(const char* s);
         static std::string bitboard2string(uint64_t bb);
 
-        static int16_t encode2Bytes(Move move);
+        static uint16_t encode2Bytes(Move move);
         static Move decode2Bytes(uint16_t d);
         static std::pair<uint16_t, int> encode1Byte(MoveFull move);
         std::pair<Move, int> decode1Byte(const int8_t* d);

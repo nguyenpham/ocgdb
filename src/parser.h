@@ -36,7 +36,7 @@ enum class ParseError
 
 enum class Lex
 {
-    none, string, number,
+    none, string, number, fen,
 
     operator_begin,
     operator_and = operator_begin, operator_or,
@@ -66,7 +66,7 @@ enum class Operator
 
 enum class NodeType
 {
-    none, piece, number, op
+    none, piece, number, op, fen
 };
 
 class Node
@@ -81,13 +81,18 @@ public:
 
     int selectSquare(const char*);
     int selectSquare(const std::string& from, const std::string& to);
-
+    
+    bool isInFenHashSet(uint64_t hash) const {
+        return fenHashSet.find(hash) != fenHashSet.end();
+    }
 public:
     NodeType nodeType = NodeType::none;
     std::string string;
     int number;
     Operator op = Operator::none;
     Node *lhs = nullptr, *rhs = nullptr;
+    
+    std::set<uint64_t> fenHashSet;
 
     bool hassquareset = false, negative = false;
     int64_t squareset = 0;
@@ -113,6 +118,7 @@ private:
 
     std::vector<LexWord> lexParse(const char*);
 
+    Node* parse_fenclause(size_t&);
     Node* parse_condition(size_t&);
     Node* parse_expression(size_t&);
     Node* parse_term(size_t&);

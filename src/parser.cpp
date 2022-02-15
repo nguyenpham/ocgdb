@@ -16,6 +16,7 @@
 
 #include "parser.h"
 #include "board/chess.h"
+#include "board/base.h"
 
 int popCount(uint64_t x);
 
@@ -204,6 +205,12 @@ int Node::selectSquare(const std::string& from, const std::string& to)
 int Node::evaluate(const std::vector<uint64_t>& bitboardVec) const
 {
     switch (nodeType) {
+        case NodeType::fen:
+        {
+            assert(!fenHashSet.empty());
+            auto hash = bitboardVec[static_cast<int>(bslib::BBIdx::hash)];
+            return isInFenHashSet(hash) ? 1 : 0;
+        }
         case NodeType::op:
         {
             assert(lhs && rhs);
@@ -324,6 +331,9 @@ int Node::evaluate(const std::vector<uint64_t>& bitboardVec) const
 bool Node::isValid() const
 {
     switch (nodeType) {
+        case NodeType::fen:
+            return !fenHashSet.empty();
+
         case NodeType::op:
             return lhs && rhs && lhs->isValid() && rhs->isValid() && op < Operator::none;
             
@@ -429,6 +439,8 @@ bool Parser::parse(const char* s)
     }
 
     Node* r = nullptr, *w = nullptr;
+    
+    // there is only one fen clause
     size_t from = 0;
     while (from < lexVec.size()) {
         auto node = parse_condition(from);
@@ -489,9 +501,57 @@ bool Parser::parse(const char* s)
     return error == ParseError::none;
 }
 
+//
+Node* Parser::parse_fenclause(size_t& from)
+{
+    assert(from <= lexVec.size());
+    if (lexVec.at(from).string != "fen") {
+        return nullptr;
+    }
+
+    if (lexVec.size() < 4 || lexVec.at(from + 1).string != "[" || lexVec.at(from + 2).lex != Lex::fen) {
+        error = ParseError::invalid;
+        return nullptr;
+    }
+    
+    auto node = new Node();
+    node->nodeType = NodeType::fen;
+
+    auto board = bslib::Funcs::createBoard(bslib::ChessVariant::standard);
+    for(from += 2; from < lexVec.size(); ++from) {
+        auto lex = lexVec.at(from);
+        if (lex.lex == Lex::fen) {
+            board->newGame(lex.string);
+            node->fenHashSet.insert(board->hashKey);
+            continue;
+        }
+
+        if (lex.string == ",") {
+            continue;
+        }
+        if (lex.string == "]") {
+            from++;
+            break;
+        }
+    }
+
+    delete board;
+    return node;
+}
+
 Node* Parser::parse_condition(size_t& from)
 {
     assert(from <= lexVec.size());
+    
+    auto node = parse_fenclause(from);
+    if (node) {
+        return node;
+    }
+    
+    if (error != ParseError::none) {
+        return nullptr;
+    }
+
     Node* r = nullptr, *w = nullptr;
     while (from < lexVec.size()) {
         auto node = parse_expression(from);
@@ -537,7 +597,6 @@ Node* Parser::parse_condition(size_t& from)
 
     return r;
 }
-
 Node* Parser::parse_expression(size_t& from)
 {
     assert(from <= lexVec.size());
@@ -773,7 +832,7 @@ std::vector<LexWord> Parser::lexParse(const char* s)
     assert(s && error == ParseError::none);
     
     enum class State {
-        none, text, number, comparison
+        none, text, number, comparison, fen
     };
     
     std::vector<LexWord> words;
@@ -849,6 +908,12 @@ std::vector<LexWord> Parser::lexParse(const char* s)
                 
             case State::text:
                 if (!isalnum(*p)) {
+                    if (*p == '/' || *p == '-') {
+                        state = State::fen;
+                        --p;
+                        break;
+                    }
+                    
                     state = State::none;
                     --p;
                     
@@ -860,13 +925,30 @@ std::vector<LexWord> Parser::lexParse(const char* s)
                         word.lex = Lex::operator_and;
                     } else if (text == "or") {
                         word.lex = Lex::operator_or;
+//                    } else if (text == "fen") {
+//                        word.lex = Lex::fen;
                     }
                     words.push_back(word);
                     break;
                 }
                 text += *p;
                 break;
-                
+
+            case State::fen:
+                if (!isalnum(*p) && *p != '/' && *p != '-' && *p != ' ') {
+                    state = State::none;
+                    --p;
+                    
+                    LexWord word;
+                    word.lex = Lex::fen;
+                    word.string = text;
+                    
+                    words.push_back(word);
+                    break;
+                }
+                text += *p;
+                break;
+
             case State::comparison:
             {
                 if (strchr("=<>!", *p)) {
@@ -891,6 +973,12 @@ std::vector<LexWord> Parser::lexParse(const char* s)
  
             case State::number:
                 if (!isdigit(*p)) {
+                    if (isalnum(*p) || *p == '/' || *p == '-') {
+                        state = State::fen;
+                        --p;
+                        break;
+                    }
+
                     state = State::none;
                     
                     if (isalpha(*p)) {

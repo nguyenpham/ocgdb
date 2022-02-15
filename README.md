@@ -5,8 +5,8 @@ Version Beta
 
 ## Brief of main ideas/techniques
 - Use SQL/SQLite as the backbone/framework for storing data and querying general information
-- Approximate position searching: a) parse games on the fly b) use Position Query Language (PQL) for querying widely and dynamically
 - Names, tables follow to PGN tags
+- Approximate position searching: a) parse games on the fly b) use Position Query Language (PQL) for querying widely and dynamically
 
 
 ## Why OCGDB? Features/Highlights
@@ -21,7 +21,7 @@ Version Beta
 - MIT license: you may use it for any applications/purposes unlimitedly without worrying about license conditions
 
 
-We believe it is one of the fastest (in terms of speeds of creating and querying/searching), smallest (in terms of database sizes), strongest (in terms of game numbers), and smartest (in terms of querying/position-searching) chess game database programs. It could compete for all parameters, results with the best chess game database formats and their programs/tools.
+We believe it is one of the fastest (in terms of speeds of creating and querying/searching), smallest (in terms of database sizes), largest (in terms of game numbers), and smartest (in terms of querying/position-searching) chess game database programs. It could compete for all parameters, results with the best chess game database formats and their programs/tools.
 
 
 ## Overview
@@ -97,7 +97,7 @@ For examples: ```White, BlackElo, PlyCount, GameCount, FEN```
 - Players: for player names
 - Games: for game info, FEN, and Moves
 - Comments: for comments of moves
-- Info: for brief information such as GameCount, playerCount, EventCount...
+- Info: for brief information such as gameCount, playerCount, eventCount... Those info become important for huge databases when querying for totals of records may take a lot of time
 
 ### Field names
 PGN standard requires some name tags (compulsory), the database should have those fields too. If one is an index field, uses suffix ID.
@@ -105,9 +105,6 @@ An important field is Moves to keep all moves in text form.
 
 For examples of field names:
 ```EventID, WhiteID, BlackElo, Round, Result, Date, FEN, Moves```
-
-### Field values
-Except for fields of identicals such EventID, SiteID, WhiteID, BlackID, values of other fields could be NULL.
 
 ### Popular fields in table Games
 We suggest beside ID, FEN and move fields, Games should have following fields according to popular PGN tags:
@@ -121,6 +118,9 @@ When a game has some tags that are not in the above list, users can choose to cr
 Fields PlyCount, WhiteElo, BlackElo and ones for IDs (such as ID, EventID) should be INTEGER.
 Fields Moves1 and Moves2 should be BLOB.
 Other fields should be TEXT.
+
+### NULL
+Except for fields of identicals such EventID, SiteID, WhiteID, BlackID, values of other fields could be NULL.
 
 ## FEN field
 A FEN string of each game could be stored (FEN strings) in that field. If the game starts from start-position, it could be saved as a NULL string.
@@ -138,8 +138,14 @@ All moves (of a game) in Moves1/Moves2 are stored as a binary array and then sav
 
 The algorithms of Moves and Moves2 are very simple, developers can easily encode and decode using their own code.
 
-In contrast, the algorithm of Moves1 is quite complicated, deeply integrated into our code/library. It is not easy for developers to write their own encode/decode. Even Moves1 can create the smallest databases, users should consider using Moves and/or Moves2 instead, just for being easy to use by other libraries.
+In contrast, the algorithm of Moves1 is quite complicated, deeply integrated into our code/library. It is not easy for developers to write their own encode/decode.
 
+Even though Moves1 can create the smallest databases, users should consider using Moves and/or Moves2 instead, just for being easy to use by other libraries.
+
+## Date fields
+Dates in PGN have format YYYY.MM.DD (such as "2022.02.21"). They are must be converted into SQLite's date standard (IS0-8601) as YYYY-MM-DD (such as "2022-02-21"). Dates are stored as text fields.
+
+Some details of PGN dates may be missing and displayed as question (?) marks. The program simply replace each question mark by '1'. E.g., from "1950.??.??" to be "1950.11.11".
 
 ## Converting speed
 We tested on an iMac 3.6 GHz Quad-Core i7, 16 GB RAM (the year 2017), converting a PGN file with 3.45 million games, size 2.42 GB.
@@ -187,9 +193,10 @@ The EBNF (Extended Backus Naur Form) of the language is as the below:
 
 ```
 clause = condition { ("and" | "or" | "&&" | "||") condition }
-condition = expression { ( "=" | "<" | "<="| " >" | ">=" | "==“ | "!=" | "<>" ) expression }
+condition = expression { ( "=" | "<" | "<="| " >" | ">=" | "==“ | "!=" | "<>" ) expression } | "fen" "[" fenset "]"
+fenset = fenstring {"," fenstring }
 expression = term  {( "+" | "-" ) term }
-term = factor {( "*" | "/" ]) factor} 
+term = factor {( "*" | "/" ) factor} 
 factor = number | piece | "(" expression ")"
 piece = piecename (<empty> | square | squareset)
 piecename = "K" | "Q" | "R" | "B" | "N" | "P" | "k" | "q" | "r" | "b" | "n" | "p" | "white" | "black"
@@ -260,6 +267,19 @@ B[c-f] + b[c-f] = 2
 
 // There are 5 white pieces in row 6
 white6 = 5
+
+// There are 5 white pieces in row 6 - another way to write
+white[6] = 5
+
+// total back pieces in columns from a to c is more than 8
+black[a-c] > 8
+
+// Find by a fen string
+fen[r2qkb1r/1p2nppp/p3p3/4Pb2/2BB4/P7/1P3PPP/RN1Q1RK1 b kq - 0 12]
+
+// Find by some fen strings
+fen[rnbqkbnr/pp2pppp/2p5/3pP3/3P4/8/PPP2PPP/RNBQKBNR b KQkq - 0 3, rn1qkbnr/pp2pppp/2p5/3pPb2/3P4/5N2/PPP2PPP/RNBQKB1R b KQkq - 1 4]
+
 ```
 
 

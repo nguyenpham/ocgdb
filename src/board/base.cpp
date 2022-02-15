@@ -130,6 +130,7 @@ void BoardCore::newGame(std::string fen)
 void BoardCore::_newGame(std::string fen)
 {
     histList.clear();
+    firstComment.clear();
     _setFen(fen);
     result.reset();
 
@@ -772,6 +773,7 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
 
             case State::comment:
                 if (ch == '}') {
+                    comment = bslib::Funcs::rtrim(comment);
                     if ((flag & ParseMoveListFlag_discardComment) == 0 && !comment.empty()) {
                         auto k = moveStringVec.size();
                         auto it = commentMap.find(k);
@@ -787,7 +789,16 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
                 }
                 
                 if ((flag & ParseMoveListFlag_discardComment) == 0) {
-                    comment += ch;
+                    if (!comment.empty() || ch < 0 || ch > ' ') { // trim left
+                        // remove new line charators in the middle
+                        if (ch == '\r' || ch == '\n') {
+                            ch = ' ';
+                            if (prevch == ' ') {
+                                break;
+                            }
+                        }
+                        comment += ch;
+                    }
                 }
                 break;
 
@@ -914,7 +925,16 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
             }
         }
     }
-    
+
+    // first comments
+    {
+        firstComment.clear();
+        auto it = commentMap.find(0);
+        if (it != commentMap.end()) {
+            firstComment = it->second;
+        }
+    }
+
     // last position
     if (shouldStop && !hit) {
         bitboardVec = posToBitboards();
@@ -966,8 +986,6 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
                              int flag,
                              std::function<bool(const std::vector<uint64_t>& bitboardVec, const BoardCore*, const PgnRecord*)> shouldStop)
 {
-//    assert(!moveVec.empty());
-    
     std::lock_guard<std::mutex> dolock(dataMutex);
     
     std::string fenString;
@@ -975,7 +993,7 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
     
     auto hit = false;
 
-    for(auto i = 0; i < moveVec.size();) {
+    for(size_t i = 0; i < moveVec.size();) {
         if (flag & ParseMoveListFlag_create_fen) {
             fenString = getFen();
         }
@@ -1003,7 +1021,8 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
             i += 2;
         }
 
-        if (!isValid(move)) {
+        // data is wrong
+        if (!isValid(move) || _isEmpty(move.from)) {
             break;
         }
 
@@ -1119,7 +1138,7 @@ std::string BoardCore::toSimplePgn() const
     return stringStream.str();
 }
 
-std::string BoardCore::toPgn(const PgnRecord* record) const
+std::string BoardCore::toPgn(const PgnRecord* record, bool useBoard) const
 {
     std::string headString, eventString, resultString, moveText;
     auto haveFEN = false;
@@ -1133,7 +1152,10 @@ std::string BoardCore::toPgn(const PgnRecord* record) const
                 eventString = s;
             } else {
                 headString += s;
-                if (tag == "FEN") haveFEN = true;
+                if (tag == "FEN") {
+                    haveFEN = true;
+                    headString += "[SetUp \"1\"]\n";
+                } else
                 if (tag == "Result") resultString = ss;
             }
         }
@@ -1149,21 +1171,30 @@ std::string BoardCore::toPgn(const PgnRecord* record) const
     stringStream << eventString << headString;
     
     if (!haveFEN && !startFen.empty()) {
-        stringStream << "[FEN \"" << startFen << "\"]\n";
+        stringStream << "[FEN \"" << startFen << "\"]\n[SetUp \"1\"]\n";
     }
     
-    auto parsed = false;
-    if (moveText.empty()) {
-        parsed = true;
-        moveText = toMoveListString(Notation::san,
-                                    8, true,
-                                    CommentComputerInfoType::standard);
-    }
+    stringStream << "\n";
 
-    stringStream << "\n" << moveText;
-    
-    if (parsed && !resultString.empty()) {
-        stringStream << " " << resultString;
+    if (useBoard) {
+        auto parsed = false;
+        if (moveText.empty()) {
+            parsed = true;
+            moveText = toMoveListString(Notation::san,
+                                        8, true,
+                                        CommentComputerInfoType::standard);
+        }
+
+        if (!firstComment.empty()) {
+            stringStream << "{" << firstComment << "}\n";
+        }
+        stringStream << moveText;
+
+        if (parsed && !resultString.empty()) {
+            stringStream << " " << resultString;
+        }
+    } else {
+        stringStream << moveText;
     }
 
     return stringStream.str();

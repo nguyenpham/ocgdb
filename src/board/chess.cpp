@@ -2522,9 +2522,12 @@ std::string ChessBoard::bitboard2string(uint64_t bb)
 }
 
 
-int16_t ChessBoard::encode2Bytes(Move move)
+// Our: empty, king, queen, rook, bishop, knight, pawn
+// SF : NO_PIECE_TYPE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,
+uint16_t ChessBoard::encode2Bytes(Move move)
 {
-    return toSFPos[move.from] | toSFPos[move.dest] << 6 | move.promotion << 12;
+    return toSFPos[move.from] | toSFPos[move.dest] << 6
+        | (move.promotion > 0 ? ((PAWNSTD + 1 - move.promotion) << 12) : 0);
 }
 
 Move ChessBoard::decode2Bytes(uint16_t d)
@@ -2533,6 +2536,9 @@ Move ChessBoard::decode2Bytes(uint16_t d)
     m.from = fromSFPos[d & 0x3f];
     m.dest = fromSFPos[(d >> 6) & 0x3f];
     m.promotion = d >> 12;
+    if (m.promotion > 0) {
+        m.promotion = PAWNSTD + 1 - m.promotion;
+    }
     
     assert(m.isValid());
     assert(m.promotion == EMPTY || (m.promotion > KING && m.promotion < PAWNSTD));

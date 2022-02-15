@@ -44,6 +44,7 @@ namespace bslib {
     protected:
         std::vector<Piece> pieces;
         std::vector<Hist> histList;
+        std::string firstComment;
 
     public:
 
@@ -113,6 +114,12 @@ namespace bslib {
         }
         MoveFull _getMoveAt(int idx) const {
             return idx >= 0 && idx < static_cast<int>(histList.size()) ? histList.at(idx).move : MoveFull();
+        }
+        void setFirstComment(const std::string& comment) {
+            firstComment = comment;
+        }
+        std::string getFirstComment() const {
+            return firstComment;
         }
 
         // low word is #computer info, high word is #comment
@@ -197,6 +204,7 @@ namespace bslib {
             fullMoveCnt = oboard->fullMoveCnt;
             hashKey = oboard->hashKey;
             startFen = oboard->startFen;
+            firstComment = oboard->firstComment;
         }
 
         int getTotalPieceCount() const {
@@ -405,7 +413,7 @@ namespace bslib {
         static std::string toMoveListString(const std::vector<Hist>& histList, ChessVariant variant, Notation notation, int itemPerLine, bool moveCounter, CommentComputerInfoType computingInfo, bool pawnUnit, int precision);
 
         virtual std::string toSimplePgn() const;
-        virtual std::string toPgn(const PgnRecord*) const;
+        virtual std::string toPgn(const PgnRecord*, bool useBoard = true) const;
 
         virtual int16_t move2i16(int from, int dest, int promotion, bool haveComment) const = 0;
         virtual void i16ToMove(int data, int& from, int& dest, int& promotion, bool& haveComment) const = 0;

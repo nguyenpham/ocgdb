@@ -31,9 +31,9 @@
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
-      selectedDebuggerIdentifier = ""
-      selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
@@ -64,6 +64,14 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-pgn /Users/nguyenpham/Downloads/middleg.pgn"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-db /Users/nguyenpham/Downloads/middleg.ocgdb.db3"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/Downloads/carlsen.ocgdb.db3.pgn"
             isEnabled = "NO">
          </CommandLineArgument>
@@ -77,11 +85,19 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/345.ocgdb.db3"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/mb-3.45.ocgdb.db3"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-pgn /Users/nguyenpham/Downloads/tmp.pgn"
             isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-r /Users/nguyenpham/Downloads/r.txt"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db :memory:"
@@ -97,7 +113,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-dup"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-plycount 40"
@@ -124,11 +140,19 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-q &quot;fen[r2qkb1r/1p2nppp/p3p3/4Pb2/2BB4/P7/1P3PPP/RN1Q1RK1 b kq - 0 12]&quot;"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-q &quot;fen[rnbqkbnr/pp2pppp/2p5/3pP3/3P4/8/PPP2PPP/RNBQKBNR b KQkq - 0 3, rn1qkbnr/pp2pppp/2p5/3pPb2/3P4/5N2/PPP2PPP/RNBQKB1R b KQkq - 1 4]&quot;"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-q &quot;4 == white6 // 4 white piece in row 6&quot;"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-g 33 -g 35"
+            argument = "-g 2 -g 5"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -153,10 +177,6 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves2"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-o moves;moves2"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument

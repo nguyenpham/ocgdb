@@ -29,6 +29,7 @@
 #endif
 
 #include "funcs.h"
+#include "chess.h"
 
 using namespace bslib;
 
@@ -221,7 +222,7 @@ std::string& ltrim(std::string& s)
 }
 
 // trim from right
-std::string& rtrim(std::string& s)
+std::string& Funcs::rtrim(std::string& s)
 {
     s.erase(s.find_last_not_of(trimChars) + 1);
     return s;
@@ -377,3 +378,9 @@ size_t Funcs::getFileSize(const std::string& fileName)
 }
 
 #endif
+
+
+BoardCore* Funcs::createBoard(ChessVariant variant)
+{
+    return variant == ChessVariant::standard ? new ChessBoard() : nullptr;
+}

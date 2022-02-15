@@ -23,6 +23,7 @@
 		B189EABA27228BE70075EA55 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = B189EAB927228BE60075EA55 /* Makefile */; };
 		B189EABD272296330075EA55 /* funcs.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B189EABB272296330075EA55 /* funcs.cpp */; };
 		B1DDA40F27887B2200E5E2B6 /* parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1DDA40D27887B2200E5E2B6 /* parser.cpp */; };
+		B1F8A18427BA0218004942BA /* sqllib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1F8A18227BA0217004942BA /* sqllib.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -81,6 +82,8 @@
 		B1E693BD2756D54C00997777 /* thread_pool.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = thread_pool.hpp; sourceTree = "<group>"; };
 		B1E693BE2756D54C00997777 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		B1E693BF2756D54C00997777 /* LICENSE.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
+		B1F8A18227BA0217004942BA /* sqllib.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = sqllib.cpp; sourceTree = "<group>"; };
+		B1F8A18327BA0218004942BA /* sqllib.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sqllib.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,6 +126,8 @@
 				B189EAAA27224A400075EA55 /* main.cpp */,
 				B1DDA40D27887B2200E5E2B6 /* parser.cpp */,
 				B1DDA40E27887B2200E5E2B6 /* parser.h */,
+				B1F8A18227BA0217004942BA /* sqllib.cpp */,
+				B1F8A18327BA0218004942BA /* sqllib.h */,
 			);
 			name = src;
 			path = ../src;
@@ -260,6 +265,7 @@
 				B189EABA27228BE70075EA55 /* Makefile in Sources */,
 				B189EAAD27224A410075EA55 /* chess.cpp in Sources */,
 				B189EAB627224A410075EA55 /* Backup.cpp in Sources */,
+				B1F8A18427BA0218004942BA /* sqllib.cpp in Sources */,
 				B189EAB027224A410075EA55 /* sqlite3.c in Sources */,
 				B189EAAC27224A410075EA55 /* base.cpp in Sources */,
 				B189EAB827224A410075EA55 /* main.cpp in Sources */,

@@ -63,6 +63,10 @@ int main(int argc, const char * argv[]) {
             paraRecord.dbPaths.push_back(std::string(argv[++i]));
             continue;
         }
+        if (str == "-r") {
+            paraRecord.reportPath = std::string(argv[++i]);
+            continue;
+        }
         if (str == "-cpu") {
             paraRecord.cpuNumber = std::atoi(argv[++i]);
             continue;
@@ -123,6 +127,7 @@ void print_usage()
     std::cerr << std::endl;
     std::cerr << " -pgn <file>           PGN game database file, repeat to add multi files" << std::endl;
     std::cerr << " -db <file>            database file, extension should be .ocgdb.db3, repeat to add multi files" << std::endl;
+    std::cerr << " -r <file>             report file, works with -dup" << std::endl;
     std::cerr << "                       use :memory: to create in-memory database" << std::endl;
 //    std::cerr << " -merge                merge databases into the first one, works with -db, -cpu" << std::endl;
     std::cerr << " -dup                  check duplicate games in databases, works with -db, -cpu, -plycount, -o printall;remove" << std::endl;
@@ -134,7 +139,7 @@ void print_usage()
     std::cerr << " -elo <n>              discard games with Elo under n (for creating)" << std::endl;
     std::cerr << " -plycount <n>         discard games with ply-count under n (for creating)" << std::endl;
     std::cerr << " -resultcount <n>      stop querying if the number of results above n (for querying)" << std::endl;
-    std::cerr << " -cpu <n>              number of threads, omit for all cores, works with -pgn, -bench, -query" << std::endl;
+    std::cerr << " -cpu <n>              number of threads, should <= total physical cores, omit it for using all cores" << std::endl;
     std::cerr << " -o [<options>;]       options" << std::endl;
     std::cerr << "    moves              create text move field Moves" << std::endl;
     std::cerr << "    moves1             create binary move field Moves, 1-byte encoding" << std::endl;

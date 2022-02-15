@@ -19,6 +19,7 @@
 
 namespace bslib {
 
+class BoardCore;
 class Funcs
 {
 public:
@@ -43,6 +44,8 @@ public:
     static void toLower(std::string& str);
     static void toLower(char* str);
     static std::string& trim(std::string& s);
+    static std::string& rtrim(std::string& s);
+    static char* trim(char*);
 
     static std::vector<std::string> splitString(const std::string &s, char delim);
     static std::vector<std::string> splitString(const std::string& s, const std::string& del);
@@ -54,10 +57,11 @@ public:
 
     static std::string secondToClockString(int second, const std::string& spString);
     
-    static char* trim(char*);
-    
+
     static size_t getFileSize(FILE *);
     static size_t getFileSize(const std::string& path);
+
+    static BoardCore* createBoard(ChessVariant variant);
 
 };
 
