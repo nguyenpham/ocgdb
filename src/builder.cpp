@@ -25,7 +25,7 @@
 using namespace ocgdb;
 
 Builder* builder = nullptr;
-
+Report printOut;
 
 
 //////////////////////////////////
@@ -83,6 +83,8 @@ void Builder::printStats() const
 
 void Builder::runTask(const ParaRecord& param)
 {
+    printOut.init((paraRecord.optionFlag & query_flag_print_all) && (paraRecord.optionFlag & query_flag_print_pgn), param.reportPath);
+    
     switch (param.task) {
         case Task::create:
             convertPgn2Sql(param);
@@ -100,7 +102,7 @@ void Builder::runTask(const ParaRecord& param)
             bench(param);
             break;
         case Task::query:
-            searchPostion(param, param.queries);
+            searchPostion(param);
             break;
         case Task::getgame:
             getGame(param);
@@ -109,6 +111,8 @@ void Builder::runTask(const ParaRecord& param)
         default:
             break;
     }
+    
+    printOut.close();
 }
 
 void Builder::createPool()
@@ -1132,7 +1136,9 @@ void Builder::searchPosition(const bslib::PgnRecord& record,
 }
 
 
-void Builder::searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, std::string query)
+void Builder::searchPosition(SQLite::Database* db,
+                             const std::vector<std::string>& pgnPaths,
+                             std::string query)
 {
     // remove comments by //
     if (query.find("//") != std::string::npos) {
@@ -1200,22 +1206,30 @@ void Builder::searchPosition(SQLite::Database* db, const std::vector<std::string
             if (paraRecord.optionFlag & query_flag_print_all) {
                 std::lock_guard<std::mutex> dolock(printMutex);
 
-                std::cout << succCount << ". gameId: " << (record ? record->gameID : -1);
-                if (paraRecord.optionFlag & query_flag_print_fen) {
-                    std::cout << ", fen: " << board->getFen() << std::endl;
-                }
-                if (paraRecord.optionFlag & query_flag_print_pgn) {
-                    std::cout << "\n\n";
-                    
-                    if (qgr) {
-                        printGamePGNByIDs(*qgr, std::vector<int>{record->gameID});
-                    } else {
-                        std::cout << record->moveText << std::endl;
-                    }
-
-                }
-                std::cout << std::endl;
+                std::cout << succCount << ". gameId: " << (record ? record->gameID : -1) << std::endl;
             }
+
+            if (printOut.isOn()) {
+                if (paraRecord.optionFlag & query_flag_print_fen) {
+                    std::string str = std::to_string(succCount) + ". gameId: " + std::to_string(record ? record->gameID : -1) +
+                                ", fen: " + board->getFen() + "\n";
+                    printOut.printOut(str);
+                }
+
+                
+                static std::string printOutQuery;
+                
+                if (query != printOutQuery) {
+                    printOutQuery = query;
+                    printOut.printOut("; >>>>>> Query: " + query + "\n");
+                }
+                if (qgr) {
+                    printGamePGNByIDs(*qgr, std::vector<int>{record->gameID});
+                } else {
+                    printOut.printOut(record->moveText);
+                }
+            }
+
             return true;
         }
 
@@ -1308,11 +1322,11 @@ void Builder::searchPosition(SQLite::Database* db, const std::vector<std::string
     delete parser;
 }
 
-void Builder::bench(const ParaRecord& paraRecord)
+void Builder::bench(ParaRecord paraRecord)
 {
     std::cout << "Benchmark position searching..." << std::endl;
 
-    const std::vector<std::string> queries {
+    paraRecord.queries = std::vector<std::string> {
         "Q = 3",                            // three White Queens
         "r[e4, e5, d4,d5]= 2",              // two black Rooks in middle squares
         "P[d4, e5, f4, g4] = 4 and kb7",    // White Pawns in d4, e5, f4, g4 and black King in b7
@@ -1320,14 +1334,15 @@ void Builder::bench(const ParaRecord& paraRecord)
         "white6 = 5",                        // There are 5 white pieces on row 6
     };
 
-    searchPostion(paraRecord, queries);
+    searchPostion(paraRecord);
 }
 
-void Builder::searchPostion(const ParaRecord& _paraRecord, const std::vector<std::string>& queries)
+void Builder::searchPostion(const ParaRecord& _paraRecord)
 {
     std::cout   << "Querying..." << std::endl;
     
     paraRecord = _paraRecord; assert(paraRecord.task != Task::create);
+
     gameCnt = commentCnt = 0;
     eventCnt = playerCnt = siteCnt = 1;
     errCnt = 0;
@@ -1339,7 +1354,7 @@ void Builder::searchPostion(const ParaRecord& _paraRecord, const std::vector<std
     if (paraRecord.dbPaths.empty()) {
         if (!paraRecord.pgnPaths.empty()) {
             ok = true;
-            for(auto && s : queries) {
+            for(auto && s : paraRecord.queries) {
                 searchPosition(nullptr, paraRecord.pgnPaths, s);
             }
         }
@@ -1347,7 +1362,7 @@ void Builder::searchPostion(const ParaRecord& _paraRecord, const std::vector<std
         ok = true;
         SQLite::Database db(paraRecord.dbPaths.front(), SQLite::OPEN_READWRITE);
 
-        for(auto && s : queries) {
+        for(auto && s : paraRecord.queries) {
             searchPosition(&db, std::vector<std::string>(), s);
         }
     }
@@ -1373,19 +1388,22 @@ void Builder::printGamePGNByIDs(SQLite::Database& db, const std::vector<int>& ga
 void Builder::printGamePGNByIDs(QueryGameRecord& qgr, const std::vector<int>& gameIDVec)
 {
     for(auto && gameID : gameIDVec) {
-        std::cout   << "Get PGN game with ID: " << gameID << std::endl;
         bslib::PgnRecord record;
         record.gameID = gameID;
-        auto toPgnString = qgr.queryAndCreatePGNByGameID(record);
-        std::cout << toPgnString << std::endl;
+        
+        std::string str = "\n\n;ID: " + std::to_string(gameID) + "\n"
+                + qgr.queryAndCreatePGNByGameID(record);
+        printOut.printOut(str);
     }
 }
 
 void Builder::getGame(const ParaRecord& _paraRecord)
 {
     paraRecord = _paraRecord;
+
     SQLite::Database db(paraRecord.dbPaths.front(), SQLite::OPEN_READWRITE);
     auto searchField = SqlLib::getMoveField(&db);
+
     printGamePGNByIDs(db, paraRecord.gameIDVec, searchField);
 }
 
@@ -1484,8 +1502,8 @@ void Builder::convertSql2PgnByAThread(const bslib::PgnRecord& record,
 
     auto toPgnString = t->board->toPgn(&record);
     if (!toPgnString.empty()) {
-        std::lock_guard<std::mutex> dolock(ofsMutex);
-        ofs << toPgnString << "\n" << std::endl;
+        std::lock_guard<std::mutex> dolock(pgnOfsMutex);
+        pgnOfs << toPgnString << "\n" << std::endl;
     }
 
 }
@@ -1509,11 +1527,7 @@ void Builder::convertSql2Pgn(const ParaRecord& _paraRecord)
 
     assert(!paraRecord.pgnPaths.empty());
     
-#ifdef _WIN32
-    ofs = std::ofstream(std::filesystem::u8path(pgnPath.c_str()), std::ios_base::out | std::ios_base::app);
-#else
-    ofs = std::ofstream(pgnPath, std::ios_base::out | std::ios_base::app);
-#endif
+    pgnOfs = bslib::Funcs::openOfstream2write(pgnPath);
 
     bool hashMoves;
     searchField = SqlLib::getMoveField(&db, &hashMoves);
@@ -1533,7 +1547,7 @@ void Builder::convertSql2Pgn(const ParaRecord& _paraRecord)
                 
             auto toPgnString = board->toPgn(&record, false);
             if (!toPgnString.empty()) {
-                ofs << toPgnString << "\n" << std::endl;
+                pgnOfs << toPgnString << "\n" << std::endl;
             }
 
             if (gameCnt && (gameCnt & 0xffff) == 0) {
@@ -1578,8 +1592,8 @@ void Builder::convertSql2Pgn(const ParaRecord& _paraRecord)
             } else {
                 auto toPgnString = board->toPgn(&record, false);
                 if (!toPgnString.empty()) {
-                    std::lock_guard<std::mutex> dolock(ofsMutex);
-                    ofs << toPgnString << "\n" << std::endl;
+                    std::lock_guard<std::mutex> dolock(pgnOfsMutex);
+                    pgnOfs << toPgnString << "\n" << std::endl;
                 }
             }
 
@@ -1597,7 +1611,7 @@ void Builder::convertSql2Pgn(const ParaRecord& _paraRecord)
         pool->wait_for_tasks();
     }
 
-    ofs.close();
+    pgnOfs.close();
     mDb = nullptr;
     delete board;
 
@@ -1655,7 +1669,7 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record,
     }
 
     t->gameCnt++;
-
+    
     // Check game length
     auto plyCount = t->board->getHistListSize();
     if (plyCount < paraRecord.limitLen) {
@@ -1672,9 +1686,10 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record,
             hashGameIDMap[hashKey] = std::vector<int>{ record.gameID };
             return;
         }
+        // Have to add the gameID here thus other threads can check
+        it->second.push_back(record.gameID);
         gameIDVec = it->second;
     }
-
     
     // Further check, match all moves of all games in the list
     assert(gameIDVec.size() > 0);
@@ -1692,11 +1707,15 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record,
 
     auto theDupID = -1;
     for(auto && dupID : gameIDVec) {
+        if (dupID == record.gameID) {
+            continue;
+        }
         t->getGameStatement->reset();
         t->getGameStatement->bind(1, dupID);
         
+        // the game may be checked and deleted by other threads
         if (!t->getGameStatement->executeStep()) {
-            return; // something wrong
+            continue;
         }
         {
             bslib::PgnRecord record2;
@@ -1741,11 +1760,11 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record,
     }
     
     if (theDupID < 0) {
-        std::lock_guard<std::mutex> dolock(dupHashKeyMutex);
-
-        auto it = hashGameIDMap.find(hashKey);
-        assert(it != hashGameIDMap.end());
-        it->second.push_back(theDupID);
+//        std::lock_guard<std::mutex> dolock(dupHashKeyMutex);
+//
+//        auto it = hashGameIDMap.find(hashKey);
+//        assert(it != hashGameIDMap.end());
+//        it->second.push_back(record.gameID);
         return;
     }
     
@@ -1757,7 +1776,7 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record,
         << std::endl;
     }
 
-    if (!paraRecord.reportPath.empty() && ofs.is_open()) {
+    if (printOut.isOn()) {
         if (!t->qgr) {
             t->qgr = new QueryGameRecord(*mDb, searchField);
         }
@@ -1769,16 +1788,29 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record,
         auto toPgnString1 = t->qgr->queryAndCreatePGNByGameID(record2);
 
         {
-            std::lock_guard<std::mutex> dolock(ofsMutex);
-            ofs << ">>>>> Duplicate: " << theDupID << " vs " << record.gameID
-                << "\n\n#ID: " << theDupID << "\n" << toPgnString0
-                << "\n\n#ID: " << record.gameID << "\n" << toPgnString1
-                << "\n" << std::endl;
+            std::string str = ";>>>>> Duplicate: " + std::to_string(theDupID) + " vs " + std::to_string(record.gameID)
+                + "\n\n;ID: " + std::to_string(theDupID) + "\n" + toPgnString0
+                + "\n\n;ID: " + std::to_string(record.gameID) + "\n" + toPgnString1
+                + "\n\n";
+            
+            printOut.printOut(str);
         }
     }
     
     t->dupCnt++;
     if (paraRecord.optionFlag & dup_flag_remove) {
+        {
+            std::lock_guard<std::mutex> dolock(dupHashKeyMutex);
+
+            auto it = hashGameIDMap.find(hashKey);
+            assert(it != hashGameIDMap.end());
+            for(size_t i = 0; i < it->second.size(); ++i) {
+                if (it->second.at(i) == record.gameID) {
+                    it->second.erase(it->second.begin() + i);
+                    break;
+                }
+            }
+        }
 
         if (!t->removeGameStatement) {
             assert(mDb);
@@ -1787,8 +1819,9 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record,
         
         t->removeGameStatement->reset();
         t->removeGameStatement->bind(1, record.gameID);
-        t->removeGameStatement->exec();
-        t->delCnt++;
+        if (t->removeGameStatement->exec()) {
+            t->delCnt++;
+        }
     }
 }
 
@@ -1796,16 +1829,6 @@ void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
 {
     paraRecord = _paraRecord;
     createPool();
-    
-    if (!paraRecord.reportPath.empty()) {
-#ifdef _WIN32
-        ofs = std::ofstream(std::filesystem::u8path(paraRecord.reportPath.c_str()), std::ios_base::out | std::ios_base::app);
-#else
-        ofs = std::ofstream(paraRecord.reportPath, std::ios_base::out | std::ios_base::app);
-#endif
-
-        assert(ofs.is_open());
-    }
     
     for(auto && dbPath : paraRecord.dbPaths) {
         std::cout   << "Finding duplicate games...\n"
@@ -1911,10 +1934,6 @@ void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
         delete statement;
         statement = nullptr;
         
-        if (ofs.is_open()) {
-            ofs.close();
-        }
-
         int64_t delCnt = 0;
         for(auto && t : threadMap) {
             t.second.deleteAllStatements();

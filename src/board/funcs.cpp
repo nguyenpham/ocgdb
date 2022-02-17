@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <cstring>
 #include <assert.h>
+#include <filesystem>
 
 #ifdef _WIN32
 
@@ -182,6 +183,8 @@ int Funcs::chessCharactorToPieceType(char ch)
 
 ChessVariant Funcs::string2ChessVariant(std::string s)
 {
+    if (s.empty()) return ChessVariant::standard;
+
     toLower(s);
     for(int i = 0; variantStrings[i]; i++) {
         if (variantStrings[i] == s) {
@@ -192,7 +195,7 @@ ChessVariant Funcs::string2ChessVariant(std::string s)
     if (s.find("960") != std::string::npos || s == "fischerandom" || s == "fische random") {
         return ChessVariant::chess960;
     }
-    return ChessVariant::standard;
+    return s == "orthodox" ? ChessVariant::standard : ChessVariant::none;
 }
 
 
@@ -383,4 +386,15 @@ size_t Funcs::getFileSize(const std::string& fileName)
 BoardCore* Funcs::createBoard(ChessVariant variant)
 {
     return variant == ChessVariant::standard ? new ChessBoard() : nullptr;
+}
+
+
+std::ofstream Funcs::openOfstream2write(const std::string& path)
+{
+#ifdef _WIN32
+    return std::ofstream(std::filesystem::u8path(path.c_str()), std::ios_base::out | std::ios_base::app);
+#else
+    return std::ofstream(path, std::ios_base::out | std::ios_base::app);
+#endif
+
 }

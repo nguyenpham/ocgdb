@@ -28,6 +28,7 @@ int main(int argc, const char * argv[]) {
         bslib::ChessBoard::staticInit();
     }
 
+    auto errCnt = 0;
     ocgdb::ParaRecord paraRecord;
     
     for(auto i = 1; i < argc; i++) {
@@ -99,21 +100,27 @@ int main(int argc, const char * argv[]) {
             paraRecord.gameIDVec.push_back(std::atoi(argv[++i]));
             continue;
         }
+
+        errCnt++;
+        std::cerr << "Error: unknown parameter: " << str << "\n" << std::endl;
+        break;
     }
     
-    if (debugMode) {
-        std::cout << "All parameters:\n" << paraRecord.toString() << std::endl;
-    }
-    
-    if (paraRecord.isValid()) {
-        ocgdb::Builder oc;
-        oc.runTask(paraRecord);
-        return 0;
-    }
-    
-    auto errorString = paraRecord.getErrorString();
-    if (!errorString.empty()) {
-        std::cerr << "Error: " << errorString << "\n" << std::endl;
+    if (errCnt == 0) {
+        if (debugMode) {
+            std::cout << "All parameters:\n" << paraRecord.toString() << std::endl;
+        }
+        
+        if (paraRecord.isValid()) {
+            ocgdb::Builder oc;
+            oc.runTask(paraRecord);
+            return 0;
+        }
+        
+        auto errorString = paraRecord.getErrorString();
+        if (!errorString.empty()) {
+            std::cerr << "Error: " << errorString << "\n" << std::endl;
+        }
     }
 
     print_usage();
@@ -127,7 +134,7 @@ void print_usage()
     std::cerr << std::endl;
     std::cerr << " -pgn <file>           PGN game database file, repeat to add multi files" << std::endl;
     std::cerr << " -db <file>            database file, extension should be .ocgdb.db3, repeat to add multi files" << std::endl;
-    std::cerr << " -r <file>             report file, works with -dup" << std::endl;
+    std::cerr << " -r <file>             report file, works with -g, -q, -dup" << std::endl;
     std::cerr << "                       use :memory: to create in-memory database" << std::endl;
 //    std::cerr << " -merge                merge databases into the first one, works with -db, -cpu" << std::endl;
     std::cerr << " -dup                  check duplicate games in databases, works with -db, -cpu, -plycount, -o printall;remove" << std::endl;
@@ -159,6 +166,8 @@ void print_usage()
     std::cerr << " ocgdb -pgn big.png -db :memory: -elo 2100 -o moves;moves1;discardsites" << std::endl;
     std::cerr << " ocgdb -bench -db big.ocgdb.db3 -cpu 4" << std::endl;
     std::cerr << " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"Q=3\" -q\"P[d4, e5, f4, g4] = 4 and kb7\"" << std::endl;
+    std::cerr << " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"fen[K7/N7/k7/8/3p4/8/N7/8 w - - 0 1]\"" << std::endl;
     std::cerr << " ocgdb -db big.ocgdb.db3 -g 423 -g 4432" << std::endl;
     std::cerr << " ocgdb -db big.ocgdb.db3 -dup -o remove;printall" << std::endl;
+    std::cerr << " ocgdb -db big.ocgdb.db3 -dup -o remove -r report.txt" << std::endl;
 }
