@@ -185,6 +185,9 @@ std::string ParaRecord::toString() const
         s += "\t\t" + query + "\n";
     }
 
+    s += "\tReport path:\n";
+    s += "\t\t" + reportPath + "\n";
+
     const std::string moveModeNames[] = {
         "none",
         "Moves", "Moves1", "Moves2",

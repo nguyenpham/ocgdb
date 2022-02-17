@@ -27,6 +27,51 @@
 namespace ocgdb {
 
 
+class Report
+{
+public:
+    Report() {}
+    void init(bool print, const std::string& path) {
+        printConsole = print;
+        if (!path.empty()) {
+            ofs = bslib::Funcs::openOfstream2write(path);
+            openingstream = ofs.is_open();
+        }
+    }
+    ~Report() {
+        close();
+    }
+    
+    bool isOn() const {
+        return printConsole || openingstream;
+    }
+
+    void printOut(const std::string& str) {
+        if (str.empty()) return;
+
+        if (openingstream) {
+            std::lock_guard<std::mutex> dolock(ofsMutex);
+            ofs << str << std::endl;
+        }
+        
+        if (printConsole) {
+            std::lock_guard<std::mutex> dolock(printMutex);
+            std::cout << str << std::endl;
+        }
+    }
+    void close() {
+        if (openingstream && ofs.is_open()) {
+            ofs.close();
+        }
+        openingstream = false;
+    }
+
+public:
+    bool printConsole = true, openingstream = false;
+    mutable std::mutex printMutex, ofsMutex;
+    std::ofstream ofs;
+};
+
 class Builder
 {
 public:
@@ -67,8 +112,8 @@ private:
     void mergeDatabases(const ParaRecord&);
     void findDuplicatedGames(const ParaRecord&);
 
-    void bench(const ParaRecord& paraRecord);
-    void searchPostion(const ParaRecord& paraRecord, const std::vector<std::string>& queries);
+    void bench(ParaRecord paraRecord);
+    void searchPostion(const ParaRecord& paraRecord);
     void getGame(const ParaRecord&);
 
     void searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, std::string query);
@@ -112,7 +157,7 @@ private:
     long halfBufSz = 0;
 
     void threadSearchPosition(const bslib::PgnRecord& record,
-                              const std::vector<int8_t>& moveVec);
+                              const std::vector<int8_t>&);
 
     std::function<bool(const std::vector<uint64_t>&, const bslib::BoardCore*, const bslib::PgnRecord*)> checkToStop = nullptr;
 
@@ -147,8 +192,8 @@ private:
 
     ParaRecord paraRecord;
 
-    mutable std::mutex ofsMutex;
-    std::ofstream ofs;
+    mutable std::mutex pgnOfsMutex;
+    std::ofstream pgnOfs;
     
     /// For stats
     std::chrono::steady_clock::time_point startTime;

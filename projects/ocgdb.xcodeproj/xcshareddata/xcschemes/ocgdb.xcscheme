@@ -53,11 +53,11 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/Carlsen.pgn"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/carlsen.ocgdb.db3"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-export"
@@ -69,6 +69,14 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/middleg.ocgdb.db3"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-pgn /Users/nguyenpham/Downloads/not_find_duplicates.pgn"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-db /Users/nguyenpham/Downloads/not_find_duplicates.ocgdb.db3"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -113,6 +121,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-dup"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-r /Users/nguyenpham/Downloads/r.txt"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -148,6 +160,10 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-q &quot;fen[K7/N7/k7/8/3p4/8/N7/8 w - - 0 1]&quot;"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-q &quot;4 == white6 // 4 white piece in row 6&quot;"
             isEnabled = "NO">
          </CommandLineArgument>
@@ -157,7 +173,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-cpu 4"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-cpu 1"
@@ -185,6 +201,14 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-debug"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-pgn /Users/nguyenpham/Downloads/60_games_with_doubles.pgn"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-db /Users/nguyenpham/Downloads/60_games_with_doubles.db3"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

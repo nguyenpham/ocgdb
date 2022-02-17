@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <fstream>
 
 #include "types.h"
 
@@ -62,6 +63,7 @@ public:
     static size_t getFileSize(const std::string& path);
 
     static BoardCore* createBoard(ChessVariant variant);
+    static std::ofstream openOfstream2write(const std::string& path);
 
 };
 
