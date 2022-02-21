@@ -93,7 +93,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/345.ocgdb.db3"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/mb-3.45.ocgdb.db3"
@@ -121,15 +121,15 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-dup"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-r /Users/nguyenpham/Downloads/r.txt"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-plycount 40"
-            isEnabled = "NO">
+            argument = "-plycount 30"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o remove"
@@ -168,12 +168,12 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-g 2 -g 5"
-            isEnabled = "NO">
+            argument = "-g 55322"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-cpu 4"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-cpu 1"
@@ -185,7 +185,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o printall;printfen;printpgn"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves"
@@ -193,7 +193,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves2"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves;moves2"
@@ -204,12 +204,16 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-o embededgames"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/Downloads/60_games_with_doubles.pgn"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/60_games_with_doubles.db3"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>

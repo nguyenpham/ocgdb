@@ -347,8 +347,8 @@ namespace bslib {
 
         void setHashKey(uint64_t key);
         
-        virtual uint64_t getHashKeyForCheckingDuplicates() const = 0;
-        bool equalMoveList(const BoardCore*) const;
+        virtual uint64_t getHashKeyForCheckingDuplicates(int = -1) const = 0;
+        bool equalMoveLists(const BoardCore*, bool embeded) const;
         
     public:
         bool fromOriginPosition() const;
@@ -414,6 +414,8 @@ namespace bslib {
 
         virtual std::string toSimplePgn() const;
         virtual std::string toPgn(const PgnRecord*, bool useBoard = true) const;
+
+        static void addCompulsoryPGNTags(std::unordered_map<std::string, std::string>& tags);
 
         virtual int16_t move2i16(int from, int dest, int promotion, bool haveComment) const = 0;
         virtual void i16ToMove(int data, int& from, int& dest, int& promotion, bool& haveComment) const = 0;

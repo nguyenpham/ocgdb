@@ -2377,10 +2377,21 @@ uint64_t polyglotRandom64[800] = {
 
 
 // embede game length and result
-uint64_t ChessBoard::getHashKeyForCheckingDuplicates() const
+uint64_t ChessBoard::getHashKeyForCheckingDuplicates(int h) const
 {
+//    uint64_t hk;
+//    auto n = histList.size();
+//
+//    if (h < 0 || h >= n) {
+//        assert(h < 800);
+//        hk = hashKey ^ polyglotRandom64[h];
+//    } else {
+//        hk = histList.at(h).hashKey ^ polyglotRandom64[n];
+//    }
+//    return hk;
+
     auto hk = hashKey;
-    
+
     for(size_t i = 0, n = histList.size(); i < n; i += 5) {
         hk ^= histList.at(i).hashKey;
     }

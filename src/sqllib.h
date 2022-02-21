@@ -70,6 +70,7 @@ enum {
     query_flag_print_pgn                = 1 << 9,
 
     dup_flag_remove                     = 1 << 10,
+    dup_flag_embededgames               = 1 << 11,
 };
 
 class ParaRecord
@@ -180,8 +181,10 @@ public:
                                 bslib::BoardCore* board);
     
     static int standardizeFEN(char *fenBuf);
+    static void standardizeDate(char* date);
+    static std::string standardizeDate(const std::string& date);
+    static std::string encodeString(const std::string& name);
 
-    
 public:
     static const std::string fullGameQueryString;
     static const std::string searchFieldNames[];

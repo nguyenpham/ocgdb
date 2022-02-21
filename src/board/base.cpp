@@ -168,21 +168,39 @@ void BoardCore::setHashKey(uint64_t key)
     hashKey = key;
 }
 
-bool BoardCore::equalMoveList(const BoardCore* oBoard) const
+bool BoardCore::equalMoveLists(const BoardCore* oBoard, bool embeded) const
 {
-    assert(oBoard);
+//    assert(oBoard);
+//
+//    auto n = histList.size();
+//    if (n != oBoard->histList.size()) {
+//        return false;
+//    }
+//
+//    for(size_t i = 0; i < n; ++i) {
+//        if (histList.at(i).move != oBoard->histList.at(i).move) {
+//            return false;
+//        }
+//    }
+//
+//    return true;
+
     
-    auto n = histList.size();
-    if (n != oBoard->histList.size()) {
+    
+    assert(oBoard && startFen == oBoard->startFen);
+
+    auto n0 = histList.size(), n1 = oBoard->histList.size();
+    if (n0 != n1 && !embeded) {
         return false;
     }
-    
+
+    auto n = std::min(n0, n1);
     for(size_t i = 0; i < n; ++i) {
         if (histList.at(i).move != oBoard->histList.at(i).move) {
             return false;
         }
     }
-    
+
     return true;
 }
 
@@ -1138,13 +1156,31 @@ std::string BoardCore::toSimplePgn() const
     return stringStream.str();
 }
 
+// Except Event
+static const std::string compulsoryPGNTagNames[] = {
+    "White", "Black", "Round", "Date", "Result", "Site"
+};
+
+void BoardCore::addCompulsoryPGNTags(std::unordered_map<std::string, std::string>& tags)
+{
+    for(auto && s : compulsoryPGNTagNames) {
+        auto it = tags.find(s);
+        if (it == tags.end()) {
+            tags[s] = "*";
+        }
+    }
+}
+
 std::string BoardCore::toPgn(const PgnRecord* record, bool useBoard) const
 {
     std::string headString, eventString, resultString, moveText;
     auto haveFEN = false;
     
     if (record) {
-        for(auto && it : record->tags) {
+        auto tags = record->tags;
+        addCompulsoryPGNTags(tags);
+
+        for(auto && it : tags) {
             auto tag = it.first, ss = it.second;
             auto s = "[" + tag + " \"" + ss + "\"]\n";
 

@@ -120,7 +120,7 @@ bool ParaRecord::isValid() const
         case Task::getgame:
         {
             if (gameIDVec.empty()) {
-                errorString = "gameID must be greater than zero";
+                errorString = "Must have some game IDs, each game ID must be greater than zero";
                 break;
             }
 
@@ -150,6 +150,7 @@ static const std::map<std::string, int> optionNameMap = {
     {"printpgn", 9},
 
     {"remove", 10},
+    {"embededgames", 11},
 };
 
 
@@ -185,6 +186,11 @@ std::string ParaRecord::toString() const
         s += "\t\t" + query + "\n";
     }
 
+    s += "\tGame IDs:\n";
+    for(auto && numb : gameIDVec) {
+        s += "\t\t" + std::to_string(numb) + "\n";
+    }
+
     s += "\tReport path:\n";
     s += "\t\t" + reportPath + "\n";
 
@@ -201,6 +207,8 @@ std::string ParaRecord::toString() const
             s += it.first + ";";
         }
     }
+    
+    s += "\n";
 
     s += "\n";
     s += "\tgameNumberLimit: " + std::to_string(gameNumberLimit) + "\n"
@@ -544,3 +552,51 @@ int SqlLib::standardizeFEN(char *fenBuf)
 
     return fenSz;
 }
+
+
+void SqlLib::standardizeDate(char* date)
+{
+    assert(date);
+    auto c = 0;
+    for(char* p = date; *p; p++) {
+        if (*p == '.') {
+            *p = '-';
+            c++;
+        } else if (*p == '?') {
+            *p = '1';
+        }
+    }
+    
+    if (c != 2) {
+        date[0] = 0;
+    }
+}
+
+std::string SqlLib::standardizeDate(const std::string& date)
+{
+    std::string s;
+    auto c = 0;
+    for(char p : date) {
+        if (p == '.') {
+            p = '-';
+            c++;
+        } else if (p == '?') {
+            p = '1';
+        }
+        
+        s += p;
+    }
+    
+    if (c != 2) {
+        s.clear();
+    }
+    
+    return s;
+}
+
+
+std::string SqlLib::encodeString(const std::string& str)
+{
+    return bslib::Funcs::replaceString(str, "\"", "\\\"");
+}
+

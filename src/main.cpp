@@ -158,8 +158,10 @@ void print_usage()
     std::cerr << "    printall           print all results (for querying, checking duplications)" << std::endl;
     std::cerr << "    printfen           print FENs of results (for querying)" << std::endl;
     std::cerr << "    printpgn           print simple PGNs of results (for querying)" << std::endl;
+    std::cerr << "    embededgames       duplicate included games inside other games" << std::endl;
     std::cerr << "    remove             remove duplicate games (for checking duplicates)" << std::endl;
 
+    
     std::cerr << std::endl;
     std::cerr << "Examples:" << std::endl;
     std::cerr << " ocgdb -pgn big.png -db big.ocgdb.db3 -cpu 4 -o moves" << std::endl;

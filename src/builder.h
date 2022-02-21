@@ -82,7 +82,11 @@ public:
     
 
 public:
-    bool addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
+    bool create_addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
+    
+    bool addGame(const std::string& dbPath, const std::unordered_map<std::string, std::string>& itemMap, const bslib::BoardCore* board);
+    bool addGame(const std::string& dbPath, const std::string& pgnString);
+
     bool queryGame(const bslib::PgnRecord&);
 
     std::set<IDInteger> gameIdSet;
@@ -109,6 +113,8 @@ public:
     void convertSql2PgnByAThread(const bslib::PgnRecord& record,
                                           const std::vector<int8_t>& moveVec, int flag);
 private:
+    bool addGame(const std::unordered_map<std::string, std::string>& itemMap, const bslib::BoardCore* board);
+
     void mergeDatabases(const ParaRecord&);
     void findDuplicatedGames(const ParaRecord&);
 
@@ -118,20 +124,22 @@ private:
 
     void searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, std::string query);
     
-    SQLite::Database* createDb(const std::string& path);
-    static std::string encodeString(const std::string& name);
+    static SQLite::Database* createDb(const std::string& path, int optionFlag);
+    bool createInsertStatements(SQLite::Database& mDb);
 
     void setDatabasePath(const std::string& path);
     SQLite::Database* openDbToWrite();
 
     uint64_t processPgnFile(const std::string& path);
 
-    int getEventNameId(char* name);
-    int getSiteNameId(char* name);
-    int getPlayerNameId(char* name, int elo);
+    int create_getEventNameId(char* name);
+    int create_getSiteNameId(char* name);
+    int create_getPlayerNameId(char* name, int elo);
 
-    IDInteger getNameId(char* name, int elo, IDInteger& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, IDInteger>& idMap);
+    IDInteger create_getNameId(char* name, int elo, IDInteger& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, IDInteger>& idMap);
 
+    IDInteger getNameId(const std::string& tableName, const std::string& name, int elo = -1);
+    
     void printStats() const;
 
     void processDataBlock(char* buffer, long sz, bool);

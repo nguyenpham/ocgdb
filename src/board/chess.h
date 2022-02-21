@@ -133,7 +133,7 @@ namespace bslib {
         static std::pair<uint16_t, int> encode1Byte(MoveFull move);
         std::pair<Move, int> decode1Byte(const int8_t* d);
 
-        virtual uint64_t getHashKeyForCheckingDuplicates() const override;
+        virtual uint64_t getHashKeyForCheckingDuplicates(int) const override;
 
     protected:
         bool _quickCheck_bishop(int from, int dest, bool checkMiddle) const;
