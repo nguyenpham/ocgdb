@@ -800,6 +800,9 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
                 }
 
                 case TagIdx_FEN:
+                    if (paraRecord.optionFlag & create_flag_discard_fen) {
+                        return false;
+                    }
                     fenString = s;
                     stringMap[TagIdx_FEN] = s;
                     break;
@@ -842,9 +845,6 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
 
                     if (strstr(it.first, "Date")) {
                         SqlLib::standardizeDate(s);
-                    } else
-                    if ((paraRecord.optionFlag & create_flag_discard_fen) && strstr(it.first, "FEN")) {
-                        return false;
                     }
 
                     stringMap[it2->second] = s;

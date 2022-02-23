@@ -29,7 +29,7 @@ class QueryGameRecord;
 // Developer may change this string
 const std::string VersionUserDatabaseString = "0.1";
 
-const std::string VersionString = "Beta 6";
+const std::string VersionString = "Beta 7";
 const std::string VersionDatabaseString = "0.5";
 
 // Current limit is about 4 billion, we can change later by changing this define
