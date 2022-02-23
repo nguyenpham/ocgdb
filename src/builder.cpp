@@ -740,7 +740,7 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
 
     auto whiteElo = 0, blackElo = 0, plyCount = 0;
     char* whiteName = nullptr, *blackName = nullptr;
-    std::string fenString;
+    std::string fenString, ecoString;
 
     for(auto && it : itemMap) {
         auto s = it.second;
@@ -829,6 +829,9 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
                     break;
                 }
 
+                case TagIdx_ECO:
+                    ecoString = s;
+
                 default:
                 {
                     // ignore empty string or one started with *, ?
@@ -839,7 +842,11 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
 
                     if (strstr(it.first, "Date")) {
                         SqlLib::standardizeDate(s);
+                    } else
+                    if ((paraRecord.optionFlag & create_flag_discard_fen) && strstr(it.first, "FEN")) {
+                        return false;
                     }
+
                     stringMap[it2->second] = s;
                     break;
                 }
@@ -968,6 +975,15 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
                 auto cnt = static_cast<int>(p - t->buf);
                 assert(cnt >= plyCount);
                 t->insertGameStatement->bind(tagIdx_MovesBlob + 1, t->buf, cnt);
+                
+                
+                if (ecoString.empty() || (paraRecord.optionFlag & create_flag_reset_eco)) {
+                    ecoString = t->board->getLastEcoString();
+                    if (!ecoString.empty()) {
+                        stringMap[TagIdx_ECO] = ecoString.c_str();
+                    }
+                }
+
             }
         }
         

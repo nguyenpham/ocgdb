@@ -64,13 +64,15 @@ enum {
     create_flag_discard_comments        = 1 << 4,
     create_flag_discard_sites           = 1 << 5,
     create_flag_discard_no_elo          = 1 << 6,
+    create_flag_discard_fen             = 1 << 7,
+    create_flag_reset_eco               = 1 << 8,
 
-    query_flag_print_all                = 1 << 7,
-    query_flag_print_fen                = 1 << 8,
-    query_flag_print_pgn                = 1 << 9,
+    query_flag_print_all                = 1 << 10,
+    query_flag_print_fen                = 1 << 11,
+    query_flag_print_pgn                = 1 << 12,
 
-    dup_flag_remove                     = 1 << 10,
-    dup_flag_embededgames               = 1 << 11,
+    dup_flag_remove                     = 1 << 15,
+    dup_flag_embededgames               = 1 << 16,
 };
 
 class ParaRecord

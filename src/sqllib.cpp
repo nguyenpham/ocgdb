@@ -144,13 +144,16 @@ static const std::map<std::string, int> optionNameMap = {
     {"discardcomments", 4},
     {"discardsites", 5},
     {"discardnoelo", 6},
-    // query
-    {"printall", 7},
-    {"printfen", 8},
-    {"printpgn", 9},
+    {"discardfen", 7},
+    {"reseteco", 8},
 
-    {"remove", 10},
-    {"embededgames", 11},
+    // query
+    {"printall", 10},
+    {"printfen", 11},
+    {"printpgn", 12},
+
+    {"remove", 15},
+    {"embededgames", 16},
 };
 
 

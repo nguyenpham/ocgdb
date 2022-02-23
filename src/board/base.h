@@ -350,6 +350,8 @@ namespace bslib {
         virtual uint64_t getHashKeyForCheckingDuplicates(int = -1) const = 0;
         bool equalMoveLists(const BoardCore*, bool embeded) const;
         
+        virtual std::string getLastEcoString() const = 0;
+
     public:
         bool fromOriginPosition() const;
         virtual std::string getStartingFen(FENCharactorSet = FENCharactorSet::standard) const;

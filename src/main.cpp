@@ -155,6 +155,8 @@ void print_usage()
     std::cerr << "    discardcomments    discard all comments (for creating)" << std::endl;
     std::cerr << "    discardsites       discard all Site tag (for creating)" << std::endl;
     std::cerr << "    discardnoelo       discard games without player Elos (for creating)" << std::endl;
+    std::cerr << "    discardfen         discard games with FENs (not started from origin; for creating)" << std::endl;
+    std::cerr << "    reseteco           re-create all ECO (for creating)" << std::endl;
     std::cerr << "    printall           print all results (for querying, checking duplications)" << std::endl;
     std::cerr << "    printfen           print FENs of results (for querying)" << std::endl;
     std::cerr << "    printpgn           print simple PGNs of results (for querying)" << std::endl;
