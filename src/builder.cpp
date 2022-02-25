@@ -2008,8 +2008,8 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record, const std::vector<
 
         auto it = hashGameIDMap.find(hashKey);
         if (it == hashGameIDMap.end()) {
-            hashGameIDMap[hashKey] = std::vector<int>{ record.gameID };
             if (!embeded) {
+                hashGameIDMap[hashKey] = std::vector<int>{ record.gameID };
                 return;
             }
         } else {
@@ -2026,6 +2026,8 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record, const std::vector<
                     gameIDVec.insert(gameIDVec.end(), it->second.begin(), it->second.end());
                 }
             }
+
+            hashGameIDMap[hashKey] = std::vector<int>{ record.gameID };
 
             if (gameIDVec.empty()) {
                 return;

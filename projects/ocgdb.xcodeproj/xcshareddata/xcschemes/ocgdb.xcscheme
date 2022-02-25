@@ -31,9 +31,9 @@
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Debug"
-      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
-      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      buildConfiguration = "Release"
+      selectedDebuggerIdentifier = ""
+      selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
@@ -53,6 +53,14 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/Carlsen.pgn"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-pgn /Users/nguyenpham/Downloads/one_embeded_game.pgn"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-db /Users/nguyenpham/Downloads/one_embeded_game.db3"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -89,7 +97,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/mb-3.45.pgn"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/345.ocgdb.db3"
@@ -121,15 +129,15 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-dup"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-r /Users/nguyenpham/Downloads/r.txt"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-plycount 30"
-            isEnabled = "NO">
+            argument = "-plycount 40"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o remove"
@@ -185,7 +193,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o printall;printfen;printpgn"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves"
@@ -193,11 +201,11 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves2"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o reseteco"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves;moves2"
