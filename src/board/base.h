@@ -221,7 +221,7 @@ namespace bslib {
     public:
         int gameID = -1;
         std::unordered_map<std::string, std::string> tags;
-        std::string fenText, moveString;
+        std::string fenText, result, moveString;
         const char* moveText = nullptr;
     };
 

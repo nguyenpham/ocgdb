@@ -129,7 +129,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-dup"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-r /Users/nguyenpham/Downloads/r.txt"
@@ -137,7 +137,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-plycount 40"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o remove"
@@ -145,7 +145,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-q &quot;Q = 3&quot;"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-q &quot;P[d4, e5, f4, g4] = 4 and kb7&quot;"
@@ -196,6 +196,10 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
+            argument = "-o printall"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-o moves"
             isEnabled = "NO">
          </CommandLineArgument>
@@ -217,7 +221,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o embededgames"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/Downloads/60_games_with_doubles.pgn"

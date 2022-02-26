@@ -1182,6 +1182,13 @@ std::string BoardCore::toPgn(const PgnRecord* record, bool useBoard) const
 
         for(auto && it : tags) {
             auto tag = it.first, ss = it.second;
+
+            // Change back date from ISO to PGN standard format
+            if (tag.find("Date") != std::string::npos) {
+                ss = bslib::Funcs::replaceString(ss, "-", ".");
+            }
+
+
             auto s = "[" + tag + " \"" + ss + "\"]\n";
 
             if (tag == "Event") {

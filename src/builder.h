@@ -102,7 +102,8 @@ public:
 
 private:
     void convertPgn2Sql(const ParaRecord&);
-    
+    void searchPosition_basic(const std::vector<std::string>& pgnPaths);
+
     
 private:
     void convertSql2Pgn(const ParaRecord&);
@@ -168,6 +169,7 @@ private:
                               const std::vector<int8_t>&);
 
     std::function<bool(const std::vector<uint64_t>&, const bslib::BoardCore*, const bslib::PgnRecord*)> checkToStop = nullptr;
+    std::function<bool(const bslib::BoardCore*, const bslib::PgnRecord*)> boardCallback = nullptr;
 
     std::unordered_map<std::string, IDInteger> playerIdMap, eventIdMap, siteIdMap;
 
@@ -185,6 +187,7 @@ private:
     SQLite::Statement *benchStatement = nullptr;
 
     thread_pool* pool = nullptr;
+    QueryGameRecord* qgr = nullptr;
 
     mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, commentMutex, threadMapMutex, dupHashKeyMutex, printMutex;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
