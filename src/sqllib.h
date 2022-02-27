@@ -43,7 +43,8 @@ enum class Task
     query,
     bench,
     getgame,
-    dup
+    dup,
+    aggressivegamesearch
 };
 
 enum {
@@ -73,6 +74,9 @@ enum {
 
     dup_flag_remove                     = 1 << 15,
     dup_flag_embededgames               = 1 << 16,
+
+    ags_flag_filter1                    = 1 << 20,
+    ags_flag_filter2                    = 1 << 21,
 };
 
 class ParaRecord

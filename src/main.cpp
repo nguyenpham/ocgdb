@@ -49,6 +49,10 @@ int main(int argc, const char * argv[]) {
 //            paraRecord.task = ocgdb::Task::merge;
 //            continue;
 //        }
+        if (str == "-ags") {
+            paraRecord.task = ocgdb::Task::aggressivegamesearch;
+            continue;
+        }
         if (str == "-dup") {
             paraRecord.task = ocgdb::Task::dup;
             continue;
@@ -138,6 +142,7 @@ void print_usage()
     std::cerr << "                       use :memory: to create in-memory database" << std::endl;
 //    std::cerr << " -merge                merge databases into the first one, works with -db, -cpu" << std::endl;
     std::cerr << " -dup                  check duplicate games in databases, works with -db, -cpu, -plycount, -o printall;remove" << std::endl;
+    std::cerr << " -ags                  aggressive games search, works with -db, -pgn, -cpu, -r, -o printall;printfen;printpgn" << std::endl;
     std::cerr << " -export               export from a database into a PGN file, works with -db and -pgn" << std::endl;
     std::cerr << " -bench                benchmarch querying games speed, works with -db and -cpu" << std::endl;
     std::cerr << " -q <query>            querying positions, repeat to add multi queries, works with -db and -cpu" << std::endl;
@@ -162,6 +167,8 @@ void print_usage()
     std::cerr << "    printpgn           print simple PGNs of results (for querying)" << std::endl;
     std::cerr << "    embededgames       duplicate included games inside other games" << std::endl;
     std::cerr << "    remove             remove duplicate games (for checking duplicates)" << std::endl;
+    std::cerr << "    filter1            filter for advancing pieces to last 3 ranks (for aggressive games search)" << std::endl;
+    std::cerr << "    filter2            filter for sacrifices (for aggressive games search)" << std::endl;
 
     
     std::cerr << std::endl;

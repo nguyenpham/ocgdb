@@ -108,7 +108,10 @@ void Builder::runTask(const ParaRecord& param)
         case Task::getgame:
             getGame(param);
             break;
-
+        case Task::aggressivegamesearch:
+            aggressiveGameSearch(param);
+            break;
+            
         default:
             break;
     }
@@ -1462,11 +1465,11 @@ void Builder::searchPosition(const bslib::PgnRecord& record,
 }
 
 
-void Builder::searchPosition(SQLite::Database* _db,
+void Builder::searchPosition(SQLite::Database* db,
                              const std::vector<std::string>& pgnPaths,
                              std::string query)
 {
-    mDb = _db;
+    mDb = db;
 
     // remove comments by //
     if (query.find("//") != std::string::npos) {
@@ -1592,8 +1595,217 @@ void Builder::searchPosition(SQLite::Database* _db,
               << ", time per results: " << elapsed / std::max<int64_t>(1, succCount)  << " ms"
               << std::endl << std::endl << std::endl;
     
+    mDb = nullptr;
     delete parser;
 }
+
+
+
+const int AggressiveGameSearch_fromPly = 28;
+
+#define EVAL_SCORE_PAWN         100
+#define EVAL_SCORE_QUEEN        (EVAL_SCORE_PAWN * 9)
+#define EVAL_SCORE_ROOK         (EVAL_SCORE_PAWN * 5)
+#define EVAL_SCORE_BISHOP       (EVAL_SCORE_PAWN * 3)
+#define EVAL_SCORE_KNIGHT       (EVAL_SCORE_PAWN * 3)
+
+const int materialbytype[] = {
+    0, 0, EVAL_SCORE_QUEEN, EVAL_SCORE_ROOK, EVAL_SCORE_BISHOP, EVAL_SCORE_KNIGHT, EVAL_SCORE_PAWN, 0
+};
+
+
+void Builder::aggressiveGameSearch(const ParaRecord& _paraRecord)
+{
+    std::cout << "Aggressive Games Searching (idea by Stefan Pohl 2022, www.sp-cc.de)..." << std::endl;
+    
+    paraRecord = _paraRecord;
+    paraRecord.limitLen = AggressiveGameSearch_fromPly + 10; // next 5 moves
+
+    gameCnt = commentCnt = 0;
+    eventCnt = playerCnt = siteCnt = 1;
+    errCnt = 0;
+
+    // Reading all data, parsing moves, multi threads
+    createPool();
+
+    auto ok = false;
+    if (paraRecord.dbPaths.empty()) {
+        if (!paraRecord.pgnPaths.empty()) {
+            ok = true;
+            aggressiveGameSearch(nullptr, paraRecord.pgnPaths);
+        }
+    } else {
+        ok = true;
+        for(auto && dbPath : paraRecord.dbPaths) {
+            SQLite::Database db(dbPath, SQLite::OPEN_READONLY);
+            aggressiveGameSearch(&db, std::vector<std::string>());
+        }
+    }
+
+    if (!ok) {
+        std::cout << "Error: there is no path for database nor PGN files" << std::endl;
+    }
+
+    std::cout << "Completed! " << std::endl;
+}
+
+void Builder::aggressiveGameSearch(SQLite::Database* db, const std::vector<std::string>& pgnPaths)
+{
+    mDb = db;
+
+    // check if there at least a move fields (Moves, Moves1 or Moves2)
+    if (mDb) {
+        searchField = SqlLib::getMoveField(mDb);
+
+        if (searchField <= SearchField::none) {
+            std::cerr << "FATAL ERROR: missing move field (Moves or Moves1 or Moves2)" << std::endl;
+            return;
+        }
+        qgr = new QueryGameRecord(*mDb, searchField);
+    }
+    
+    
+    checkToStop = nullptr;
+    
+    boardCallback = [=](const bslib::BoardCore* board, const bslib::PgnRecord* record) -> bool {
+        assert(board);
+        // board not started from origin position
+        auto moveCnt = board->getHistListSize();
+        if (moveCnt < paraRecord.limitLen || !board->getStartingFen().empty()) {
+            return false;
+        }
+
+        if (record->result != "1-0" && record->result != "0-1") {
+            return false;
+        }
+        auto won = record->result == "1-0";
+        auto wonside = won ? bslib::Side::white : bslib::Side::black;
+        auto wonsd = static_cast<int>(wonside);
+        auto bbwonsd = static_cast<int>(won ? bslib::BBIdx::white : bslib::BBIdx::black);
+
+        uint64_t last3ranks = 0;
+        auto startX = won ? 0 : (64 - 3 * 8);
+        for(auto i = 0; i < 8 * 3; ++i) {
+            last3ranks |= bslib::ChessBoard::_posToBitboard[startX + i];
+        }
+
+        assert(moveCnt > AggressiveGameSearch_fromPly);
+
+        auto filter1cnt = 0, filter2cnt = 0;
+        int mat[2] = {0, 0};
+        
+        // Work with won side only, ignore the lost side
+        for(auto i = 0; i <= moveCnt; ++i) {
+            const bslib::Hist* hist = i < moveCnt ? board->_getHistPointerAt(i) : nullptr;
+            assert(!hist || !hist->bitboardVec.empty());
+            
+            if (hist && !hist->cap.isEmpty()) {
+                mat[static_cast<int>(hist->cap.side)] -= materialbytype[static_cast<int>(hist->cap.type)];
+            }
+
+            auto moveSide = hist ? hist->move.piece.side : board->side;
+            assert(moveSide == bslib::Side::white || moveSide == bslib::Side::black);
+
+            // consider from move 14 and won side only
+            if (i < AggressiveGameSearch_fromPly || moveSide != wonside) {
+                continue;
+            }
+
+            std::vector<uint64_t> bitboardVec = hist ? hist->bitboardVec : board->posToBitboards();
+
+            auto found = false;
+            //The first one is a filter for pieces of the winning color on the last 3 ranks of the opponent board-side
+            //after move 14, at least 3 times until move 60 and the Queen and rooks (ore one rook and some knights or
+            //bishops) are still on the board. Example: White wins the game and has 3 times a non-pawn piece on the
+            //rank 6,7 or 8.
+            
+            auto queens = bitboardVec[static_cast<int>(bslib::BBIdx::queens)];
+            auto rooks = bitboardVec[static_cast<int>(bslib::BBIdx::rooks)];
+            auto bishops = bitboardVec[static_cast<int>(bslib::BBIdx::bishops)];
+            auto knights = bitboardVec[static_cast<int>(bslib::BBIdx::knights)];
+            
+            if (!rooks || !(queens | knights | bishops)) {
+                return false;
+            }
+            
+            if ((paraRecord.optionFlag & ags_flag_filter1) && i < 120) {
+                auto qrbn = bitboardVec[bbwonsd] | queens | rooks | bishops | knights;
+
+                if (qrbn & last3ranks) {
+                    filter1cnt++;
+                    
+                    if (filter1cnt >= 3) {
+                        found = true;
+                    }
+                }
+            }
+            
+            //The second one is a filter for sacrifices, means, that the loosing color has more material after move 14
+            //and before the endgame (Queen, 2 rooks of the same color (or one rook and some bishops/knights) have to be
+            //still on the board) for at least 5 consecutive moves (7 moves, if the loosing color is only one pawn ahead).
+
+            if (!found && (paraRecord.optionFlag & ags_flag_filter2)) {
+                auto d = mat[1 - wonsd] - mat[wonsd];
+                if (d < EVAL_SCORE_PAWN) {
+                    filter2cnt = 0;
+                    continue;
+                }
+                filter2cnt++;
+                if (filter2cnt >= 7 || (filter2cnt >= 5 && d >= EVAL_SCORE_PAWN * 2)) {
+                    found = true;
+                }
+            }
+            
+            //////////////////////
+            if (!found) {
+                continue;
+            }
+
+            succCount++;
+
+            if (paraRecord.optionFlag & query_flag_print_all) {
+                std::lock_guard<std::mutex> dolock(printMutex);
+
+                std::cout << succCount << ". gameId: " << (record ? record->gameID : -1) << std::endl;
+            }
+
+            if (printOut.isOn()) {
+                if (paraRecord.optionFlag & query_flag_print_fen) {
+                    std::string str = std::to_string(succCount) + ". gameId: " + std::to_string(record ? record->gameID : -1) +
+                                ", fen: " + board->getFen() + "\n";
+                    printOut.printOut(str);
+                }
+
+                static std::string printOutQuery;
+
+                if (qgr) {
+                    printGamePGNByIDs(*qgr, std::vector<int>{record->gameID});
+                } else {
+                    printOut.printOut(record->moveText);
+                }
+            }
+
+            return true;
+        }
+
+        return false;
+    };
+
+    auto startTime = getNow();
+
+    searchPosition_basic(pgnPaths);
+    
+    int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
+    
+    std::cout << std::endl << "Aggressive Games Search DONE. Elapsed: " << elapsed << " ms, "
+              << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
+              << ", total games: " << gameCnt
+              << ", total results: " << succCount
+              << ", time per results: " << elapsed / std::max<int64_t>(1, succCount)  << " ms"
+              << std::endl << std::endl << std::endl;
+    mDb = nullptr;
+}
+
 
 void Builder::searchPosition_basic(const std::vector<std::string>& pgnPaths)
 {
@@ -1609,16 +1821,23 @@ void Builder::searchPosition_basic(const std::vector<std::string>& pgnPaths)
     succCount = 0; gameCnt = 0;
 
     if (mDb) {
-        
         auto str = (paraRecord.optionFlag & query_flag_print_pgn) ?
         SqlLib::fullGameQueryString : "SELECT * FROM Games";
-        
+
         SQLite::Statement statement(*mDb, str);
         for (; statement.executeStep(); gameCnt++) {
             bslib::PgnRecord record;
             record.gameID = statement.getColumn("ID").getInt();
-            record.result = statement.getColumn("Result").getInt();
+            record.result = statement.getColumn("Result").getText();
             record.fenText = statement.getColumn("FEN").getText();
+
+            if (paraRecord.limitLen) {
+                auto plyCount = statement.getColumn("PlyCount").getInt();
+                
+                if (plyCount < paraRecord.limitLen) {
+                    continue;
+                }
+            }
 
             std::vector<int8_t> moveVec;
 
@@ -1689,7 +1908,7 @@ void Builder::searchPostion(const ParaRecord& _paraRecord)
 {
     std::cout   << "Querying..." << std::endl;
     
-    paraRecord = _paraRecord; assert(paraRecord.task != Task::create);
+    paraRecord = _paraRecord;
 
     gameCnt = commentCnt = 0;
     eventCnt = playerCnt = siteCnt = 1;
@@ -1708,7 +1927,7 @@ void Builder::searchPostion(const ParaRecord& _paraRecord)
         }
     } else {
         ok = true;
-        SQLite::Database db(paraRecord.dbPaths.front(), SQLite::OPEN_READWRITE);
+        SQLite::Database db(paraRecord.dbPaths.front(), SQLite::OPEN_READONLY);
 
         for(auto && s : paraRecord.queries) {
             searchPosition(&db, std::vector<std::string>(), s);
@@ -1853,7 +2072,6 @@ void Builder::convertSql2PgnByAThread(const bslib::PgnRecord& record,
         std::lock_guard<std::mutex> dolock(pgnOfsMutex);
         pgnOfs << toPgnString << "\n" << std::endl;
     }
-
 }
 
 void Builder::convertSql2Pgn(const ParaRecord& _paraRecord)

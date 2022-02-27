@@ -47,10 +47,10 @@ const std::string SqlLib::searchFieldNames[] = {
 
 bool ParaRecord::isValid() const
 {
-    if (dbPaths.empty() && task != Task::query) {
-        errorString = "Must have a database (.db3) path. Mising or wrong parameter -db";
-        return false;
-    }
+//    if (dbPaths.empty() && task != Task::query) {
+//        errorString = "Must have a database (.db3) path. Mising or wrong parameter -db";
+//        return false;
+//    }
     
     auto hasPgn = false;
     for(auto && s : pgnPaths) {
@@ -65,8 +65,8 @@ bool ParaRecord::isValid() const
     switch (task) {
         case Task::create:
         {
-            if (!hasPgn) {
-                errorString = "Must have at least one PGN path. Mising or wrong parameter -pgn";
+            if (dbPaths.empty() || !hasPgn) {
+                errorString = "Must have a PGN path and a database path. Mising or wrong parameter -pgn";
                 break;
             }
             
@@ -104,13 +104,21 @@ bool ParaRecord::isValid() const
         }
 
         case Task::query:
+            if (queries.empty()) {
+                errorString = "Must have at least one query. Mising or wrong parameter -q";
+                break;
+            }
+        case Task::aggressivegamesearch:
             if (dbPaths.empty() && !hasPgn) {
                 errorString = "Must have a database (.db3) path or a PGN path. Mising or wrong parameter -db and -pgn";
                 return false;
             }
-            if (queries.empty()) {
-                errorString = "Must have at least one query. Mising or wrong parameter -q";
-                break;
+            
+            if (task == Task::aggressivegamesearch) {
+                if (!(optionFlag & (ags_flag_filter1 | ags_flag_filter2))) {
+                    errorString = "Must have an option's filter such as -o filter1 or  -o filter1;filter2";
+                    return false;
+                }
             }
         case Task::bench:
         {
@@ -154,6 +162,10 @@ static const std::map<std::string, int> optionNameMap = {
 
     {"remove", 15},
     {"embededgames", 16},
+
+    {"filter1", 20},
+    {"filter2", 21},
+
 };
 
 
@@ -168,8 +180,8 @@ std::string ParaRecord::toString() const
         "query",
         "bench",
         "get game",
-        "duplicate"
-
+        "duplicate",
+        "aggressive game search"
     };
         
     s = "\tTask: " + taskNames[static_cast<int>(task)] + "\n";

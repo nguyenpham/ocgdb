@@ -104,7 +104,10 @@ private:
     void convertPgn2Sql(const ParaRecord&);
     void searchPosition_basic(const std::vector<std::string>& pgnPaths);
 
-    
+private:
+    void aggressiveGameSearch(SQLite::Database* _db, const std::vector<std::string>& pgnPaths);
+    void aggressiveGameSearch(const ParaRecord&);
+
 private:
     void convertSql2Pgn(const ParaRecord&);
     void threadConvertSql2Pgn(const bslib::PgnRecord& record,
