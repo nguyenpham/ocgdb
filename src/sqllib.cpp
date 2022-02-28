@@ -47,10 +47,10 @@ const std::string SqlLib::searchFieldNames[] = {
 
 bool ParaRecord::isValid() const
 {
-    if (dbPaths.empty() && task != Task::query) {
-        errorString = "Must have a database (.db3) path. Mising or wrong parameter -db";
-        return false;
-    }
+//    if (dbPaths.empty() && task != Task::query) {
+//        errorString = "Must have a database (.db3) path. Mising or wrong parameter -db";
+//        return false;
+//    }
     
     auto hasPgn = false;
     for(auto && s : pgnPaths) {
@@ -65,8 +65,8 @@ bool ParaRecord::isValid() const
     switch (task) {
         case Task::create:
         {
-            if (!hasPgn) {
-                errorString = "Must have at least one PGN path. Mising or wrong parameter -pgn";
+            if (!hasPgn || dbPaths.empty()) {
+                errorString = "Must have a database path and at least one PGN path. Mising or wrong parameter -db -pgn";
                 break;
             }
             
@@ -94,8 +94,8 @@ bool ParaRecord::isValid() const
 
         case Task::export_:
         {
-            if (!hasPgn || pgnPaths.size() != 1) {
-                errorString = "Must have one PGN path. Mising or wrong parameter -pgn";
+            if (dbPaths.empty() || !hasPgn || pgnPaths.size() != 1) {
+                errorString = "Must have a database path and a PGN path. Mising or wrong parameter -db -pgn";
                 break;
             }
 
@@ -114,13 +114,18 @@ bool ParaRecord::isValid() const
             }
         case Task::bench:
         {
+            if (dbPaths.empty()) {
+                errorString = "Must have a database (.db3) path. Mising or wrong parameter -db";
+                return false;
+            }
+
             ok = true;
             break;
         }
         case Task::getgame:
         {
-            if (gameIDVec.empty()) {
-                errorString = "Must have some game IDs, each game ID must be greater than zero";
+            if (dbPaths.empty() || gameIDVec.empty()) {
+                errorString = "Must have a database (.db3) path and one or some game IDs, each game ID must be greater than zero";
                 break;
             }
 

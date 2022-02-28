@@ -890,7 +890,7 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
                     _parseComment(it->second, tmphist);
                 } else {
                     if (!tmphist.comment.empty()) {
-                        tmphist.comment + ", ";
+                        tmphist.comment += ", ";
                     }
                     tmphist.comment += it->second;
                 }

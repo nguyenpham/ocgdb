@@ -1462,11 +1462,11 @@ void Builder::searchPosition(const bslib::PgnRecord& record,
 }
 
 
-void Builder::searchPosition(SQLite::Database* _db,
+void Builder::searchPosition(SQLite::Database* db,
                              const std::vector<std::string>& pgnPaths,
                              std::string query)
 {
-    mDb = _db;
+    mDb = db;
 
     // remove comments by //
     if (query.find("//") != std::string::npos) {
@@ -1592,6 +1592,7 @@ void Builder::searchPosition(SQLite::Database* _db,
               << ", time per results: " << elapsed / std::max<int64_t>(1, succCount)  << " ms"
               << std::endl << std::endl << std::endl;
     
+    mDb = nullptr;
     delete parser;
 }
 
@@ -1615,9 +1616,17 @@ void Builder::searchPosition_basic(const std::vector<std::string>& pgnPaths)
         
         SQLite::Statement statement(*mDb, str);
         for (; statement.executeStep(); gameCnt++) {
+            if (paraRecord.limitLen) {
+                auto plyCount = statement.getColumn("PlyCount").getInt();
+
+                if (plyCount < paraRecord.limitLen) {
+                    continue;
+                }
+            }
+
             bslib::PgnRecord record;
             record.gameID = statement.getColumn("ID").getInt();
-            record.result = statement.getColumn("Result").getInt();
+            record.result = statement.getColumn("Result").getText();
             record.fenText = statement.getColumn("FEN").getText();
 
             std::vector<int8_t> moveVec;
@@ -1708,10 +1717,17 @@ void Builder::searchPostion(const ParaRecord& _paraRecord)
         }
     } else {
         ok = true;
-        SQLite::Database db(paraRecord.dbPaths.front(), SQLite::OPEN_READWRITE);
+        
+        for(auto && dbPath : paraRecord.dbPaths) {
+            gameCnt = commentCnt = 0;
+            eventCnt = playerCnt = siteCnt = 1;
+            errCnt = 0;
 
-        for(auto && s : paraRecord.queries) {
-            searchPosition(&db, std::vector<std::string>(), s);
+            SQLite::Database db(dbPath, SQLite::OPEN_READONLY);
+
+            for(auto && s : paraRecord.queries) {
+                searchPosition(&db, std::vector<std::string>(), s);
+            }
         }
     }
 
@@ -1749,7 +1765,7 @@ void Builder::getGame(const ParaRecord& _paraRecord)
 {
     paraRecord = _paraRecord;
 
-    SQLite::Database db(paraRecord.dbPaths.front(), SQLite::OPEN_READWRITE);
+    SQLite::Database db(paraRecord.dbPaths.front(), SQLite::OPEN_READONLY);
     auto searchField = SqlLib::getMoveField(&db);
 
     printGamePGNByIDs(db, paraRecord.gameIDVec, searchField);
@@ -1870,7 +1886,7 @@ void Builder::convertSql2Pgn(const ParaRecord& _paraRecord)
 
     startTime = getNow();
 
-    SQLite::Database db(dbPath, SQLite::OPEN_READWRITE);
+    SQLite::Database db(dbPath, SQLite::OPEN_READONLY);
     mDb = &db;
 
     assert(!paraRecord.pgnPaths.empty());
@@ -2215,7 +2231,7 @@ void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
 
         startTime = getNow();
 
-        mDb = new SQLite::Database(dbPath, SQLite::OPEN_READWRITE);
+        mDb = new SQLite::Database(dbPath, SQLite::OPEN_READONLY);
         if (!mDb) {
             std::cerr << "Error: can't open database " << dbPath << std::endl;
             continue;

@@ -31,9 +31,9 @@
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
-      selectedDebuggerIdentifier = ""
-      selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
@@ -101,7 +101,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/345.ocgdb.db3"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/mb-3.45.ocgdb.db3"
@@ -129,11 +129,11 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-dup"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-r /Users/nguyenpham/Downloads/r.txt"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-plycount 40"
@@ -145,7 +145,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-q &quot;Q = 3&quot;"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-q &quot;P[d4, e5, f4, g4] = 4 and kb7&quot;"
@@ -181,11 +181,11 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-cpu 4"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-cpu 1"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves;moves1;discardsites;printall;printfen;printpgn"
@@ -193,11 +193,11 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o printall;printfen;printpgn"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o printall"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves"
@@ -230,6 +230,14 @@
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/60_games_with_doubles.db3"
             isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-pgn /Users/nguyenpham/Downloads/imbedded_duplicates.pgn"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-db /Users/nguyenpham/Downloads/imbedded_duplicates.db3"
+            isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>

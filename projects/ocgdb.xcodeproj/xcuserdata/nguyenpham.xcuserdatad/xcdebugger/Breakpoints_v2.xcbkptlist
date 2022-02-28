@@ -846,8 +846,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1649"
-            endingLineNumber = "1649"
+            startingLineNumber = "1658"
+            endingLineNumber = "1658"
             landmarkName = "Builder::searchPosition_basic(pgnPaths)"
             landmarkType = "7">
          </BreakpointContent>
@@ -910,8 +910,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1632"
-            endingLineNumber = "1632"
+            startingLineNumber = "1641"
+            endingLineNumber = "1641"
             landmarkName = "Builder::searchPosition_basic(pgnPaths)"
             landmarkType = "7">
          </BreakpointContent>
@@ -928,7 +928,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "1513"
             endingLineNumber = "1513"
-            landmarkName = "Builder::searchPosition(_db, pgnPaths, query)"
+            landmarkName = "Builder::searchPosition(db, pgnPaths, query)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -992,7 +992,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "1484"
             endingLineNumber = "1484"
-            landmarkName = "Builder::searchPosition(_db, pgnPaths, query)"
+            landmarkName = "Builder::searchPosition(db, pgnPaths, query)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1008,7 +1008,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "1496"
             endingLineNumber = "1496"
-            landmarkName = "Builder::searchPosition(_db, pgnPaths, query)"
+            landmarkName = "Builder::searchPosition(db, pgnPaths, query)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1070,8 +1070,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2241"
-            endingLineNumber = "2241"
+            startingLineNumber = "2257"
+            endingLineNumber = "2257"
             landmarkName = "Builder::findDuplicatedGames(_paraRecord)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1102,8 +1102,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2145"
-            endingLineNumber = "2145"
+            startingLineNumber = "2161"
+            endingLineNumber = "2161"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1294,8 +1294,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2153"
-            endingLineNumber = "2153"
+            startingLineNumber = "2169"
+            endingLineNumber = "2169"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1310,8 +1310,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2152"
-            endingLineNumber = "2152"
+            startingLineNumber = "2168"
+            endingLineNumber = "2168"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1326,8 +1326,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2093"
-            endingLineNumber = "2093"
+            startingLineNumber = "2109"
+            endingLineNumber = "2109"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1406,8 +1406,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2024"
-            endingLineNumber = "2024"
+            startingLineNumber = "2040"
+            endingLineNumber = "2040"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1422,8 +1422,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1750"
-            endingLineNumber = "1750"
+            startingLineNumber = "1766"
+            endingLineNumber = "1766"
             landmarkName = "Builder::getGame(_paraRecord)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1454,8 +1454,8 @@
             filePath = "../src/sqllib.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "231"
-            endingLineNumber = "231"
+            startingLineNumber = "236"
+            endingLineNumber = "236"
             landmarkName = "ParaRecord::setupOptions(optionString)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1470,8 +1470,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2023"
-            endingLineNumber = "2023"
+            startingLineNumber = "2039"
+            endingLineNumber = "2039"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1486,8 +1486,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2064"
-            endingLineNumber = "2064"
+            startingLineNumber = "2080"
+            endingLineNumber = "2080"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1502,8 +1502,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2088"
-            endingLineNumber = "2088"
+            startingLineNumber = "2104"
+            endingLineNumber = "2104"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1518,8 +1518,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2058"
-            endingLineNumber = "2058"
+            startingLineNumber = "2074"
+            endingLineNumber = "2074"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1534,8 +1534,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2051"
-            endingLineNumber = "2051"
+            startingLineNumber = "2067"
+            endingLineNumber = "2067"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1550,8 +1550,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2052"
-            endingLineNumber = "2052"
+            startingLineNumber = "2068"
+            endingLineNumber = "2068"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1566,8 +1566,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2047"
-            endingLineNumber = "2047"
+            startingLineNumber = "2063"
+            endingLineNumber = "2063"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
