@@ -2094,9 +2094,7 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record, const std::vector<
 
     auto moveName = SqlLib::searchFieldNames[static_cast<int>(searchField)];
 
-
     // Next check, match all moves of all games in the list
-    auto theDupID = -1;
     for(auto && dupID : gameIDVec) {
         if (dupID == record.gameID) {
             continue;
@@ -2148,14 +2146,18 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record, const std::vector<
             continue;
         }
 
-        if (t->board->equalMoveLists(t->board2, embeded)) {
-            theDupID = dupID;
+        if (t->board->equalMoveLists(t->board2, embeded)
+            && processDuplicate(t, record, dupID, plyCount, hashKey)) { // should stop searching if record.gameID be deleted
             break;
         }
     }
+}
 
+// true if record.gameID deleted
+bool Builder::processDuplicate(ThreadRecord* t, const bslib::PgnRecord& record, int theDupID, int plyCount, uint64_t hashKey)
+{
     if (theDupID < 0) {
-        return;
+        return false;
     }
 
     if (paraRecord.optionFlag & query_flag_print_all) {
@@ -2188,35 +2190,48 @@ void Builder::checkDuplicates(const bslib::PgnRecord& record, const std::vector<
     }
 
     t->dupCnt++;
-    if (paraRecord.optionFlag & dup_flag_remove) {
-        if (!t->removeGameStatement) {
-            assert(mDb);
-            t->removeGameStatement = new SQLite::Statement(*mDb, "DELETE FROM Games WHERE ID = ?");
-        }
+    
+    if ((paraRecord.optionFlag & dup_flag_remove) == 0) {
+        return false;
+    }
+    
+    if (!t->removeGameStatement) {
+        assert(mDb);
+        t->removeGameStatement = new SQLite::Statement(*mDb, "DELETE FROM Games WHERE ID = ?");
+    }
 
-        auto removingGameID = record.gameID;
-        if (t->board2->getHistListSize() < plyCount) {
-            removingGameID = theDupID;
-        }
-        {
-            std::lock_guard<std::mutex> dolock(dupHashKeyMutex);
+    auto removingGameID = theDupID;
+    if (t->board2->getHistListSize() < plyCount) {
+        removingGameID = record.gameID;
+    }
+    {
+        std::lock_guard<std::mutex> dolock(dupHashKeyMutex);
 
-            auto it = hashGameIDMap.find(hashKey);
-            assert(it != hashGameIDMap.end());
-            for(size_t i = 0; i < it->second.size(); ++i) {
-                if (it->second.at(i) == removingGameID) {
-                    it->second.erase(it->second.begin() + i);
-                    break;
-                }
+        auto it = hashGameIDMap.find(hashKey);
+        assert(it != hashGameIDMap.end());
+        for(size_t i = 0; i < it->second.size(); ++i) {
+            if (it->second.at(i) == removingGameID) {
+                it->second.erase(it->second.begin() + i);
+                break;
             }
         }
+    }
 
-        t->removeGameStatement->reset();
-        t->removeGameStatement->bind(1, removingGameID);
+    t->removeGameStatement->reset();
+    t->removeGameStatement->bind(1, removingGameID);
+    std::cout << "t->removeGameStatement: " << t->removeGameStatement->getExpandedSQL() << std::endl;
+    
+    try {
         if (t->removeGameStatement->exec()) {
             t->delCnt++;
+            return removingGameID == record.gameID;
         }
+    } catch (std::exception& e) {
+        std::cout << "SQLite exception: " << e.what() << std::endl;
+        t->errCnt++;
     }
+    
+    return false;
 }
 
 void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
@@ -2231,7 +2246,7 @@ void Builder::findDuplicatedGames(const ParaRecord& _paraRecord)
 
         startTime = getNow();
 
-        mDb = new SQLite::Database(dbPath, SQLite::OPEN_READONLY);
+        mDb = new SQLite::Database(dbPath, (paraRecord.optionFlag & dup_flag_remove) ? SQLite::OPEN_READWRITE : SQLite::OPEN_READONLY);
         if (!mDb) {
             std::cerr << "Error: can't open database " << dbPath << std::endl;
             continue;

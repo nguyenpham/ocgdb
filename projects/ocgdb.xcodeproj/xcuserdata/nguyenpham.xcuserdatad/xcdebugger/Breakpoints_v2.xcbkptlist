@@ -1070,8 +1070,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2257"
-            endingLineNumber = "2257"
+            startingLineNumber = "2272"
+            endingLineNumber = "2272"
             landmarkName = "Builder::findDuplicatedGames(_paraRecord)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1089,22 +1089,6 @@
             startingLineNumber = "198"
             endingLineNumber = "198"
             landmarkName = "BoardCore::equalMoveLists(oBoard, embeded)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "F817A61E-3A45-48F9-A506-FD9A0BBCA0E5"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2161"
-            endingLineNumber = "2161"
-            landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1256,7 +1240,7 @@
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
             uuid = "B5A1BB4F-BB53-4500-89EB-D4EFD42B0410"
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "../src/builder.cpp"
@@ -1287,38 +1271,6 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "943D856A-5218-4C57-A8FC-94C79940D3DA"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2169"
-            endingLineNumber = "2169"
-            landmarkName = "Builder::checkDuplicates(record, moveVec)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "078B4EAD-D2EB-4F0E-8E98-3FAFB08F10D6"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/builder.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2168"
-            endingLineNumber = "2168"
-            landmarkName = "Builder::checkDuplicates(record, moveVec)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
             uuid = "54F59220-2DDF-435E-9CB6-2591EDA7A05D"
             shouldBeEnabled = "No"
             ignoreCount = "0"
@@ -1326,8 +1278,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2109"
-            endingLineNumber = "2109"
+            startingLineNumber = "2107"
+            endingLineNumber = "2107"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1502,8 +1454,8 @@
             filePath = "../src/builder.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2104"
-            endingLineNumber = "2104"
+            startingLineNumber = "2102"
+            endingLineNumber = "2102"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -1569,6 +1521,54 @@
             startingLineNumber = "2063"
             endingLineNumber = "2063"
             landmarkName = "Builder::checkDuplicates(record, moveVec)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "94949A95-9FDE-4F2E-BFB9-62845AE9D236"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/sqllib.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "149"
+            endingLineNumber = "149"
+            landmarkName = "unknown"
+            landmarkType = "0">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "1F033693-8DB3-4570-A376-D5C977733C88"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/builder.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "2194"
+            endingLineNumber = "2194"
+            landmarkName = "Builder::processDuplicate(t, record, theDupID, plyCount, hashKey)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "0930A934-8036-45A8-B3B5-5FA9C7CBF53A"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/builder.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "2220"
+            endingLineNumber = "2220"
+            landmarkName = "Builder::processDuplicate(t, record, theDupID, plyCount, hashKey)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

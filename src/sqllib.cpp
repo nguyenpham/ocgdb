@@ -343,6 +343,7 @@ bool ThreadRecord::createInsertGameStatement(SQLite::Database* mDb, const std::u
     insertGameStatement = new SQLite::Statement(*mDb, sql0 + sql1 + ")");
     return true;
 }
+
 //////////////////////////////////
 
 

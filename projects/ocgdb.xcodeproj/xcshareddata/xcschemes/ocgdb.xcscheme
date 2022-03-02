@@ -133,7 +133,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-r /Users/nguyenpham/Downloads/r.txt"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-plycount 40"
@@ -221,6 +221,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o embededgames"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-o remove"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
