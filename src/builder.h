@@ -120,7 +120,7 @@ private:
 
     void mergeDatabases(const ParaRecord&);
     void findDuplicatedGames(const ParaRecord&);
-    bool processDuplicate(ThreadRecord* t, const bslib::PgnRecord& record, int theDupID, int, uint64_t);
+    void printDuplicates(ThreadRecord* t, const bslib::PgnRecord& record, int theDupID, uint64_t);
 
     void bench(ParaRecord paraRecord);
     void searchPostion(const ParaRecord& paraRecord);

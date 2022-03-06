@@ -37,20 +37,22 @@ int main(int argc, const char * argv[]) {
             paraRecord.task = ocgdb::Task::bench;
             continue;
         }
-        if (str == "-export") {
-            paraRecord.task = ocgdb::Task::export_;
-            continue;
-        }
         if (str == "-debug") {
             debugMode = true;
             continue;
         }
-//        if (str == "-merge") {
-//            paraRecord.task = ocgdb::Task::merge;
-//            continue;
-//        }
-        if (str == "-dup") {
-            paraRecord.task = ocgdb::Task::dup;
+        if (str == "-export" || str == "-dup") {
+            auto oldTask = paraRecord.task;
+            if (str == "-export") {
+                paraRecord.task = ocgdb::Task::export_;
+            }
+            else if (str == "-dup") {
+                paraRecord.task = ocgdb::Task::dup;
+            }
+            if (oldTask != paraRecord.task && oldTask != ocgdb::Task::create) {
+                errCnt++;
+                std::cerr << "Error: redudant task " << str << "\n" << std::endl;
+            }
             continue;
         }
 

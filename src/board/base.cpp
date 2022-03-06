@@ -1091,7 +1091,7 @@ std::string BoardCore::toMoveListString(const std::vector<Hist>& histList, Chess
         
         if (c) stringStream << " ";
         if (moveCounter && (k & 1) == 0) {
-            stringStream << (1 + k / 2) << ". ";
+            stringStream << (1 + k / 2) << ".";
         }
         
         switch (notation) {

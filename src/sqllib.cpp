@@ -376,7 +376,6 @@ std::string QueryGameRecord::queryAndCreatePGNByGameID(bslib::PgnRecord& record)
         SqlLib::queryForABoard(record, searchField, queryGameByID, queryComments, board);
         str = board->toPgn(&record);
     }
-    assert(!str.empty());
     return str;
 }
 

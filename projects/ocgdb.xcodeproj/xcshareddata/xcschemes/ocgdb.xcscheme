@@ -233,7 +233,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o remove"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/Downloads/60_games_with_doubles.pgn"
@@ -250,6 +250,10 @@
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/imbedded_duplicates.db3"
             isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-pgn /Users/nguyenpham/Downloads/t.pgn"
+            isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>
