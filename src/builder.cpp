@@ -155,7 +155,6 @@ void Builder::convertPgn2Sql(const ParaRecord& _paraRecord)
                 std::cout << "WARNING: redundant! There are two binary columns for storing moves. Use Moves2, discard Move1" << std::endl;
             }
         }
-        
     }
 
     // init
@@ -168,33 +167,51 @@ void Builder::convertPgn2Sql(const ParaRecord& _paraRecord)
         eventIdMap.reserve(128 * 1024);
         siteIdMap.reserve(128 * 1024);
 
-        extraFieldSet.clear();
-        fieldOrderMap.clear();
+        // ID, FEN, Moves, Moves1, Moves2 are special columns
+        create_tagVec = {
+            "ID",
+            "Event", "Site", "Date", "Round",
+            "White", "WhiteElo", "Black", "BlackElo",
+            "Result", "TimeControl", "ECO", "PlyCount"
+        };
         
-        int idx = 0;
-        for(; SqlLib::tagNames[idx]; ++idx) {
-            fieldOrderMap[SqlLib::tagNames[idx]] = static_cast<int>(fieldOrderMap.size());
+        assert(TagIdx_Max == knownPgnTagVec.size());
+        std::unordered_map<std::string, int> create_knownTagMap;
+        for(int i = 0; i < TagIdx_Max; i++) {
+            create_knownTagMap[knownPgnTagVec[i]] = i;
         }
-        assert(fieldOrderMap.size() == TagIdx_Max && TagIdx_Max == idx);
-        fieldOrderMap["UTCDate"] = TagIdx_Date;
+        
+        auto hasFEN = false;
+        for(auto && s : create_tagVec) {
+            if (s == "FEN") hasFEN = true;
+            auto it = create_knownTagMap.find(s);
+            if (it != create_knownTagMap.end()) {
+                create_tagMap[s] = it->second;
+            }
+        }
+        
+        if (!hasFEN) {
+            create_tagVec.push_back("FEN");
+            create_tagMap["FEN"] = TagIdx_FEN;
+        }
 
-        tagIdx_Moves = -1; tagIdx_MovesBlob = -1;
+        auto sz = static_cast<int>(create_knownTagMap.size());
+        for(auto && s : create_tagVec) {
+            auto it = create_knownTagMap.find(s);
+            if (it == create_knownTagMap.end()) {
+                create_tagMap[s] = sz++;
+            }
+        }
+        
         if (paraRecord.optionFlag & create_flag_moves) {
-            tagIdx_Moves = idx++;
-            fieldOrderMap["Moves"] = tagIdx_Moves;
-            extraFieldSet.insert("Moves");
+            create_tagVec.push_back("Moves");
         }
         if (paraRecord.optionFlag & (create_flag_moves1 | create_flag_moves2)) {
-            tagIdx_MovesBlob = idx++;
-            std::string s = (paraRecord.optionFlag & create_flag_moves2) ? "Moves2" : "Moves1";
-            fieldOrderMap[s] = tagIdx_MovesBlob;
-            extraFieldSet.insert(s);
+            create_tagVec.push_back((paraRecord.optionFlag & create_flag_moves2) ? "Moves2" : "Moves1");
         }
-        insertGameStatementIdxSz = idx;
-
         
         // Create database
-        mDb = createDb(dbPath, paraRecord.optionFlag);
+        mDb = createDb(dbPath, paraRecord.optionFlag, create_tagVec);
         if (!mDb) {
             return;
         }
@@ -257,38 +274,43 @@ void Builder::processHalfBegin(char* buffer, long len)
     halfBufSz = len;
 }
 
-int Builder::addNewField(const char* fieldName)
+bool Builder::create_addNewField(const std::string& fieldName)
 {
-    std::string s = fieldName, s0 = s;
-    bslib::Funcs::toLower(s);
-    
-    if (extraFieldSet.find(s) == extraFieldSet.end()) {
-        s = fieldName;
+    if (create_tagMap.find(fieldName) == create_tagMap.end()) {
+        std::lock_guard<std::mutex> dolock(create_tagFieldMutex);
+
         try {
-            mDb->exec("ALTER TABLE Games ADD COLUMN " + s + " TEXT");
-        } catch (std::exception& e) {}
-
-        auto order = -1;
-        auto it2 = fieldOrderMap.find(s);
-        if (it2 != fieldOrderMap.end()) {
-            order = it2->second;
-        } else {
-            for(auto && fo : fieldOrderMap) {
-                order = std::max(order, fo.second);
-            }
-            ++order;
-            fieldOrderMap[s] = order;
-            fieldOrderMap[s0] = order;
+            mDb->exec("ALTER TABLE Games ADD COLUMN " + fieldName + " TEXT");
+        } catch (std::exception& e) {
+            return false;
         }
+        
+        auto sz = static_cast<int>(create_tagVec.size());
+        create_tagVec.push_back(fieldName);
+        create_tagMap[fieldName] = sz;
+        
 
-        extraFieldSet.insert(s);
-        extraFieldSet.insert(s0);
-        insertGameStatementIdxSz++;
-
-        assert(order > 0);
-        return order;
+//        auto order = -1;
+//        auto it2 = fieldOrderMap.find(s);
+//        if (it2 != fieldOrderMap.end()) {
+//            order = it2->second;
+//        } else {
+//            for(auto && fo : fieldOrderMap) {
+//                order = std::max(order, fo.second);
+//            }
+//            ++order;
+//            fieldOrderMap[s] = order;
+//            fieldOrderMap[s0] = order;
+//        }
+//
+//        extraFieldSet.insert(s);
+//        extraFieldSet.insert(s0);
+//        insertGameStatementIdxSz++;
+//
+//        assert(order > 0);
+//        return order;
     }
-    return -1;
+    return true;
 }
 
 // the game between two blocks, second half
@@ -509,7 +531,7 @@ uint64_t Builder::processPgnFile(const std::string& path)
 }
 
 
-SQLite::Database* Builder::createDb(const std::string& path, int optionFlag)
+SQLite::Database* Builder::createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec)
 {
     assert(!path.empty());
 
@@ -540,26 +562,48 @@ SQLite::Database* Builder::createDb(const std::string& path, int optionFlag)
         mDb->exec("CREATE TABLE Players (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE, Elo INTEGER)");
         mDb->exec("INSERT INTO Players (ID, Name) VALUES (1, \"\")"); // default empty
 
-        mDb->exec("DROP TABLE IF EXISTS Games");
-        
-        std::string sqlstring0 =
-            "CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT, EventID INTEGER, SiteID INTEGER, "\
-           "Date TEXT, Round TEXT, WhiteID INTEGER, WhiteElo INTEGER, BlackID INTEGER, BlackElo INTEGER, "\
-        "Result TEXT, TimeControl TEXT, ECO TEXT, PlyCount INTEGER, FEN TEXT";
-        
-        if (optionFlag & create_flag_moves) {
-            sqlstring0 += ", Moves TEXT";
-        }
-        if (optionFlag & (create_flag_moves1 | create_flag_moves2)) {
-            auto sz = (optionFlag & create_flag_moves2) ? 2 : 1;
-            sqlstring0 += ", Moves" + std::to_string(sz) + " BLOB DEFAULT NULL";
-        }
+        // Table Games
+        {
+            mDb->exec("DROP TABLE IF EXISTS Games");
+            
+            std::string sql0 = "CREATE TABLE Games (ID INTEGER PRIMARY KEY AUTOINCREMENT";
+            std::string sql1;
+            for(auto && str : tagVec) {
+                if (str == "ID") {
+                    continue;;
+                }
 
-        std::string sqlstring1 =
-           ", FOREIGN KEY(EventID) REFERENCES Events, FOREIGN KEY(SiteID) REFERENCES Sites, FOREIGN KEY(WhiteID) REFERENCES Players, FOREIGN KEY(BlackID) REFERENCES Players)";
+                sql0 += ", " + str;
 
-        
-        mDb->exec(sqlstring0 + sqlstring1);
+                std::string stype = "TEXT";
+                
+                // Special fields, using ID
+                if (str == "Event" || str == "Site" || str == "White" || str == "Black") {
+                    if (str == "Event") {
+                        sql1 += ", FOREIGN KEY(EventID) REFERENCES Events";
+                    }
+                    else if (str == "Site") {
+                        sql1 += ", FOREIGN KEY(SiteID) REFERENCES Sites";
+                    }
+                    else if (str == "White") {
+                        sql1 += ", FOREIGN KEY(WhiteID) REFERENCES Players";
+                    }
+                    else if (str == "Black") {
+                        sql1 += ", FOREIGN KEY(BlackID) REFERENCES Players";
+                    }
+                    sql0 += "ID";
+                    stype = "INTEGER";
+                } else if (str == "WhiteElo" || str == "BlackElo" || str == "PlyCount") {
+                    stype = "INTEGER";
+                } else if (str == "Moves1" || str == "Moves2") {
+                    stype = "BLOB DEFAULT NULL";
+                }
+                
+                sql0 += " " + stype;
+            }
+            
+            mDb->exec(sql0 + sql1 + ")");
+        }
 
         mDb->exec("DROP TABLE IF EXISTS Comments");
         mDb->exec("CREATE TABLE Comments (ID INTEGER PRIMARY KEY AUTOINCREMENT, GameID INTEGER, Ply INTEGER, Comment TEXT)");
@@ -735,8 +779,8 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
         return false;
     }
     
-    std::unordered_map<int, const char*> stringMap;
-    std::unordered_map<int, int> intMap;
+    std::unordered_map<std::string, const char*> stringMap;
+    std::unordered_map<std::string, int> intMap;
 
     auto whiteElo = 0, blackElo = 0, plyCount = 0;
     char* whiteName = nullptr, *blackName = nullptr;
@@ -745,47 +789,59 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
     for(auto && it : itemMap) {
         auto s = it.second;
 
-        auto it2 = fieldOrderMap.find(it.first);
-        if (it2 != fieldOrderMap.end()) {
+        if (strcmp(it.first, "Variant") == 0) {
+            auto variant = bslib::Funcs::string2ChessVariant(it.second);
+            // at this moment, support only the standard variant
+            assert(variant != bslib::ChessVariant::standard);
+
+            if (variant != bslib::ChessVariant::standard) {
+                t->errCnt++;
+                return false;
+            }
+            continue;
+        }
+        if (strcmp(it.first, "SetUp") == 0) {
+            continue;
+        }
+
+        auto it2 = create_tagMap.find(it.first);
+        if (it2 != create_tagMap.end()) {
             while(*s <= ' ' && *s > 0) s++; // trim left
             assert(strlen(s) < 1024);
 
             switch (it2->second) {
                 case TagIdx_Event:
                 {
-                    intMap[TagIdx_Event] = create_getEventNameId(s);
+                    intMap["EventID"] = create_getEventNameId(s);
                     break;
                 }
                 case TagIdx_Site:
                 {
                     if (paraRecord.optionFlag & create_flag_discard_sites) {
-                        intMap[TagIdx_Site] = 1; // empty
+                        intMap["SiteID"] = 1; // empty
                         break;
                     }
 
                     // detect Lichess site, it is actually URL of the game, change to Source
                     if (memcmp(s, lichessURL, lichessURLLength) == 0 && strlen(s) > lichessURLLength + 5) {
-                        intMap[TagIdx_Site] = 1; // empty for Site
+                        intMap["SiteID"] = 1; // empty for Site
 
                         // change content to column Source
-                        if (extraFieldSet.find(sourceFieldName) == extraFieldSet.end()) {
-                            std::lock_guard<std::mutex> dolock(tagFieldMutex);
-                            auto order = addNewField(sourceFieldName.c_str());
-                            if (order >= TagIdx_Max) {
-                                stringMap[order] = s;
-                                break;
+                        if (create_tagMap.find(sourceFieldName) == create_tagMap.end()) {
+                            if (create_addNewField(sourceFieldName)) {
+                                stringMap[sourceFieldName] = s;
                             }
+                            break;
                         }
-                        auto it2 = fieldOrderMap.find(sourceFieldName);
-                        if (it2 != fieldOrderMap.end()) {
-                            auto order = it2->second;
-                            assert(order > TagIdx_Max && order < fieldOrderMap.size());
-                            stringMap[order] = s;
+
+                        auto it2 = create_tagMap.find(sourceFieldName);
+                        if (it2 != create_tagMap.end()) {
+                            stringMap[sourceFieldName] = s;
                         }
 
                         break;
                     }
-                    intMap[TagIdx_Site] = create_getSiteNameId(s);
+                    intMap["SiteID"] = create_getSiteNameId(s);
                     break;
                 }
                 case TagIdx_White:
@@ -804,14 +860,14 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
                         return false;
                     }
                     fenString = s;
-                    stringMap[TagIdx_FEN] = s;
+                    stringMap["FEN"] = s;
                     break;
 
                 case TagIdx_WhiteElo:
                 {
                     whiteElo = std::atoi(s);
                     if (whiteElo > 0) {
-                        intMap[TagIdx_WhiteElo] = whiteElo;
+                        intMap["WhiteElo"] = whiteElo;
                     }
                     break;
                 }
@@ -819,7 +875,7 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
                 {
                     blackElo = std::atoi(s);
                     if (blackElo > 0) {
-                        intMap[TagIdx_BlackElo] = blackElo;
+                        intMap["BlackElo"] = blackElo;
                     }
                     break;
                 }
@@ -847,57 +903,54 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
                         SqlLib::standardizeDate(s);
                     }
 
-                    stringMap[it2->second] = s;
+                    stringMap[it.first] = s;
                     break;
                 }
-            }
+            } // switch
 
             continue;
-        }
+        } // if (it2 != create_fieldMap.end())
         
-        if (strcmp(it.first, "Variant") == 0) {
-            auto variant = bslib::Funcs::string2ChessVariant(it.second);
-            // at this moment, support only the standard variant
-            assert(variant != bslib::ChessVariant::standard);
-
-            if (variant != bslib::ChessVariant::standard) {
-                t->errCnt++;
-                return false;
-            }
-        }
         
-        if ((paraRecord.optionFlag & create_flag_discard_no_elo) && (whiteElo <= 0 || blackElo <= 0)) {
-            return false;
-        }
-        
-        if (paraRecord.limitElo > 0 && (whiteElo < paraRecord.limitElo || blackElo < paraRecord.limitElo)) {
-            return false;
-        }
-        
-        if ((paraRecord.optionFlag & create_flag_accept_new_tags) && strcmp(it.first, "SetUp") != 0) {
+        if ((paraRecord.optionFlag & create_flag_accept_new_tags) &&
+            create_addNewField(it.first)) {
             if (t->insertGameStatement) {
                 delete t->insertGameStatement;
                 t->insertGameStatement = nullptr;
             }
-
-            std::lock_guard<std::mutex> dolock(tagFieldMutex);
-            auto order = addNewField(it.first);
-            assert(order > TagIdx_Max && order < fieldOrderMap.size());
-            stringMap[order] = s;
+            stringMap[it.first] = s;
         }
     }
+
+    if ((paraRecord.optionFlag & create_flag_discard_no_elo) && (whiteElo <= 0 || blackElo <= 0)) {
+        return false;
+    }
     
+    if (paraRecord.limitElo > 0 && (whiteElo < paraRecord.limitElo || blackElo < paraRecord.limitElo)) {
+        return false;
+    }
+    
+//    if ((paraRecord.optionFlag & create_flag_accept_new_tags) && strcmp(it.first, "SetUp") != 0) {
+//        if (t->insertGameStatement) {
+//            delete t->insertGameStatement;
+//            t->insertGameStatement = nullptr;
+//        }
+//
+//        create_addNewField(it.first);
+//        stringMap[it.first] = s;
+//    }
+
     try {
-        if (!t->insertGameStatement || t->insertGameStatementIdxSz != insertGameStatementIdxSz) {
-            std::lock_guard<std::mutex> dolock(tagFieldMutex);
-            t->createInsertGameStatement(mDb, fieldOrderMap);
+        if (!t->insertGameStatement || t->insertGameStatementIdxSz != create_tagVec.size()) {
+            std::lock_guard<std::mutex> dolock(create_tagFieldMutex);
+            t->createInsertGameStatement(mDb, create_tagVec);
         }
 
         t->insertGameStatement->reset();
         t->insertGameStatement->clearBindings();
 
-        intMap[TagIdx_White] = create_getPlayerNameId(whiteName, whiteElo);
-        intMap[TagIdx_Black] = create_getPlayerNameId(blackName, blackElo);
+        intMap["WhiteID"] = create_getPlayerNameId(whiteName, whiteElo);
+        intMap["BlackID"] = create_getPlayerNameId(blackName, blackElo);
 
         IDInteger gameID;
         {
@@ -905,19 +958,16 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
             ++gameCnt;
             gameID = gameCnt;
         }
-        intMap[TagIdx_GameID] = gameID;
+        intMap["ID"] = gameID;
 
-        if (tagIdx_Moves >= 0) {
-            assert(paraRecord.optionFlag & create_flag_moves);
-
+        if (paraRecord.optionFlag & create_flag_moves) {
             // trim left
             while(*moveText <= ' ') moveText++;
-            stringMap[tagIdx_Moves] = moveText;
+            stringMap["Moves"] = moveText;
         }
 
         // Parse moves
-        if (tagIdx_MovesBlob >= 0) {
-            assert(paraRecord.optionFlag & (create_flag_moves1 | create_flag_moves2));
+        if (paraRecord.optionFlag & (create_flag_moves1 | create_flag_moves2)) {
             //assert(t->board);
             t->board->newGame(fenString);
 
@@ -974,13 +1024,14 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
                 
                 auto cnt = static_cast<int>(p - t->buf);
                 assert(cnt >= plyCount);
-                t->insertGameStatement->bind(tagIdx_MovesBlob + 1, t->buf, cnt);
+                auto bindMoves = (paraRecord.optionFlag & create_flag_moves1) ? ":Moves1" : ":Moves2";
+                t->insertGameStatement->bind(bindMoves, t->buf, cnt);
                 
                 
                 if (ecoString.empty() || (paraRecord.optionFlag & create_flag_reset_eco)) {
                     ecoString = t->board->getLastEcoString();
                     if (!ecoString.empty()) {
-                        stringMap[TagIdx_ECO] = ecoString.c_str();
+                        stringMap["ECO"] = ecoString.c_str();
                     }
                 }
 
@@ -1001,18 +1052,14 @@ bool Builder::create_addGame(const std::unordered_map<char*, char*>& itemMap, co
 
         t->hdpLen += plyCount;
         if (plyCount > 0) {
-            intMap[TagIdx_PlyCount] = plyCount;
+            intMap["PlyCount"] = plyCount;
         }
 
         for(auto && it : stringMap) {
-            if (it.first >= 0) {
-                t->insertGameStatement->bind(it.first + 1, it.second);
-            }
+            t->insertGameStatement->bind(":" + it.first, it.second);
         }
         for(auto && it : intMap) {
-            if (it.first >= 0) {
-                t->insertGameStatement->bind(it.first + 1, it.second);
-            }
+            t->insertGameStatement->bind(":" + it.first, it.second);
         }
         
         t->insertGameStatement->exec();
@@ -1070,7 +1117,7 @@ bool Builder::addGame(const std::string& dbPath, const std::unordered_map<std::s
     if (mDb) {
     } else {
         paraRecord.optionFlag = create_flag_moves2;
-        mDb = createDb(dbPath, paraRecord.optionFlag);
+        mDb = createDb(dbPath, paraRecord.optionFlag, create_tagVec);
         createInsertStatements(*mDb);
     }
     if (!mDb) {
@@ -1087,6 +1134,7 @@ bool Builder::addGame(const std::string& dbPath, const std::unordered_map<std::s
     return r;
 }
 
+// Single adding game
 bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMap, const bslib::BoardCore* board)
 {
     assert(board);
@@ -1104,8 +1152,8 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
         return false;
     }
     
-    std::unordered_map<int, std::string> stringMap;
-    std::unordered_map<int, int> intMap;
+    std::unordered_map<std::string, std::string> stringMap;
+    std::unordered_map<std::string, int> intMap;
 
     auto whiteElo = 0, blackElo = 0;
     std::string whiteName, blackName, eventName, siteName, fenString;
@@ -1116,15 +1164,15 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
         return false;
     }
     if (plyCount > 0) {
-        intMap[TagIdx_PlyCount] = plyCount;
+        intMap["PlyCount"] = plyCount;
     }
 
 
     for(auto && it : itemMap) {
         auto s = it.second;
 
-        auto it2 = fieldOrderMap.find(it.first);
-        if (it2 != fieldOrderMap.end()) {
+        auto it2 = create_tagMap.find(it.first);
+        if (it2 != create_tagMap.end()) {
 //            while(*s <= ' ' && *s > 0) s++; // trim left
 //            assert(strlen(s) < 1024);
 
@@ -1137,28 +1185,25 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
                 case TagIdx_Site:
                 {
                     if (paraRecord.optionFlag & create_flag_discard_sites) {
-                        intMap[TagIdx_Site] = 1; // empty
+                        intMap["SiteID"] = 1; // empty
                         break;
                     }
 
                     // detect Lichess site, it is actually URL of the game, change to Source
                     if (memcmp(s.c_str(), lichessURL, lichessURLLength) == 0 && s.size() > lichessURLLength + 5) {
-                        intMap[TagIdx_Site] = 1; // empty for Site
+                        intMap["SiteID"] = 1; // empty for Site
 
                         // change content to column Source
-                        if (extraFieldSet.find(sourceFieldName) == extraFieldSet.end()) {
-                            std::lock_guard<std::mutex> dolock(tagFieldMutex);
-                            auto order = addNewField(sourceFieldName.c_str());
-                            if (order >= TagIdx_Max) {
-                                stringMap[order] = s;
-                                break;
-                            }
+                        if (create_tagMap.find(sourceFieldName) == create_tagMap.end()) {
+                            create_addNewField(sourceFieldName);
+                            stringMap[sourceFieldName] = s;
+                            break;
                         }
-                        auto it2 = fieldOrderMap.find(sourceFieldName);
-                        if (it2 != fieldOrderMap.end()) {
-                            auto order = it2->second;
-                            assert(order > TagIdx_Max && order < fieldOrderMap.size());
-                            stringMap[order] = s;
+                        auto it2 = create_tagMap.find(sourceFieldName);
+                        if (it2 != create_tagMap.end()) {
+//                            auto order = it2->second;
+//                            assert(order > TagIdx_Max && order < fieldOrderMap.size());
+                            stringMap[sourceFieldName] = s;
                         }
 
                         break;
@@ -1180,14 +1225,14 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
                 case TagIdx_FEN:
                 {
                     fenString = s;
-                    stringMap[TagIdx_FEN] = s;
+                    stringMap["FEN"] = s;
                     break;
                 }
                 case TagIdx_WhiteElo:
                 {
                     whiteElo = std::stoi(s);
                     if (whiteElo > 0) {
-                        intMap[TagIdx_WhiteElo] = whiteElo;
+                        intMap["WhiteElo"] = whiteElo;
                     }
                     break;
                 }
@@ -1195,7 +1240,7 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
                 {
                     blackElo = std::stoi(s);
                     if (blackElo > 0) {
-                        intMap[TagIdx_BlackElo] = blackElo;
+                        intMap["BlackElo"] = blackElo;
                     }
                     break;
                 }
@@ -1219,7 +1264,7 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
                     if (it.first.find("Date") != std::string::npos) {
                         s = SqlLib::standardizeDate(s);
                     }
-                    stringMap[it2->second] = s;
+                    stringMap[it.first] = s;
                     break;
                 }
             }
@@ -1237,19 +1282,19 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
     }
 
     try {
-        if (!t->insertGameStatement || t->insertGameStatementIdxSz != insertGameStatementIdxSz) {
-            std::lock_guard<std::mutex> dolock(tagFieldMutex);
-            t->createInsertGameStatement(mDb, fieldOrderMap);
+        if (!t->insertGameStatement || t->insertGameStatementIdxSz != create_tagVec.size()) {
+            std::lock_guard<std::mutex> dolock(create_tagFieldMutex);
+            t->createInsertGameStatement(mDb, create_tagVec);
         }
 
         t->insertGameStatement->reset();
         t->insertGameStatement->clearBindings();
 
-        intMap[TagIdx_Event] = getNameId("Events", eventName);
-        intMap[TagIdx_Site] = getNameId("Sites", siteName);
+        intMap["EventID"] = getNameId("Events", eventName);
+        intMap["SiteID"] = getNameId("Sites", siteName);
 
-        intMap[TagIdx_White] = getNameId("Players", whiteName, whiteElo);
-        intMap[TagIdx_Black] = getNameId("Players", blackName, blackElo);
+        intMap["WhiteID"] = getNameId("Players", whiteName, whiteElo);
+        intMap["BlackID"] = getNameId("Players", blackName, blackElo);
 
         IDInteger gameID;
         {
@@ -1257,23 +1302,19 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
             ++gameCnt;
             gameID = gameCnt;
         }
-        intMap[TagIdx_GameID] = gameID;
+        intMap["ID"] = gameID;
         std::string moveText;
 
-        if (tagIdx_Moves >= 0) {
-            assert(paraRecord.optionFlag & create_flag_moves);
-
+        if (paraRecord.optionFlag & create_flag_moves) {
             // trim left
 //            while(*moveText <= ' ') moveText++;
             
             moveText = board->toMoveListString(bslib::Notation::san);
-            stringMap[tagIdx_Moves] = moveText;
+            stringMap["Moves"] = moveText;
         }
 
         // Parse moves
-        if (tagIdx_MovesBlob >= 0) {
-            assert(paraRecord.optionFlag & (create_flag_moves1 | create_flag_moves2));
-
+        if (paraRecord.optionFlag & (create_flag_moves1 | create_flag_moves2)) {
             int flag = bslib::BoardCore::ParseMoveListFlag_quick_check;
 
             if (paraRecord.optionFlag & create_flag_discard_comments) {
@@ -1320,7 +1361,8 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
 
                 auto cnt = static_cast<int>(p - t->buf);
                 assert(cnt >= plyCount);
-                t->insertGameStatement->bind(tagIdx_MovesBlob + 1, t->buf, cnt);
+                auto bindMoves = (paraRecord.optionFlag & create_flag_moves1) ? ":Moves1" : ":Moves2";
+                t->insertGameStatement->bind(bindMoves, t->buf, cnt);
             }
         }
         
@@ -1336,14 +1378,10 @@ bool Builder::addGame(const std::unordered_map<std::string, std::string>& itemMa
         }
 
         for(auto && it : stringMap) {
-            if (it.first >= 0) {
-                t->insertGameStatement->bind(it.first + 1, it.second);
-            }
+            t->insertGameStatement->bind(":" + it.first, it.second);
         }
         for(auto && it : intMap) {
-            if (it.first >= 0) {
-                t->insertGameStatement->bind(it.first + 1, it.second);
-            }
+            t->insertGameStatement->bind(":" + it.first, it.second);
         }
         
         t->insertGameStatement->exec();
@@ -2219,7 +2257,6 @@ bool Builder::processDuplicate(ThreadRecord* t, const bslib::PgnRecord& record, 
 
     t->removeGameStatement->reset();
     t->removeGameStatement->bind(1, removingGameID);
-    std::cout << "t->removeGameStatement: " << t->removeGameStatement->getExpandedSQL() << std::endl;
     
     try {
         if (t->removeGameStatement->exec()) {

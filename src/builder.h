@@ -72,6 +72,8 @@ public:
     std::ofstream ofs;
 };
 
+
+////////////////////////////////
 class Builder
 {
 public:
@@ -126,7 +128,7 @@ private:
 
     void searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, std::string query);
     
-    static SQLite::Database* createDb(const std::string& path, int optionFlag);
+    static SQLite::Database* createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec);
     bool createInsertStatements(SQLite::Database& mDb);
 
     void setDatabasePath(const std::string& path);
@@ -154,7 +156,7 @@ private:
 
     void queryInfo();
 
-    int addNewField(const char* fieldName);
+    bool create_addNewField(const std::string& fieldName);
 
     void threadCheckDupplication(const bslib::PgnRecord&, const std::vector<int8_t>& moveVec);
     void createPool();
@@ -193,13 +195,15 @@ private:
     mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, commentMutex, threadMapMutex, dupHashKeyMutex, printMutex;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
 
-    std::unordered_map<std::string, int> fieldOrderMap;
-    mutable std::mutex parsingMutex, tagFieldMutex;
-    std::set<std::string> extraFieldSet;
+    std::vector<std::string> create_tagVec;
+    std::unordered_map<std::string, int> create_tagMap;
+//    std::unordered_map<std::string, int> fieldOrderMap;
+    mutable std::mutex parsingMutex, create_tagFieldMutex;
+//    std::set<std::string> extraFieldSet;
     
     std::unordered_map<int64_t, std::vector<int>> hashGameIDMap;
 
-    int tagIdx_Moves, tagIdx_MovesBlob, insertGameStatementIdxSz;
+//    int insertGameStatementIdxSz; // tagIdx_Moves, tagIdx_MovesBlob,
     IDInteger gameCnt, eventCnt, playerCnt, siteCnt, commentCnt;
 
     ParaRecord paraRecord;

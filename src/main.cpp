@@ -151,7 +151,7 @@ void print_usage()
     std::cerr << "    moves              create text move field Moves" << std::endl;
     std::cerr << "    moves1             create binary move field Moves, 1-byte encoding" << std::endl;
     std::cerr << "    moves2             create binary move field Moves, 2-byte encoding" << std::endl;
-    std::cerr << "    acceptnewtag       create a new field for a new PGN tag (for creating)" << std::endl;
+    std::cerr << "    acceptnewtags      create a new field for a new PGN tag (for creating)" << std::endl;
     std::cerr << "    discardcomments    discard all comments (for creating)" << std::endl;
     std::cerr << "    discardsites       discard all Site tag (for creating)" << std::endl;
     std::cerr << "    discardnoelo       discard games without player Elos (for creating)" << std::endl;

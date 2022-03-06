@@ -26,6 +26,7 @@
 
 bool debugMode = false;
 
+
 using namespace ocgdb;
 
 
@@ -44,14 +45,20 @@ const std::string SqlLib::searchFieldNames[] = {
     "Moves2"
 };
 
+// same order and meaning with TagIdx_
+const std::vector<std::string> ocgdb::knownPgnTagVec = {
+    "ID",
+    "Event", "Site", "Date",
+    "Round",
+    "White", "WhiteElo", "Black", "BlackElo",
+    "Result", "TimeControl", "ECO", "PlyCount",
+    "FEN"
+};
 
+
+////////////////////////////////////////////////////////////////////////
 bool ParaRecord::isValid() const
 {
-//    if (dbPaths.empty() && task != Task::query) {
-//        errorString = "Must have a database (.db3) path. Mising or wrong parameter -db";
-//        return false;
-//    }
-    
     auto hasPgn = false;
     for(auto && s : pgnPaths) {
         if (!s.empty()) {
@@ -232,13 +239,12 @@ std::string ParaRecord::toString() const
 
 void ParaRecord::setupOptions(const std::string& optionString)
 {
-//    optionFlag = 0;
     auto vec = bslib::Funcs::splitString(optionString, ';');
     
     for(auto && s : vec) {
         auto it = optionNameMap.find(s);
         if (it == optionNameMap.end()) {
-            std::cerr << "Error: Don't know option string: " << it->first << std::endl;
+            std::cerr << "Error: Don't know option string: " << s << std::endl;
         } else {
             optionFlag |= 1 << it->second;
             
@@ -309,37 +315,32 @@ void ThreadRecord::resetStats()
 }
 
 
-bool ThreadRecord::createInsertGameStatement(SQLite::Database* mDb, const std::unordered_map<std::string, int>& fieldOrderMap)
+bool ThreadRecord::createInsertGameStatement(SQLite::Database* mDb, const std::vector<std::string>& fieldVec)
 {
     if (insertGameStatement) {
         delete insertGameStatement;
         insertGameStatement = nullptr;
     }
 
-    std::string sql0 = "INSERT INTO Games (ID, EventID, SiteID, Date, Round, WhiteID, WhiteElo, BlackID, BlackElo, Result, TimeControl, ECO, PlyCount, FEN";
-    std::string sql1 = ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?";
+    std::string sql0 = "INSERT INTO Games (";
+    std::string sql1 = ") VALUES (";
 
-    std::unordered_map<int, std::string> map;
-    for(auto && it : fieldOrderMap) {
-        if (it.second >= TagIdx_Max) {
-            map[it.second] = it.first;
+    auto cnt = 0;
+    for(auto str : fieldVec) {
+        // Special fields, using ID
+        if (str == "Event" || str == "Site" || str == "White" || str == "Black") {
+            str += "ID";
         }
+        if (cnt) {
+            sql0 += ",";
+            sql1 += ",";
+        }
+        sql0 += str;
+        sql1 += ":" + str;
+        cnt++;
     }
     
-    insertGameStatementIdxSz = TagIdx_Max;
-
-    if (!map.empty()) {
-        for(int i = TagIdx_Max; ; ++i) {
-            auto it = map.find(i);
-            if (it == map.end()) break;
-            
-            sql0 += ", " + it->second;
-            sql1 += ", ?";
-            
-            insertGameStatementIdxSz++;
-        }
-    }
-
+    insertGameStatementIdxSz = static_cast<int>(fieldVec.size());
     insertGameStatement = new SQLite::Statement(*mDb, sql0 + sql1 + ")");
     return true;
 }

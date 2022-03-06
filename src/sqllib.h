@@ -48,13 +48,16 @@ enum class Task
 
 enum {
     TagIdx_GameID,
-    TagIdx_Event, TagIdx_Site, TagIdx_Date, TagIdx_Round,
+    TagIdx_Event, TagIdx_Site, TagIdx_Date,
+    TagIdx_Round,
     TagIdx_White, TagIdx_WhiteElo, TagIdx_Black, TagIdx_BlackElo,
-    TagIdx_Result, TagIdx_Timer, TagIdx_ECO, TagIdx_PlyCount,
+    TagIdx_Result, TagIdx_TimeControl, TagIdx_ECO, TagIdx_PlyCount,
     TagIdx_FEN,
 
     TagIdx_Max
 };
+
+extern const std::vector<std::string> knownPgnTagVec;
 
 enum {
     create_flag_moves                   = 1 << 0,
@@ -108,7 +111,7 @@ public:
     ~ThreadRecord();
     void init(SQLite::Database* mDb);
 
-    bool createInsertGameStatement(SQLite::Database* mDb, const std::unordered_map<std::string, int>&);
+    bool createInsertGameStatement(SQLite::Database* mDb, const std::vector<std::string>&);
     
     void deleteAllStatements();
 
