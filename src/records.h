@@ -173,29 +173,6 @@ private:
     std::mutex queryMutex;
 };
 
-class SqlLib
-{
-public:
-    static SearchField getMoveField(SQLite::Database* db, bool* hashMoves = nullptr);
-
-    static void extractHeader(SQLite::Statement& query, bslib::PgnRecord& record);
-    static void queryForABoard( bslib::PgnRecord& record,
-                                SearchField searchField,
-                                SQLite::Statement* query,
-                                SQLite::Statement* queryComments,
-                                bslib::BoardCore* board);
-    
-    static int standardizeFEN(char *fenBuf);
-    static void standardizeDate(char* date);
-    static std::string standardizeDate(const std::string& date);
-    static std::string encodeString(const std::string& name);
-
-public:
-    static const std::string fullGameQueryString;
-    static const std::string searchFieldNames[];
-    static const char* tagNames[];
-};
-
 }
 
 #endif /* SqlLib_hpp */

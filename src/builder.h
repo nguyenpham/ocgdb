@@ -21,166 +21,41 @@
 #include "board/types.h"
 #include "board/base.h"
 
-#include "sqllib.h"
+#include "records.h"
+#include "pgnread.h"
 
 
 namespace ocgdb {
 
 
-class Report
+
+class Builder : public PGNRead
 {
-public:
-    Report() {}
-    void init(bool print, const std::string& path) {
-        printConsole = print;
-        if (!path.empty()) {
-            ofs = bslib::Funcs::openOfstream2write(path);
-            openingstream = ofs.is_open();
-        }
-    }
-    ~Report() {
-        close();
-    }
-    
-    bool isOn() const {
-        return printConsole || openingstream;
-    }
-
-    void printOut(const std::string& str) {
-        if (str.empty()) return;
-
-        if (openingstream) {
-            std::lock_guard<std::mutex> dolock(ofsMutex);
-            ofs << str << std::endl;
-        }
-        
-        if (printConsole) {
-            std::lock_guard<std::mutex> dolock(printMutex);
-            std::cout << str << std::endl;
-        }
-    }
-    void close() {
-        if (openingstream && ofs.is_open()) {
-            ofs.close();
-        }
-        openingstream = false;
-    }
-
-public:
-    bool printConsole = true, openingstream = false;
-    mutable std::mutex printMutex, ofsMutex;
-    std::ofstream ofs;
-};
-
-
-////////////////////////////////
-class Builder
-{
-public:
-    Builder();
-    virtual ~Builder();
-
-    void runTask(const ParaRecord&);
-    
-
-public:
-    bool create_addGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
-    
-    bool addGame(const std::string& dbPath, const std::unordered_map<std::string, std::string>& itemMap, const bslib::BoardCore* board);
-    bool addGame(const std::string& dbPath, const std::string& pgnString);
-
-    bool queryGame(const bslib::PgnRecord&);
-
-    std::set<IDInteger> gameIdSet;
-
-    void searchPosition(const bslib::PgnRecord& record,
-                        const std::vector<int8_t>& moveVec);
-
-    static void printGamePGNByIDs(SQLite::Database& db, const std::vector<int>& gameIDVec, SearchField);
-    
-    static void printGamePGNByIDs(QueryGameRecord&, const std::vector<int>&);
-
-    void checkDuplicates(const bslib::PgnRecord&, const std::vector<int8_t>& moveVec);
-
 private:
-    void convertPgn2Sql(const ParaRecord&);
-    void searchPosition_basic(const std::vector<std::string>& pgnPaths);
-
-    
-private:
-    void convertSql2Pgn(const ParaRecord&);
-    void threadConvertSql2Pgn(const bslib::PgnRecord& record,
-                                       const std::vector<int8_t>& moveVec, int flag);
-    
-public:
-    void convertSql2PgnByAThread(const bslib::PgnRecord& record,
-                                          const std::vector<int8_t>& moveVec, int flag);
-private:
-    bool addGame(const std::unordered_map<std::string, std::string>& itemMap, const bslib::BoardCore* board);
-
-    void mergeDatabases(const ParaRecord&);
-    void findDuplicatedGames(const ParaRecord&);
-    void printDuplicates(ThreadRecord* t, const bslib::PgnRecord& record, int theDupID, uint64_t);
-
-    void bench(ParaRecord paraRecord);
-    void searchPostion(const ParaRecord& paraRecord);
-    void getGame(const ParaRecord&);
-
-    void searchPosition(SQLite::Database* db, const std::vector<std::string>& pgnPaths, std::string query);
+    virtual void processPGNGameByAThread(const std::unordered_map<char*, char*>&, const char *) override;
+    virtual void runTask() override;
     
     static SQLite::Database* createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec);
     bool createInsertStatements(SQLite::Database& mDb);
 
-    void setDatabasePath(const std::string& path);
-    SQLite::Database* openDbToWrite();
+    int getEventNameId(char* name);
+    int getSiteNameId(char* name);
+    int getPlayerNameId(char* name, int elo);
 
-    uint64_t processPgnFile(const std::string& path);
+    IDInteger getNameId(char* name, int elo, IDInteger& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, IDInteger>& idMap);
 
-    int create_getEventNameId(char* name);
-    int create_getSiteNameId(char* name);
-    int create_getPlayerNameId(char* name, int elo);
+    virtual void printStats() const override;
 
-    IDInteger create_getNameId(char* name, int elo, IDInteger& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, IDInteger>& idMap);
+    bool addNewField(const std::string& fieldName);
 
-    IDInteger getNameId(const std::string& tableName, const std::string& name, int elo = -1);
-    
-    void printStats() const;
-
-    void processDataBlock(char* buffer, long sz, bool);
-    void processHalfBegin(char* buffer, long len);
-    void processHalfEnd(char* buffer, long len);
-
-    void threadAddGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
-    void threadQueryGame(const bslib::PgnRecord& record);
-    void threadQueryGame(const std::unordered_map<char*, char*>& itemMap, const char* moveText);
-
-    void queryInfo();
-
-    bool create_addNewField(const std::string& fieldName);
-
-    void threadCheckDupplication(const bslib::PgnRecord&, const std::vector<int8_t>& moveVec);
-    void createPool();
+public:
+    static int standardizeFEN(char *fenBuf);
+    static void standardizeDate(char* date);
+    static std::string standardizeDate(const std::string& date);
+    static std::string encodeString(const std::string& name);
 
 private:
-    SearchField searchField;
-    const size_t blockSz = 8 * 1024 * 1024;
-    const int halfBlockSz = 16 * 1024;
-    char* halfBuf = nullptr;
-    long halfBufSz = 0;
-
-    void threadSearchPosition(const bslib::PgnRecord& record,
-                              const std::vector<int8_t>&);
-
-    std::function<bool(const std::vector<uint64_t>&, const bslib::BoardCore*, const bslib::PgnRecord*)> checkToStop = nullptr;
-    std::function<bool(const bslib::BoardCore*, const bslib::PgnRecord*)> boardCallback = nullptr;
-
     std::unordered_map<std::string, IDInteger> playerIdMap, eventIdMap, siteIdMap;
-
-    bslib::ChessVariant chessVariant = bslib::ChessVariant::standard;
-
-    std::string dbPath;
-
-    SQLite::Database* mDb = nullptr;
 
     /// Prepared statements
     SQLite::Statement *playerInsertStatement = nullptr;
@@ -189,31 +64,11 @@ private:
 
     SQLite::Statement *benchStatement = nullptr;
 
-    thread_pool* pool = nullptr;
-    QueryGameRecord* qgr = nullptr;
-
-    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, commentMutex, threadMapMutex, dupHashKeyMutex, printMutex;
-    std::unordered_map<std::thread::id, ThreadRecord> threadMap;
+    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, commentMutex;
 
     std::vector<std::string> create_tagVec;
     std::unordered_map<std::string, int> create_tagMap;
-//    std::unordered_map<std::string, int> fieldOrderMap;
-    mutable std::mutex parsingMutex, create_tagFieldMutex;
-//    std::set<std::string> extraFieldSet;
-    
-    std::unordered_map<int64_t, std::vector<int>> hashGameIDMap;
-
-//    int insertGameStatementIdxSz; // tagIdx_Moves, tagIdx_MovesBlob,
-    IDInteger gameCnt, eventCnt, playerCnt, siteCnt, commentCnt;
-
-    ParaRecord paraRecord;
-
-    mutable std::mutex pgnOfsMutex;
-    std::ofstream pgnOfs;
-    
-    /// For stats
-    std::chrono::steady_clock::time_point startTime;
-    int64_t blockCnt, processedPgnSz, errCnt, succCount;
+    mutable std::mutex create_tagFieldMutex;
 };
 
 

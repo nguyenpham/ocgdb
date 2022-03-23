@@ -15,35 +15,16 @@
 #include <set>
 #include <fstream>
 
-#include "3rdparty/SQLiteCpp/VariadicBind.h"
-#include "3rdparty/sqlite3/sqlite3.h"
-
 #include "board/chess.h"
-#include "builder.h"
+#include "dbread.h"
 
-#include "parser.h"
-#include "sqllib.h"
+#include "records.h"
 
 bool debugMode = false;
 
 
 using namespace ocgdb;
 
-
-const std::string SqlLib::fullGameQueryString =
-    "SELECT e.Name Event, s.Name Site, w.Name White, b.Name Black, g.* " \
-    "FROM Games g " \
-    "INNER JOIN Players w ON WhiteID = w.ID " \
-    "INNER JOIN Players b ON BlackID = b.ID " \
-    "INNER JOIN Events e ON EventID = e.ID " \
-    "INNER JOIN Sites s ON SiteID = s.ID";
-
-const std::string SqlLib::searchFieldNames[] = {
-    "",
-    "Moves",
-    "Moves1",
-    "Moves2"
-};
 
 // same order and meaning with TagIdx_
 const std::vector<std::string> ocgdb::knownPgnTagVec = {
@@ -119,6 +100,9 @@ bool ParaRecord::isValid() const
                 errorString = "Must have at least one query. Mising or wrong parameter -q";
                 break;
             }
+            ok = true;
+            break;
+            
         case Task::bench:
         {
             if (dbPaths.empty()) {
@@ -219,7 +203,7 @@ std::string ParaRecord::toString() const
     
     for(auto && it : optionNameMap) {
         if (optionFlag & (1 << it.second)) {
-            s += it.first + ";";
+            s += it.first + ",";
         }
     }
     
@@ -239,7 +223,7 @@ std::string ParaRecord::toString() const
 
 void ParaRecord::setupOptions(const std::string& optionString)
 {
-    auto vec = bslib::Funcs::splitString(optionString, ';');
+    auto vec = bslib::Funcs::splitString(optionString, ',');
     
     for(auto && s : vec) {
         auto it = optionNameMap.find(s);
@@ -256,17 +240,6 @@ void ParaRecord::setupOptions(const std::string& optionString)
         }
     }
 }
-
-const char* SqlLib::tagNames[] = {
-    "GameID", // Not real PGN tag, added for convernience
-    
-    "Event", "Site", "Date", "Round",
-    "White", "WhiteElo", "Black", "BlackElo",
-    "Result", "TimeControl", "ECO", "PlyCount", "FEN",
-
-    nullptr, nullptr
-};
-
 
 void ThreadRecord::init(SQLite::Database* mDb)
 {
@@ -353,7 +326,7 @@ bool ThreadRecord::createInsertGameStatement(SQLite::Database* mDb, const std::v
 QueryGameRecord::QueryGameRecord(SQLite::Database& db, SearchField searchField)
 : searchField(searchField)
 {
-    std::string str = SqlLib::fullGameQueryString + " WHERE g.ID = ?";
+    std::string str = DbRead::fullGameQueryString + " WHERE g.ID = ?";
     queryGameByID = new SQLite::Statement(db, str);
     queryComments = new SQLite::Statement(db, "SELECT * FROM Comments WHERE GameID = ?");
     
@@ -373,239 +346,11 @@ std::string QueryGameRecord::queryAndCreatePGNByGameID(bslib::PgnRecord& record)
     std::string str;
     
     if (queryGameByID->executeStep()) {
-        SqlLib::queryForABoard(record, searchField, queryGameByID, queryComments, board);
+        DbRead::queryForABoard(record, searchField, queryGameByID, queryComments, board);
         str = board->toPgn(&record);
     }
     return str;
 }
 
 //////////////////////////////////
-
-SearchField SqlLib::getMoveField(SQLite::Database* db, bool* hashMoves)
-{
-    assert(db);
-    auto searchField = SearchField::none;
-    if (hashMoves) *hashMoves = false;
-
-    SQLite::Statement stmt(*db, "PRAGMA table_info(Games)");
-    while (stmt.executeStep()) {
-        std::string fieldName = stmt.getColumn(1).getText();
-        
-        if (fieldName == "Moves2") {
-            searchField = SearchField::moves2;
-            break;
-        }
-        if (fieldName == "Moves1") {
-            if (searchField < SearchField::moves1) {
-                searchField = SearchField::moves1;
-            }
-        }
-        if (fieldName == "Moves") {
-            if (hashMoves) *hashMoves = true;
-            if (searchField < SearchField::moves) {
-                searchField = SearchField::moves;
-            }
-        }
-    }
-
-    return searchField;
-}
-
-
-
-void SqlLib::extractHeader(SQLite::Statement& query, bslib::PgnRecord& record)
-{
-    for(int i = 0, cnt = query.getColumnCount(); i < cnt; ++i) {
-        auto c = query.getColumn(i);
-        std::string name = c.getName();
-        if (name == "ID") {
-            record.gameID = c.getInt();
-            continue;
-        }
-
-        // Ignore all ID columns and Moves, Moves1, Moves2
-        if (name == "EventID" || name == "SiteID"
-            || name == "WhiteID" || name == "BlackID"
-            || name == "Moves" || name == "Moves1" || name == "Moves2") {
-            continue;
-        }
-        
-        std::string str;
-        
-        switch (c.getType())
-        {
-            case SQLITE_INTEGER:
-            {
-                auto k = c.getInt();
-                str = std::to_string(k);
-                break;
-            }
-            case SQLITE_FLOAT:
-            {
-                auto k = c.getDouble();
-                str = std::to_string(k);
-                break;
-            }
-            case SQLITE_BLOB:
-            {
-                // something wrong
-                break;
-            }
-            case SQLITE_NULL:
-            {
-                // something wrong
-                break;
-            }
-            case SQLITE3_TEXT:
-            {
-                str = c.getString();
-                if (name == "FEN") record.fenText = str;
-                break;
-            }
-
-            default:
-                assert(0);
-                break;
-        }
-
-        if (name != "Event" && str.empty()) {
-            continue;
-        }
-        record.tags[name] = str;
-    }
-}
-
-
-void SqlLib::queryForABoard(bslib::PgnRecord& record,
-                            SearchField searchField,
-                            SQLite::Statement* query,
-                            SQLite::Statement* queryComments,
-                            bslib::BoardCore* board)
-{
-    assert(query && board);
-
-    extractHeader(*query, record);
-
-    board->newGame(record.fenText);
-
-    // Tables games may have 0-2 columns for moves
-    if (searchField == SearchField::moves1 || searchField == SearchField::moves2) {
-        auto moveName = "Moves2";
-
-        int flag = bslib::BoardCore::ParseMoveListFlag_create_san;
-
-        if (searchField == SearchField::moves1) {
-            flag |= bslib::BoardCore::ParseMoveListFlag_move_size_1_byte;
-            moveName = "Moves1";
-        }
-
-        auto c = query->getColumn(moveName);
-        auto moveBlob = static_cast<const int8_t*>(c.getBlob());
-
-        if (moveBlob) {
-            std::vector<int8_t> moveVec;
-            auto sz = c.size();
-            for(auto i = 0; i < sz; ++i) {
-                moveVec.push_back(moveBlob[i]);
-            }
-
-            board->fromMoveList(&record, moveVec, flag, nullptr);
-
-            if (queryComments) {
-                queryComments->reset();
-                queryComments->bind(1, record.gameID);
-                while (queryComments->executeStep()) {
-                    auto comment = queryComments->getColumn("Comment").getString();
-                    if (comment.empty()) continue;
-
-                    auto ply = queryComments->getColumn("Ply").getInt();
-                    if (ply >= 0 && ply < board->getHistListSize()) {
-                        board->_getHistPointerAt(ply)->comment = comment;
-                    } else {
-                        board->setFirstComment(comment);
-                    }
-                }
-            }
-        }
-    } else if (searchField == SearchField::moves) {
-        record.moveString = query->getColumn("Moves").getString();
-
-        int flag = bslib::BoardCore::ParseMoveListFlag_quick_check
-                    | bslib::BoardCore::ParseMoveListFlag_discardComment
-                    | bslib::BoardCore::ParseMoveListFlag_create_san;
-
-        board->fromMoveList(&record, bslib::Notation::san, flag, nullptr);
-    }
-}
-
-
-// replace Halfmove clock to 0 and Fullmove number to 1
-int SqlLib::standardizeFEN(char *fenBuf)
-{
-    assert(fenBuf);
-    auto fenSz = static_cast<int>(strlen(fenBuf));
-    assert(fenSz > 10 && fenSz < 90);
-    
-    for(auto i = fenSz - 2, c = 0; i > 0; --i) {
-        if (fenBuf[i] == ' ') {
-            c++;
-            if (c >= 2) {
-                fenBuf[i + 1] = '0';
-                fenBuf[i + 2] = ' ';
-                fenBuf[i + 3] = '1';
-                fenBuf[i + 4] = 0;
-                return i + 4;
-            }
-        }
-    }
-
-    return fenSz;
-}
-
-
-void SqlLib::standardizeDate(char* date)
-{
-    assert(date);
-    auto c = 0;
-    for(char* p = date; *p; p++) {
-        if (*p == '.') {
-            *p = '-';
-            c++;
-        } else if (*p == '?') {
-            *p = '1';
-        }
-    }
-    
-    if (c != 2) {
-        date[0] = 0;
-    }
-}
-
-std::string SqlLib::standardizeDate(const std::string& date)
-{
-    std::string s;
-    auto c = 0;
-    for(char p : date) {
-        if (p == '.') {
-            p = '-';
-            c++;
-        } else if (p == '?') {
-            p = '1';
-        }
-        
-        s += p;
-    }
-    
-    if (c != 2) {
-        s.clear();
-    }
-    
-    return s;
-}
-
-
-std::string SqlLib::encodeString(const std::string& str)
-{
-    return bslib::Funcs::replaceString(str, "\"", "\\\"");
-}
 

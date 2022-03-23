@@ -18,8 +18,15 @@
 #include "board/chess.h"
 #include "board/base.h"
 
-int popCount(uint64_t x);
-
+static int popCount(uint64_t x)
+{
+   int count = 0;
+   while (x) {
+       count++;
+       x &= x - 1; // reset LS1B
+   }
+   return count;
+}
 
 using namespace ocgdb;
 

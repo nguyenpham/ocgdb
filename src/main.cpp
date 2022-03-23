@@ -9,11 +9,67 @@
  */
 
 #include <iostream>
+
+#include "records.h"
+#include "report.h"
+#include "search.h"
+#include "exporter.h"
+#include "duplicate.h"
 #include "builder.h"
+#include "extract.h"
+
 #include "board/chess.h"
 
 void print_usage();
 extern bool debugMode;
+
+void runTask(ocgdb::ParaRecord& param)
+{
+    ocgdb::DbCore* dbCore = nullptr;
+
+    switch (param.task) {
+        case ocgdb::Task::create:
+        {
+            dbCore = new ocgdb::Builder;
+            break;
+        }
+        case ocgdb::Task::export_:
+        {
+            dbCore = new ocgdb::Exporter;
+            break;
+        }
+        case ocgdb::Task::dup:
+        {
+            dbCore = new ocgdb::Duplicate;
+            break;
+        }
+        case ocgdb::Task::bench:
+        {
+            auto search = new ocgdb::Search;
+            search->setupForBench(param);
+            dbCore = search;
+            break;
+        }
+        case ocgdb::Task::query:
+        {
+            dbCore = new ocgdb::Search;
+            break;
+        }
+        case ocgdb::Task::getgame:
+        {
+            dbCore = new ocgdb::Extract;
+            break;
+        }
+
+        default:
+            break;
+    }
+    
+    if (dbCore) {
+        dbCore->run(param);
+        delete dbCore;
+    }
+}
 
 int main(int argc, const char * argv[]) {
     std::cout << "Open Chess Game Database Standard (OCGDB), (C) 2022 - version: " << ocgdb::VersionString << "\n" << std::endl;
@@ -114,8 +170,7 @@ int main(int argc, const char * argv[]) {
         }
         
         if (paraRecord.isValid()) {
-            ocgdb::Builder oc;
-            oc.runTask(paraRecord);
+            runTask(paraRecord);
             return 0;
         }
         
@@ -131,49 +186,57 @@ int main(int argc, const char * argv[]) {
 
 void print_usage()
 {
-    std::cerr << "Usage:" << std::endl;
-    std::cerr << " ocgdb [<parameters>]" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << " -pgn <file>           PGN game database file, repeat to add multi files" << std::endl;
-    std::cerr << " -db <file>            database file, extension should be .ocgdb.db3, repeat to add multi files" << std::endl;
-    std::cerr << " -r <file>             report file, works with -g, -q, -dup" << std::endl;
-    std::cerr << "                       use :memory: to create in-memory database" << std::endl;
-//    std::cerr << " -merge                merge databases into the first one, works with -db, -cpu" << std::endl;
-    std::cerr << " -dup                  check duplicate games in databases, works with -db, -cpu, -plycount, -o printall;remove" << std::endl;
-    std::cerr << " -export               export from a database into a PGN file, works with -db and -pgn" << std::endl;
-    std::cerr << " -bench                benchmarch querying games speed, works with -db and -cpu" << std::endl;
-    std::cerr << " -q <query>            querying positions, repeat to add multi queries, works with -db and -cpu" << std::endl;
-    std::cerr << " -g <id>               get game with game ID number, works with -db, repeat to add multi IDs" << std::endl;
-
-    std::cerr << " -elo <n>              discard games with Elo under n (for creating)" << std::endl;
-    std::cerr << " -plycount <n>         discard games with ply-count under n (for creating)" << std::endl;
-    std::cerr << " -resultcount <n>      stop querying if the number of results above n (for querying)" << std::endl;
-    std::cerr << " -cpu <n>              number of threads, should <= total physical cores, omit it for using all cores" << std::endl;
-    std::cerr << " -o [<options>;]       options" << std::endl;
-    std::cerr << "    moves              create text move field Moves" << std::endl;
-    std::cerr << "    moves1             create binary move field Moves, 1-byte encoding" << std::endl;
-    std::cerr << "    moves2             create binary move field Moves, 2-byte encoding" << std::endl;
-    std::cerr << "    acceptnewtags      create a new field for a new PGN tag (for creating)" << std::endl;
-    std::cerr << "    discardcomments    discard all comments (for creating)" << std::endl;
-    std::cerr << "    discardsites       discard all Site tag (for creating)" << std::endl;
-    std::cerr << "    discardnoelo       discard games without player Elos (for creating)" << std::endl;
-    std::cerr << "    discardfen         discard games with FENs (not started from origin; for creating)" << std::endl;
-    std::cerr << "    reseteco           re-create all ECO (for creating)" << std::endl;
-    std::cerr << "    printall           print all results (for querying, checking duplications)" << std::endl;
-    std::cerr << "    printfen           print FENs of results (for querying)" << std::endl;
-    std::cerr << "    printpgn           print simple PGNs of results (for querying)" << std::endl;
-    std::cerr << "    embededgames       duplicate included games inside other games" << std::endl;
-    std::cerr << "    remove             remove duplicate games (for checking duplicates)" << std::endl;
-
     
-    std::cerr << std::endl;
-    std::cerr << "Examples:" << std::endl;
-    std::cerr << " ocgdb -pgn big.png -db big.ocgdb.db3 -cpu 4 -o moves" << std::endl;
-    std::cerr << " ocgdb -pgn big.png -db :memory: -elo 2100 -o moves;moves1;discardsites" << std::endl;
-    std::cerr << " ocgdb -bench -db big.ocgdb.db3 -cpu 4" << std::endl;
-    std::cerr << " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"Q=3\" -q\"P[d4, e5, f4, g4] = 4 and kb7\"" << std::endl;
-    std::cerr << " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"fen[K7/N7/k7/8/3p4/8/N7/8 w - - 0 1]\"" << std::endl;
-    std::cerr << " ocgdb -db big.ocgdb.db3 -g 423 -g 4432" << std::endl;
-    std::cerr << " ocgdb -db big.ocgdb.db3 -dup -o remove;printall" << std::endl;
-    std::cerr << " ocgdb -db big.ocgdb.db3 -dup -o remove -r report.txt" << std::endl;
+    const std::string str =
+    "Usage:\n" \
+    " ocgdb [<parameters>]\n" \
+    "\n" \
+    " -pgn <file>           PGN game database file, repeat to add multi files\n" \
+    " -db <file>            database file, extension should be .ocgdb.db3, repeat to add multi files\n" \
+    " -r <file>             report file, works with -g, -q, -dup\n" \
+    "                       use :memory: to create in-memory database\n" \
+    " -dup                  check duplicate games in databases, works with -db, -cpu, -plycount, -o printall,remove\n" \
+    " -export               export from a database into a PGN file, works with -db and -pgn\n" \
+    " -bench                benchmarch querying games speed, works with -db and -cpu\n" \
+    " -q <query>            querying positions, repeat to add multi queries, works with -db and -cpu\n" \
+    " -g <id>               get game with game ID number, works with -db, repeat to add multi IDs\n" \
+    " -elo <n>              discard games with Elo under n (for creating)\n" \
+    " -plycount <n>         discard games with ply-count under n (for creating)\n" \
+    " -resultcount <n>      stop querying if the number of results above n (for querying)\n" \
+    " -cpu <n>              number of threads, should <= total physical cores, omit it for using all cores\n" \
+    " -o [<options>,]       options\n" \
+    "    moves              create text move field Moves\n" \
+    "    moves1             create binary move field Moves, 1-byte encoding\n" \
+    "    moves2             create binary move field Moves, 2-byte encoding\n" \
+    "    acceptnewtags      create a new field for a new PGN tag (for creating)\n" \
+    "    discardcomments    discard all comments (for creating)\n" \
+    "    discardsites       discard all Site tag (for creating)\n" \
+    "    discardnoelo       discard games without player Elos (for creating)\n" \
+    "    discardfen         discard games with FENs (not started from origin; for creating)\n" \
+    "    reseteco           re-create all ECO (for creating)\n" \
+    "    printall           print all results (for querying, checking duplications)\n" \
+    "    printfen           print FENs of results (for querying)\n" \
+    "    printpgn           print simple PGNs of results (for querying)\n" \
+    "    embededgames       duplicate included games inside other games\n" \
+    "    remove             remove duplicate games (for checking duplicates)\n" \
+    "\n" \
+    "Examples:\n" \
+    " ocgdb -pgn big.png -db big.ocgdb.db3 -cpu 4 -o moves\n" \
+    " ocgdb -pgn big.png -db :memory: -elo 2100 -o moves,moves1,discardsites\n" \
+    " ocgdb -bench -db big.ocgdb.db3 -cpu 4\n" \
+    " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"Q=3\" -q\"P[d4, e5, f4, g4] = 4 and kb7\"\n" \
+    " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"fen[K7/N7/k7/8/3p4/8/N7/8 w - - 0 1]\"\n" \
+    " ocgdb -db big.ocgdb.db3 -g 423 -g 4432\n" \
+    " ocgdb -db big.ocgdb.db3 -dup -o remove,printall\n" \
+    " ocgdb -db big.ocgdb.db3 -dup -o remove -r report.txt\n"
+    "\n" \
+    "Main functions/features:\n" \
+    "1. create a SQLite database from multi PGN files\n" \
+    "2. export multi SQLite databases to a PGN file\n" \
+    "3. get/display PGN games/FEN strings with game IDs from a SQLite database\n" \
+    "4. find duplicates/embeded games from multi SQLite databases\n" \
+    "5. query games from multi SQLite databases or PGN files, using PQL (Position Query Language)\n" \
+    ;
+
+    std::cerr << str << std::endl;
 }
