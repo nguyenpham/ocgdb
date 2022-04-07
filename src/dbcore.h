@@ -30,7 +30,8 @@ public:
     virtual ~DbCore();
 
     virtual void run(const ocgdb::ParaRecord&);
-    
+    ThreadRecord* getThreadRecord();
+
 protected:
     virtual void runTask() = 0;
 
@@ -38,6 +39,8 @@ protected:
     virtual void printStats() const;
     static std::chrono::steady_clock::time_point getNow();
 
+    void queryInfo();
+    
 protected:
     bslib::ChessVariant chessVariant = bslib::ChessVariant::standard;
 
@@ -48,7 +51,8 @@ protected:
 
     mutable std::mutex threadMapMutex;
     mutable std::mutex printMutex;
-    thread_pool* pool = nullptr;
+    
+    static thread_pool* pool;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
     
     IDInteger gameCnt, eventCnt, playerCnt, siteCnt, commentCnt;

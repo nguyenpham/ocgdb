@@ -162,17 +162,10 @@ void Search::runTask()
 }
 
 
-void Search::processAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
+void Search::processAGameWithAThread(ThreadRecord* t, const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
 {
-    assert(!record.moveString.empty() || record.moveText || !moveVec.empty());
+    assert(t);
 
-    auto threadId = std::this_thread::get_id();
-    ThreadRecord* t;
-    
-    {
-        std::lock_guard<std::mutex> dolock(threadMapMutex);
-        t = &threadMap[threadId];
-    }
     if (!t->board) {
         t->board = bslib::Funcs::createBoard(bslib::ChessVariant::standard);
     }
@@ -210,15 +203,9 @@ void Search::printStats() const
 
 }
 
-void Search::processPGNGameByAThread(const std::unordered_map<char*, char*>& tagMap, const char* moveText)
+void Search::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_map<char*, char*>& tagMap, const char* moveText)
 {
-    auto threadId = std::this_thread::get_id();
-    ThreadRecord* t;
-    
-    {
-        std::lock_guard<std::mutex> dolock(threadMapMutex);
-        t = &threadMap[threadId];
-    }
+    assert(t);
 
     if (!t->board) {
         t->board = bslib::Funcs::createBoard(bslib::ChessVariant::standard);

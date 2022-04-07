@@ -101,16 +101,20 @@ void Builder::runTask()
 {
     std::cout   << "Convert PGN files into a database..." << std::endl;
 
+    startTime = getNow();
+
     // Prepare
     assert(!paraRecord.dbPaths.empty());
     auto dbPath = paraRecord.dbPaths.front();
-//    setDatabasePath(dbPath);
     
     // remove old db file if existed
     std::remove(dbPath.c_str());
+    
+    create();
+}
 
-    startTime = getNow();
-
+void Builder::create()
+{
     // options
     {
         int movebit = paraRecord.optionFlag & (create_flag_moves|create_flag_moves1|create_flag_moves2);
@@ -128,60 +132,12 @@ void Builder::runTask()
 
     // init
     {
-        gameCnt = commentCnt = 0;
-        eventCnt = playerCnt = siteCnt = 1;
-        errCnt = 0;
-        
         playerIdMap.reserve(8 * 1024 * 1024);
         eventIdMap.reserve(128 * 1024);
         siteIdMap.reserve(128 * 1024);
 
-        // ID, FEN, Moves, Moves1, Moves2 are special columns
-        create_tagVec = {
-            "ID",
-            "Event", "Site", "Date", "Round",
-            "White", "WhiteElo", "Black", "BlackElo",
-            "Result", "TimeControl", "ECO", "PlyCount"
-        };
-        
-        assert(TagIdx_Max == knownPgnTagVec.size());
-        std::unordered_map<std::string, int> create_knownTagMap;
-        for(int i = 0; i < TagIdx_Max; i++) {
-            create_knownTagMap[knownPgnTagVec[i]] = i;
-        }
-        
-        auto hasFEN = false;
-        for(auto && s : create_tagVec) {
-            if (s == "FEN") hasFEN = true;
-            auto it = create_knownTagMap.find(s);
-            if (it != create_knownTagMap.end()) {
-                create_tagMap[s] = it->second;
-            }
-        }
-        
-        if (!hasFEN) {
-            create_tagVec.push_back("FEN");
-            create_tagMap["FEN"] = TagIdx_FEN;
-        }
-
-        auto sz = static_cast<int>(create_knownTagMap.size());
-        for(auto && s : create_tagVec) {
-            auto it = create_knownTagMap.find(s);
-            if (it == create_knownTagMap.end()) {
-                create_tagMap[s] = sz++;
-            }
-        }
-        
-        if (paraRecord.optionFlag & create_flag_moves) {
-            create_tagVec.push_back("Moves");
-        }
-        if (paraRecord.optionFlag & (create_flag_moves1 | create_flag_moves2)) {
-            create_tagVec.push_back((paraRecord.optionFlag & create_flag_moves2) ? "Moves2" : "Moves1");
-        }
-        
-        // Create database
-        mDb = createDb(dbPath, paraRecord.optionFlag, create_tagVec);
-        if (!mDb) {
+        auto dbPath = paraRecord.dbPaths.front();
+        if (!createDb(dbPath) || !mDb) {
             return;
         }
         createInsertStatements(*mDb);
@@ -191,21 +147,8 @@ void Builder::runTask()
 
     // completing
     {
-        auto str = std::string("INSERT INTO Info (Name, Value) VALUES ('GameCount', '") + std::to_string(gameCnt) + "')";
-        mDb->exec(str);
-
-        str = std::string("INSERT INTO Info (Name, Value) VALUES ('PlayerCount', '") + std::to_string(playerCnt) + "')";
-        mDb->exec(str);
-
-        str = std::string("INSERT INTO Info (Name, Value) VALUES ('EventCount', '") + std::to_string(eventCnt) + "')";
-        mDb->exec(str);
-
-        str = std::string("INSERT INTO Info (Name, Value) VALUES ('SiteCount', '") + std::to_string(siteCnt) + "')";
-        mDb->exec(str);
-
-        str = std::string("INSERT INTO Info (Name, Value) VALUES ('CommentCount', '") + std::to_string(commentCnt) + "')";
-        mDb->exec(str);
-
+        updateInfoTable();
+        
         if (playerInsertStatement) delete playerInsertStatement;
         playerInsertStatement = nullptr;
         if (eventInsertStatement) delete eventInsertStatement;
@@ -213,6 +156,27 @@ void Builder::runTask()
         if (siteInsertStatement) delete siteInsertStatement;
         siteInsertStatement = nullptr;
     }
+}
+
+void Builder::updateInfoTable()
+{
+    std::string str = "DELETE FROM Info WHERE Name='GameCount' OR Name='PlayerCount' OR Name='EventCount' OR Name='SiteCount' OR Name='CommentCount'";
+    mDb->exec(str);
+
+    str = std::string("INSERT INTO Info (Name, Value) VALUES ('GameCount', '") + std::to_string(gameCnt) + "')";
+    mDb->exec(str);
+
+    str = std::string("INSERT INTO Info (Name, Value) VALUES ('PlayerCount', '") + std::to_string(playerCnt) + "')";
+    mDb->exec(str);
+
+    str = std::string("INSERT INTO Info (Name, Value) VALUES ('EventCount', '") + std::to_string(eventCnt) + "')";
+    mDb->exec(str);
+
+    str = std::string("INSERT INTO Info (Name, Value) VALUES ('SiteCount', '") + std::to_string(siteCnt) + "')";
+    mDb->exec(str);
+
+    str = std::string("INSERT INTO Info (Name, Value) VALUES ('CommentCount', '") + std::to_string(commentCnt) + "')";
+    mDb->exec(str);
 }
 
 void Builder::printStats() const
@@ -240,6 +204,64 @@ bool Builder::addNewField(const std::string& fieldName)
     return true;
 }
 
+bool Builder::createDb(const std::string& dbPath)
+{
+    gameCnt = commentCnt = 0;
+    eventCnt = playerCnt = siteCnt = 1;
+    errCnt = 0;
+    
+    // ID, FEN, Moves, Moves1, Moves2 are special columns
+    setupTagVec({
+        "ID",
+        "Event", "Site", "Date", "Round",
+        "White", "WhiteElo", "Black", "BlackElo",
+        "Result", "TimeControl", "ECO", "PlyCount"
+    }, paraRecord.optionFlag);
+        
+    // Create database
+    mDb = createDb(dbPath, paraRecord.optionFlag, create_tagVec);
+    return mDb != nullptr;
+}
+
+void Builder::setupTagVec(const std::vector<std::string>& tagVec, int optionFlag)
+{
+    create_tagVec = tagVec;
+    
+    assert(TagIdx_Max == knownPgnTagVec.size());
+    std::unordered_map<std::string, int> create_knownTagMap;
+    for(int i = 0; i < TagIdx_Max; i++) {
+        create_knownTagMap[knownPgnTagVec[i]] = i;
+    }
+    
+    auto hasFEN = false;
+    for(auto && s : create_tagVec) {
+        if (s == "FEN") hasFEN = true;
+        auto it = create_knownTagMap.find(s);
+        if (it != create_knownTagMap.end()) {
+            create_tagMap[s] = it->second;
+        }
+    }
+    
+    if (!hasFEN) {
+        create_tagVec.push_back("FEN");
+        create_tagMap["FEN"] = TagIdx_FEN;
+    }
+
+    auto sz = static_cast<int>(create_knownTagMap.size());
+    for(auto && s : create_tagVec) {
+        auto it = create_knownTagMap.find(s);
+        if (it == create_knownTagMap.end()) {
+            create_tagMap[s] = sz++;
+        }
+    }
+    
+    if (optionFlag & create_flag_moves) {
+        create_tagVec.push_back("Moves");
+    }
+    if (optionFlag & (create_flag_moves1 | create_flag_moves2)) {
+        create_tagVec.push_back((optionFlag & create_flag_moves2) ? "Moves2" : "Moves1");
+    }
+}
 
 SQLite::Database* Builder::createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec)
 {
@@ -410,14 +432,10 @@ static const int lichessURLLength = 20;
 
 
 // Add games when creating database
-void Builder::processPGNGameByAThread(const std::unordered_map<char*, char*>& itemMap, const char* moveText)
+void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_map<char*, char*>& itemMap, const char* moveText)
 {
-    auto threadId = std::this_thread::get_id();
-    ThreadRecord* t;
-    {
-        std::lock_guard<std::mutex> dolock(threadMapMutex);
-        t = &threadMap[threadId];
-    }
+    assert(t);
+
     t->init(mDb);
     assert(t->board);
 
@@ -589,12 +607,7 @@ void Builder::processPGNGameByAThread(const std::unordered_map<char*, char*>& it
         intMap["WhiteID"] = getPlayerNameId(whiteName, whiteElo);
         intMap["BlackID"] = getPlayerNameId(blackName, blackElo);
 
-        IDInteger gameID;
-        {
-            std::lock_guard<std::mutex> dolock(gameMutex);
-            ++gameCnt;
-            gameID = gameCnt;
-        }
+        IDInteger gameID = getNewGameID();
         intMap["ID"] = gameID;
 
         if (paraRecord.optionFlag & create_flag_moves) {
@@ -664,7 +677,6 @@ void Builder::processPGNGameByAThread(const std::unordered_map<char*, char*>& it
                 auto bindMoves = (paraRecord.optionFlag & create_flag_moves1) ? ":Moves1" : ":Moves2";
                 t->insertGameStatement->bind(bindMoves, t->buf, cnt);
                 
-                
                 if (ecoString.empty() || (paraRecord.optionFlag & create_flag_reset_eco)) {
                     ecoString = t->board->getLastEcoString();
                     if (!ecoString.empty()) {
@@ -710,3 +722,9 @@ void Builder::processPGNGameByAThread(const std::unordered_map<char*, char*>& it
 }
 
 
+IDInteger Builder::getNewGameID()
+{
+    std::lock_guard<std::mutex> dolock(gameMutex);
+    ++gameCnt;
+    return gameCnt;
+}

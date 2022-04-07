@@ -52,39 +52,27 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
+            argument = "-create"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-merge"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/Carlsen.pgn"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/carlsen.ocgdb.db3"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/Downloads/one_embeded_game.pgn"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/one_embeded_game.db3"
-            isEnabled = "NO">
+            argument = "-db /Users/nguyenpham/Downloads/carlsen2.ocgdb.db3"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-export"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/Downloads/middleg.pgn"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/middleg.ocgdb.db3"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/Downloads/not_find_duplicates.pgn"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/not_find_duplicates.ocgdb.db3"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -129,18 +117,14 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-dup"
-            isEnabled = "YES">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-r /Users/nguyenpham/Downloads/r.txt"
-            isEnabled = "YES">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-plycount 40"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-o remove"
+            argument = "-r /Users/nguyenpham/Downloads/r.txt"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-plycount 40"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -188,11 +172,11 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-o moves;moves1;discardsites;printall;printfen;printpgn"
+            argument = "-o moves,moves1,discardsites,printall,printfen,printpgn"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-o printall;printfen;printpgn"
+            argument = "-o printall,printfen,printpgn"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -209,7 +193,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o moves2"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o acceptnewtags"
@@ -229,11 +213,11 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o embededgames"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-o remove"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/Downloads/60_games_with_doubles.pgn"
@@ -249,10 +233,18 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/imbedded_duplicates.db3"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-pgn /Users/nguyenpham/Downloads/t.pgn"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-pgn /Users/nguyenpham/Downloads/24_games_1_embedded_duplicate.pgn"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-db /Users/nguyenpham/Downloads/24_games_1_embedded_duplicate.db3"
             isEnabled = "NO">
          </CommandLineArgument>
       </CommandLineArguments>

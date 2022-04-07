@@ -12,19 +12,6 @@
 
 using namespace ocgdb;
 
-PGNRead *pgnReadInstance = nullptr;
-
-PGNRead::PGNRead()
-{
-    assert(!pgnReadInstance);
-    pgnReadInstance = this;
-}
-
-PGNRead::~PGNRead()
-{
-    pgnReadInstance = nullptr;
-}
-
 // the game between two blocks, first half
 void PGNRead::processHalfBegin(char* buffer, long len)
 {
@@ -76,7 +63,7 @@ void PGNRead::processDataBlock(char* buffer, long sz, bool connectBlock)
     char *tagName = nullptr, *tagContent = nullptr, *event = nullptr, *moves = nullptr;
 
     enum class ParsingState {
-        none, tagName, tag_after, tag_content, tag_content_after
+        none, tagName, tag_after, tag_content, tag_content_after, comment
     };
     
     auto st = ParsingState::none;
@@ -110,6 +97,11 @@ void PGNRead::processDataBlock(char* buffer, long sz, bool connectBlock)
                     tagName = p;
                     st = ParsingState::tagName;
                 } else if (ch > ' ') {
+                    // Comments by semicolon or escape mechanism
+                    if (ch == ';'
+                        || (ch == '%' && (p == buffer || *p == '\n' || *p == '\r'))) {
+                        st = ParsingState::comment;
+                    } else
                     if (!moves && hasEvent) {
                         moves = p;
                     }
@@ -158,6 +150,16 @@ void PGNRead::processDataBlock(char* buffer, long sz, bool connectBlock)
 
                     tagName = tagContent = nullptr;
                     st = ParsingState::tag_content_after;
+                }
+                break;
+            }
+
+            // comments by semicolon or escape mechanism % in the header,
+            // just ignore still the end of that line
+            case ParsingState::comment:
+            {
+                if (ch == '\n' || ch == '\r' || ch == 0) {
+                    st = ParsingState::none;
                 }
                 break;
             }
@@ -261,18 +263,27 @@ uint64_t PGNRead::processPgnFile(const std::string& path)
 }
 
 
-void doProcessPGNGame(const std::unordered_map<char*, char*>& tagMap, const char* moves)
+void doProcessPGNGame(PGNRead* instance, const std::unordered_map<char*, char*>& tagMap, const char* moves)
 {
-    assert(pgnReadInstance);
-    pgnReadInstance->processPGNGameByAThread(tagMap, moves);
+//    assert(pgnReadInstance);
+//    pgnReadInstance->processPGNGameByAThread(tagMap, moves);
+    assert(instance);
+    instance->processPGNGameByAThread(tagMap, moves);
 }
 
 void PGNRead::processPGNGame(const std::unordered_map<char*, char*>& tagMap, const char* moves)
 {
-    pool->submit(doProcessPGNGame, tagMap, moves);
+    pool->submit(doProcessPGNGame, this, tagMap, moves);
 }
 
 void PGNRead::processPGNGameByAThread(const std::unordered_map<char*, char*>& tagMap, const char* moves)
+{
+    auto t = getThreadRecord(); assert(t);
+    processPGNGameWithAThread(t, tagMap, moves);
+}
+
+
+void PGNRead::processPGNGameWithAThread(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *)
 {
     assert(false);
 }

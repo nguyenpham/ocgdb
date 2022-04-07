@@ -20,18 +20,16 @@ namespace ocgdb {
 class PGNRead : public virtual DbCore
 {
 public:
-    PGNRead();
-    ~PGNRead();
-
     virtual void processPGNGame(const std::unordered_map<char*, char*>&, const char *);
+    virtual void processPGNGameWithAThread(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *);
     virtual void processPGNGameByAThread(const std::unordered_map<char*, char*>&, const char *);
 
 protected:
     uint64_t processPgnFiles(const std::vector<std::string>& pgnPaths);
     uint64_t processPgnFile(const std::string& path);
+    void processDataBlock(char* buffer, long sz, bool);
 
 private:
-    void processDataBlock(char* buffer, long sz, bool);
     void processHalfBegin(char* buffer, long len);
     void processHalfEnd(char* buffer, long len);
 

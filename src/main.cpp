@@ -17,6 +17,7 @@
 #include "duplicate.h"
 #include "builder.h"
 #include "extract.h"
+#include "addgame.h"
 
 #include "board/chess.h"
 
@@ -60,6 +61,11 @@ void runTask(ocgdb::ParaRecord& param)
             dbCore = new ocgdb::Extract;
             break;
         }
+        case ocgdb::Task::merge:
+        {
+            dbCore = new ocgdb::AddGame;
+            break;
+        }
 
         default:
             break;
@@ -69,6 +75,11 @@ void runTask(ocgdb::ParaRecord& param)
         dbCore->run(param);
         delete dbCore;
     }
+}
+
+void printConflictedTasks(ocgdb::Task task0, ocgdb::Task task1)
+{
+    std::cerr << "Error: multi/conflicted tasks: " << ocgdb::ParaRecord::toString(task0) << " vs "  << ocgdb::ParaRecord::toString(task1) << std::endl;
 }
 
 int main(int argc, const char * argv[]) {
@@ -88,6 +99,7 @@ int main(int argc, const char * argv[]) {
     ocgdb::ParaRecord paraRecord;
     
     for(auto i = 1; i < argc; i++) {
+        auto oldTask = paraRecord.task;
         auto str = std::string(argv[i]);
         if (str == "-bench") {
             paraRecord.task = ocgdb::Task::bench;
@@ -97,17 +109,19 @@ int main(int argc, const char * argv[]) {
             debugMode = true;
             continue;
         }
-        if (str == "-export" || str == "-dup") {
-            auto oldTask = paraRecord.task;
-            if (str == "-export") {
+        if (str == "-create" || str == "-merge" || str == "-export" || str == "-dup") {
+            if (str == "-create") {
+                paraRecord.task = ocgdb::Task::create;
+            } else if (str == "-merge") {
+                paraRecord.task = ocgdb::Task::merge;
+            } else if (str == "-export") {
                 paraRecord.task = ocgdb::Task::export_;
-            }
-            else if (str == "-dup") {
+            } else if (str == "-dup") {
                 paraRecord.task = ocgdb::Task::dup;
             }
-            if (oldTask != paraRecord.task && oldTask != ocgdb::Task::create) {
+            if (oldTask != ocgdb::Task::none) {
                 errCnt++;
-                std::cerr << "Error: redudant task " << str << "\n" << std::endl;
+                printConflictedTasks(oldTask, paraRecord.task);
             }
             continue;
         }
@@ -147,18 +161,22 @@ int main(int argc, const char * argv[]) {
             paraRecord.resultNumberLimit = std::atoi(argv[++i]);
             continue;
         }
-        if (str == "-q") {
-            paraRecord.task = ocgdb::Task::query;
-            auto query = std::string(argv[++i]);
-            paraRecord.queries.push_back(query);
+        if (str == "-q" || str == "-g") {
+            if (str == "-q") {
+                paraRecord.task = ocgdb::Task::query;
+                auto query = std::string(argv[++i]);
+                paraRecord.queries.push_back(query);
+            } else {
+                paraRecord.task = ocgdb::Task::getgame;
+                paraRecord.gameIDVec.push_back(std::atoi(argv[++i]));
+            }
+            if (oldTask != ocgdb::Task::none) {
+                errCnt++;
+                printConflictedTasks(oldTask, paraRecord.task);
+                break;
+            }
             continue;
         }
-        if (str == "-g") {
-            paraRecord.task = ocgdb::Task::getgame;
-            paraRecord.gameIDVec.push_back(std::atoi(argv[++i]));
-            continue;
-        }
-
         errCnt++;
         std::cerr << "Error: unknown parameter: " << str << "\n" << std::endl;
         break;
@@ -191,20 +209,22 @@ void print_usage()
     "Usage:\n" \
     " ocgdb [<parameters>]\n" \
     "\n" \
+    " -create               create a new database from multi PGN files, works with -db, -pgn\n" \
+    " -merge                merge multi PGN files or databases into the first database, works with -db, -pgn\n" \
+    " -dup                  check duplicate games in databases, works with -db\n" \
+    " -export               export from a database into a PGN file, works with -db, -pgn\n" \
+    " -bench                benchmarch querying games speed, works with -db\n" \
+    " -q <query>            querying positions, repeat to add multi queries, works with -db, -pgn\n" \
+    " -g <id>               get game with game ID numbers (repeat to add multi IDs), works with -db, -pgn\n" \
     " -pgn <file>           PGN game database file, repeat to add multi files\n" \
     " -db <file>            database file, extension should be .ocgdb.db3, repeat to add multi files\n" \
     " -r <file>             report file, works with -g, -q, -dup\n" \
     "                       use :memory: to create in-memory database\n" \
-    " -dup                  check duplicate games in databases, works with -db, -cpu, -plycount, -o printall,remove\n" \
-    " -export               export from a database into a PGN file, works with -db and -pgn\n" \
-    " -bench                benchmarch querying games speed, works with -db and -cpu\n" \
-    " -q <query>            querying positions, repeat to add multi queries, works with -db and -cpu\n" \
-    " -g <id>               get game with game ID number, works with -db, repeat to add multi IDs\n" \
     " -elo <n>              discard games with Elo under n (for creating)\n" \
     " -plycount <n>         discard games with ply-count under n (for creating)\n" \
     " -resultcount <n>      stop querying if the number of results above n (for querying)\n" \
     " -cpu <n>              number of threads, should <= total physical cores, omit it for using all cores\n" \
-    " -o [<options>,]       options\n" \
+    " -o [<options>,]       options, separated by commas\n" \
     "    moves              create text move field Moves\n" \
     "    moves1             create binary move field Moves, 1-byte encoding\n" \
     "    moves2             create binary move field Moves, 2-byte encoding\n" \
@@ -221,8 +241,8 @@ void print_usage()
     "    remove             remove duplicate games (for checking duplicates)\n" \
     "\n" \
     "Examples:\n" \
-    " ocgdb -pgn big.png -db big.ocgdb.db3 -cpu 4 -o moves\n" \
-    " ocgdb -pgn big.png -db :memory: -elo 2100 -o moves,moves1,discardsites\n" \
+    " ocgdb -create -pgn big.png -db big.ocgdb.db3 -cpu 4 -o moves\n" \
+    " ocgdb -create -pgn big1.png -pgn big2.png -db :memory: -elo 2100 -o moves,moves1,discardsites\n" \
     " ocgdb -bench -db big.ocgdb.db3 -cpu 4\n" \
     " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"Q=3\" -q\"P[d4, e5, f4, g4] = 4 and kb7\"\n" \
     " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"fen[K7/N7/k7/8/3p4/8/N7/8 w - - 0 1]\"\n" \
@@ -232,10 +252,11 @@ void print_usage()
     "\n" \
     "Main functions/features:\n" \
     "1. create a SQLite database from multi PGN files\n" \
-    "2. export multi SQLite databases to a PGN file\n" \
-    "3. get/display PGN games/FEN strings with game IDs from a SQLite database\n" \
-    "4. find duplicates/embeded games from multi SQLite databases\n" \
-    "5. query games from multi SQLite databases or PGN files, using PQL (Position Query Language)\n" \
+    "2. merge/add games from some PGN files/databases into a SQLite database\n" \
+    "3. export multi SQLite databases to a PGN file\n" \
+    "4. get/display PGN games/FEN strings with game IDs from a SQLite database\n" \
+    "5. find duplicates/embeded games from multi SQLite databases\n" \
+    "6. query games from multi SQLite databases or PGN files, using PQL (Position Query Language)\n" \
     ;
 
     std::cerr << str << std::endl;

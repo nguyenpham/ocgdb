@@ -12,6 +12,8 @@
 
 using namespace ocgdb;
 
+thread_pool* DbCore::pool = nullptr;
+
 DbCore::DbCore()
 {
 }
@@ -49,10 +51,14 @@ void DbCore::createPool()
 {
     auto cpu = paraRecord.cpuNumber;
     if (cpu < 0) cpu = std::thread::hardware_concurrency();
+    if (pool) {
+        if (pool->get_thread_count() == cpu) {
+            return;
+        }
+        delete pool;
+    }
     pool = new thread_pool(cpu);
-    
     std::cout << "Thread count: " << pool->get_thread_count() << std::endl;
-
 }
 
 void DbCore::printStats() const
@@ -66,4 +72,52 @@ void DbCore::printStats() const
               << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
               << ", speed: " << gameCnt * 1000ULL / elapsed
               << " games/s";
+}
+
+ThreadRecord* DbCore::getThreadRecord()
+{
+    auto threadId = std::this_thread::get_id();
+    std::lock_guard<std::mutex> dolock(threadMapMutex);
+    return &threadMap[threadId];
+}
+
+void DbCore::queryInfo()
+{
+    playerCnt = eventCnt = gameCnt = siteCnt = -1;
+    
+    if (!mDb) return;
+
+    SQLite::Statement query(*mDb, "SELECT * FROM Info");
+    
+    while (query.executeStep()) {
+        auto name = query.getColumn(0).getString();
+        auto v = query.getColumn(1);
+        if (name == "GameCount") {
+            gameCnt = v.getInt();
+        } else if (name == "PlayerCount") {
+            playerCnt = v.getInt();
+        } else if (name == "EventCount") {
+            eventCnt = v.getInt();
+        } else if (name == "SiteCount") {
+            siteCnt = v.getInt();
+        } else if (name == "CommentCount") {
+            commentCnt = v.getInt();
+        }
+    }
+
+    if (gameCnt < 0) {
+        gameCnt = 0;
+        SQLite::Statement query(*mDb, "SELECT COUNT(*) FROM Games");
+        if (query.executeStep()) {
+            gameCnt = query.getColumn(0).getInt();
+        }
+    }
+
+    if (playerCnt < 0) {
+        playerCnt = 0;
+        SQLite::Statement query(*mDb, "SELECT COUNT(*) FROM Players");
+        if (query.executeStep()) {
+            playerCnt = query.getColumn(0).getInt();
+        }
+    }
 }

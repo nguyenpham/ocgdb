@@ -58,13 +58,7 @@ void Exporter::processAGame(const bslib::PgnRecord& record, const std::vector<in
     assert(!record.moveString.empty() || record.moveText || !moveVec.empty());
     assert(record.gameID > 0);
 
-    auto threadId = std::this_thread::get_id();
-    ThreadRecord* t;
-    
-    {
-        std::lock_guard<std::mutex> dolock(threadMapMutex);
-        t = &threadMap[threadId];
-    }
+    auto t = getThreadRecord(); assert(t);
 
     if (!t->board) {
         t->board = bslib::Funcs::createBoard(bslib::ChessVariant::standard);

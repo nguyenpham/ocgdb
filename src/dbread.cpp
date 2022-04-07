@@ -15,9 +15,6 @@
 
 using namespace ocgdb;
 
-static DbRead* dbReadInstance = nullptr;
-
-
 const std::string DbRead::fullGameQueryString =
     "SELECT e.Name Event, s.Name Site, w.Name White, b.Name Black, g.* " \
     "FROM Games g " \
@@ -49,12 +46,10 @@ const char* DbRead::tagNames[] = {
 
 DbRead::DbRead()
 {
-    dbReadInstance = this;
 }
 
 DbRead::~DbRead()
 {
-    dbReadInstance = nullptr;
     closeDb();
 }
 
@@ -108,11 +103,25 @@ void DbRead::extractHeader(SQLite::Statement& query, bslib::PgnRecord& record)
             record.gameID = c.getInt();
             continue;
         }
+        if (name == "EventID") {
+            record.eventID = c.getInt();
+            continue;
+        }
+        if (name == "SiteID") {
+            record.siteID = c.getInt();
+            continue;
+        }
+        if (name == "WhiteID") {
+            record.whiteID = c.getInt();
+            continue;
+        }
+        if (name == "BlackID") {
+            record.blackID = c.getInt();
+            continue;
+        }
 
-        // Ignore all ID columns and Moves, Moves1, Moves2
-        if (name == "EventID" || name == "SiteID"
-            || name == "WhiteID" || name == "BlackID"
-            || name == "Moves" || name == "Moves1" || name == "Moves2") {
+        // Ignore Moves, Moves1, Moves2
+        if (name == "Moves" || name == "Moves1" || name == "Moves2") {
             continue;
         }
         
@@ -247,47 +256,6 @@ void DbRead::printGamePGNByIDs(QueryGameRecord& qgr, const std::vector<int>& gam
     }
 }
 
-void DbRead::queryInfo()
-{
-    playerCnt = eventCnt = gameCnt = siteCnt = -1;
-    
-    if (!mDb) return;
-
-    SQLite::Statement query(*mDb, "SELECT * FROM Info WHERE");
-    
-    while (query.executeStep()) {
-        auto name = query.getColumn(0).getString();
-        auto v = query.getColumn(1);
-        if (name == "GameCount") {
-            gameCnt = v.getInt();
-        } else if (name == "PlayerCount") {
-            playerCnt = v.getInt();
-        } else if (name == "EventCount") {
-            eventCnt = v.getInt();
-        } else if (name == "SiteCount") {
-            siteCnt = v.getInt();
-        } else if (name == "CommentCount") {
-            commentCnt = v.getInt();
-        }
-    }
-
-    if (gameCnt < 0) {
-        gameCnt = 0;
-        SQLite::Statement query(*mDb, "SELECT COUNT(*) FROM Games");
-        if (query.executeStep()) {
-            gameCnt = query.getColumn(0).getInt();
-        }
-    }
-
-    if (playerCnt < 0) {
-        playerCnt = 0;
-        SQLite::Statement query(*mDb, "SELECT COUNT(*) FROM Players");
-        if (query.executeStep()) {
-            playerCnt = query.getColumn(0).getInt();
-        }
-    }
-}
-
 
 bool DbRead::openDB(const std::string& dbPath)
 {
@@ -399,20 +367,29 @@ bool DbRead::readADb(const std::string& dbPath, const std::string& sqlString)
     return true;
 }
 
-void doProcessAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
+void doProcessAGame(DbRead* instance, const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
 {
-    assert(dbReadInstance);
-    dbReadInstance->processAGame(record, moveVec);
+    assert(instance);
+    instance->processAGame(record, moveVec);
 }
 
 void DbRead::threadProcessAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
 {
-    pool->submit(doProcessAGame, record, moveVec);
+    assert(pool);
+    pool->submit(doProcessAGame, this, record, moveVec);
 }
 
 
 void DbRead::processAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
 {
-    assert(false);
+    assert(!record.moveString.empty() || record.moveText || !moveVec.empty());
+    assert(record.gameID > 0);
+
+    auto t = getThreadRecord(); assert(t);
+    processAGameWithAThread(t, record, moveVec);
 }
 
+void DbRead::processAGameWithAThread(ThreadRecord* t, const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
+{
+    
+}

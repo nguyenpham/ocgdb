@@ -51,6 +51,11 @@ bool ParaRecord::isValid() const
     errorString.clear();
     auto ok = false;
     switch (task) {
+        case Task::none:
+        {
+            errorString = "Must set a task. Mising or wrong parameter such as -create, -merge, -export, -q, -bench, -g, -dup";
+            break;
+        }
         case Task::create:
         {
             if (!hasPgn || dbPaths.empty()) {
@@ -58,13 +63,19 @@ bool ParaRecord::isValid() const
                 break;
             }
             
+            for(auto && path : dbPaths) {
+                if (path.find(".ocgdb.db3") == std::string::npos) {
+                    std::cout << "Warning: database file extension is not '.ocgdb.db3'" << std::endl;
+                }
+            }
+            
             ok = true;
             break;
         }
         case Task::merge:
         {
-            if (dbPaths.size() < 2) {
-                errorString = "Must have from 2 database (.db3) paths. Mising or wrong parameter -db";
+            if (dbPaths.size() < 2 && !hasPgn) {
+                errorString = "Must have at least a PGN file or from 2 database (.db3) paths. Mising or wrong parameter -pgn, -db";
                 return false;
             }
             ok = true;
@@ -152,11 +163,8 @@ static const std::map<std::string, int> optionNameMap = {
     {"embededgames", 16},
 };
 
-
-std::string ParaRecord::toString() const
+std::string ParaRecord::toString(Task task)
 {
-    std::string s;
-    
     const std::string taskNames[] = {
         "create SQL database",
         "export",
@@ -164,11 +172,18 @@ std::string ParaRecord::toString() const
         "query",
         "bench",
         "get game",
-        "duplicate"
-
+        "duplicate",
+        "none"
     };
         
-    s = "\tTask: " + taskNames[static_cast<int>(task)] + "\n";
+    return taskNames[static_cast<int>(task)];
+}
+
+std::string ParaRecord::toString() const
+{
+    std::string s;
+    
+    s = "\tTask: " + toString(task) + "\n";
     
     s += "\tPGN paths:\n";
     for(auto && path : pgnPaths) {

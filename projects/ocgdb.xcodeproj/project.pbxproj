@@ -7,6 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B10DE85027E6140D008EEC72 /* dbcore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B10DE84E27E6140D008EEC72 /* dbcore.cpp */; };
+		B10DE85327E61DDC008EEC72 /* exporter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B10DE85127E61DDC008EEC72 /* exporter.cpp */; };
+		B10DE85627E61E34008EEC72 /* duplicate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B10DE85427E61E34008EEC72 /* duplicate.cpp */; };
+		B10DE85927E63397008EEC72 /* search.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B10DE85727E63397008EEC72 /* search.cpp */; };
+		B10DE85C27E63738008EEC72 /* report.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B10DE85A27E63738008EEC72 /* report.cpp */; };
+		B10DE85F27E63845008EEC72 /* dbread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B10DE85D27E63845008EEC72 /* dbread.cpp */; };
+		B10DE86227E730AF008EEC72 /* extract.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B10DE86027E730AF008EEC72 /* extract.cpp */; };
+		B10DE86527E7E785008EEC72 /* pgnread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B10DE86327E7E785008EEC72 /* pgnread.cpp */; };
+		B10DE86827E98CC4008EEC72 /* addgame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B10DE86627E98CC4008EEC72 /* addgame.cpp */; };
 		B189EAAB27224A410075EA55 /* chesstypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B189EA8727224A400075EA55 /* chesstypes.cpp */; };
 		B189EAAC27224A410075EA55 /* base.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B189EA8927224A400075EA55 /* base.cpp */; };
 		B189EAAD27224A410075EA55 /* chess.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B189EA8A27224A400075EA55 /* chess.cpp */; };
@@ -23,7 +32,7 @@
 		B189EABA27228BE70075EA55 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = B189EAB927228BE60075EA55 /* Makefile */; };
 		B189EABD272296330075EA55 /* funcs.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B189EABB272296330075EA55 /* funcs.cpp */; };
 		B1DDA40F27887B2200E5E2B6 /* parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1DDA40D27887B2200E5E2B6 /* parser.cpp */; };
-		B1F8A18427BA0218004942BA /* sqllib.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1F8A18227BA0217004942BA /* sqllib.cpp */; };
+		B1F8A18427BA0218004942BA /* records.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1F8A18227BA0217004942BA /* records.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -39,6 +48,24 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B10DE84E27E6140D008EEC72 /* dbcore.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = dbcore.cpp; sourceTree = "<group>"; };
+		B10DE84F27E6140D008EEC72 /* dbcore.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dbcore.h; sourceTree = "<group>"; };
+		B10DE85127E61DDC008EEC72 /* exporter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = exporter.cpp; sourceTree = "<group>"; };
+		B10DE85227E61DDC008EEC72 /* exporter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = exporter.h; sourceTree = "<group>"; };
+		B10DE85427E61E34008EEC72 /* duplicate.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = duplicate.cpp; sourceTree = "<group>"; };
+		B10DE85527E61E34008EEC72 /* duplicate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = duplicate.h; sourceTree = "<group>"; };
+		B10DE85727E63397008EEC72 /* search.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = search.cpp; sourceTree = "<group>"; };
+		B10DE85827E63397008EEC72 /* search.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = search.h; sourceTree = "<group>"; };
+		B10DE85A27E63738008EEC72 /* report.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = report.cpp; sourceTree = "<group>"; };
+		B10DE85B27E63738008EEC72 /* report.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = report.h; sourceTree = "<group>"; };
+		B10DE85D27E63845008EEC72 /* dbread.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = dbread.cpp; sourceTree = "<group>"; };
+		B10DE85E27E63845008EEC72 /* dbread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = dbread.h; sourceTree = "<group>"; };
+		B10DE86027E730AF008EEC72 /* extract.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = extract.cpp; sourceTree = "<group>"; };
+		B10DE86127E730AF008EEC72 /* extract.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = extract.h; sourceTree = "<group>"; };
+		B10DE86327E7E785008EEC72 /* pgnread.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = pgnread.cpp; sourceTree = "<group>"; };
+		B10DE86427E7E785008EEC72 /* pgnread.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pgnread.h; sourceTree = "<group>"; };
+		B10DE86627E98CC4008EEC72 /* addgame.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = addgame.cpp; sourceTree = "<group>"; };
+		B10DE86727E98CC4008EEC72 /* addgame.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = addgame.h; sourceTree = "<group>"; };
 		B189EA7A272249F60075EA55 /* ocgdb */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ocgdb; sourceTree = BUILT_PRODUCTS_DIR; };
 		B189EA8627224A400075EA55 /* chess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = chess.h; sourceTree = "<group>"; };
 		B189EA8727224A400075EA55 /* chesstypes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = chesstypes.cpp; sourceTree = "<group>"; };
@@ -82,8 +109,8 @@
 		B1E693BD2756D54C00997777 /* thread_pool.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = thread_pool.hpp; sourceTree = "<group>"; };
 		B1E693BE2756D54C00997777 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		B1E693BF2756D54C00997777 /* LICENSE.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
-		B1F8A18227BA0217004942BA /* sqllib.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = sqllib.cpp; sourceTree = "<group>"; };
-		B1F8A18327BA0218004942BA /* sqllib.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = sqllib.h; sourceTree = "<group>"; };
+		B1F8A18227BA0217004942BA /* records.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = records.cpp; sourceTree = "<group>"; };
+		B1F8A18327BA0218004942BA /* records.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = records.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,6 +145,8 @@
 		B189EA8427224A400075EA55 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				B10DE85127E61DDC008EEC72 /* exporter.cpp */,
+				B10DE85227E61DDC008EEC72 /* exporter.h */,
 				B189EAB927228BE60075EA55 /* Makefile */,
 				B189EA8527224A400075EA55 /* board */,
 				B189EA8D27224A400075EA55 /* builder.cpp */,
@@ -126,8 +155,24 @@
 				B189EAAA27224A400075EA55 /* main.cpp */,
 				B1DDA40D27887B2200E5E2B6 /* parser.cpp */,
 				B1DDA40E27887B2200E5E2B6 /* parser.h */,
-				B1F8A18227BA0217004942BA /* sqllib.cpp */,
-				B1F8A18327BA0218004942BA /* sqllib.h */,
+				B1F8A18227BA0217004942BA /* records.cpp */,
+				B1F8A18327BA0218004942BA /* records.h */,
+				B10DE84E27E6140D008EEC72 /* dbcore.cpp */,
+				B10DE84F27E6140D008EEC72 /* dbcore.h */,
+				B10DE85427E61E34008EEC72 /* duplicate.cpp */,
+				B10DE85527E61E34008EEC72 /* duplicate.h */,
+				B10DE85727E63397008EEC72 /* search.cpp */,
+				B10DE85827E63397008EEC72 /* search.h */,
+				B10DE85A27E63738008EEC72 /* report.cpp */,
+				B10DE85B27E63738008EEC72 /* report.h */,
+				B10DE85D27E63845008EEC72 /* dbread.cpp */,
+				B10DE85E27E63845008EEC72 /* dbread.h */,
+				B10DE86027E730AF008EEC72 /* extract.cpp */,
+				B10DE86127E730AF008EEC72 /* extract.h */,
+				B10DE86327E7E785008EEC72 /* pgnread.cpp */,
+				B10DE86427E7E785008EEC72 /* pgnread.h */,
+				B10DE86627E98CC4008EEC72 /* addgame.cpp */,
+				B10DE86727E98CC4008EEC72 /* addgame.h */,
 			);
 			name = src;
 			path = ../src;
@@ -263,22 +308,31 @@
 			buildActionMask = 2147483647;
 			files = (
 				B189EABA27228BE70075EA55 /* Makefile in Sources */,
+				B10DE85627E61E34008EEC72 /* duplicate.cpp in Sources */,
 				B189EAAD27224A410075EA55 /* chess.cpp in Sources */,
+				B10DE85027E6140D008EEC72 /* dbcore.cpp in Sources */,
 				B189EAB627224A410075EA55 /* Backup.cpp in Sources */,
-				B1F8A18427BA0218004942BA /* sqllib.cpp in Sources */,
+				B10DE85C27E63738008EEC72 /* report.cpp in Sources */,
+				B1F8A18427BA0218004942BA /* records.cpp in Sources */,
 				B189EAB027224A410075EA55 /* sqlite3.c in Sources */,
 				B189EAAC27224A410075EA55 /* base.cpp in Sources */,
 				B189EAB827224A410075EA55 /* main.cpp in Sources */,
 				B189EAAB27224A410075EA55 /* chesstypes.cpp in Sources */,
+				B10DE85F27E63845008EEC72 /* dbread.cpp in Sources */,
 				B189EAB327224A410075EA55 /* Exception.cpp in Sources */,
 				B1DDA40F27887B2200E5E2B6 /* parser.cpp in Sources */,
 				B189EABD272296330075EA55 /* funcs.cpp in Sources */,
+				B10DE85327E61DDC008EEC72 /* exporter.cpp in Sources */,
 				B189EAB727224A410075EA55 /* Transaction.cpp in Sources */,
 				B189EAAE27224A410075EA55 /* builder.cpp in Sources */,
+				B10DE85927E63397008EEC72 /* search.cpp in Sources */,
 				B189EAB427224A410075EA55 /* Statement.cpp in Sources */,
 				B189EAB127224A410075EA55 /* Column.cpp in Sources */,
 				B189EAB227224A410075EA55 /* Savepoint.cpp in Sources */,
 				B189EAB527224A410075EA55 /* Database.cpp in Sources */,
+				B10DE86527E7E785008EEC72 /* pgnread.cpp in Sources */,
+				B10DE86227E730AF008EEC72 /* extract.cpp in Sources */,
+				B10DE86827E98CC4008EEC72 /* addgame.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

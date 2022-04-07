@@ -20,7 +20,7 @@ class Duplicate : public DbRead
 {
 public:
 
-    virtual void processAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec) override;
+    virtual void processAGameWithAThread(ThreadRecord* t, const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec) override;
 
 private:
     virtual void runTask() override;

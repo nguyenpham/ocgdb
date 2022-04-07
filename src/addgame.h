@@ -16,20 +16,52 @@
 
 namespace ocgdb {
 
+class AddGame;
+class AddGameDbRead;
+
+class AddGameDbRead : public Builder, public DbRead
+{
+public:
+    AddGame* addGameInstance;
+    virtual void processAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec) override;
+
+    void setOptionFlag(int);
+
+private:
+    virtual bool openDB(const std::string& dbPath) override;
+    
+};
 
 class AddGame : public Builder
 {
 public:
+    AddGame();
+    
+    ThreadRecord* getThreadRecordAndInit();
+    void addAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec);
+
+    bool createConvertingIDMaps(SQLite::Database* db);
     
 private:
     virtual void runTask() override;
-    
-    IDInteger getNameId(const std::string& tableName, const std::string& name, int elo = -1);
 
-    bool addGame(const std::string& dbPath, const std::string& pgnString);
-    bool addGame(const std::string& dbPath, const std::unordered_map<std::string, std::string>& itemMap, const bslib::BoardCore* board);
+    virtual int getEventNameId(char* name) override;
+    virtual int getSiteNameId(char* name) override;
+    virtual int getPlayerNameId(char* name, int elo) override;
+    IDInteger getNameId(const std::string& tableName, IDInteger& cnt, const std::string& name, int elo = -1);
+
+    void addDb(const std::string& dbPath);
+    virtual IDInteger getNewGameID() override;
+
+    bool createConvertingIDMap(SQLite::Database* db, const std::string& tableName, IDInteger& cnt, std::map<IDInteger, IDInteger>& theMap);
+
+private:
+    AddGameDbRead dbRead;
     
-    bool addGame(const std::unordered_map<std::string, std::string>& itemMap, const bslib::BoardCore* board);
+    IDInteger newGameID = 0;
+    bool createMode;
+    
+    std::map<IDInteger, IDInteger> playerConvertIDMap, eventConvertIDMap, siteConvertIDMap;
 };
 
 } // namespace ocdb

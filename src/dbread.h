@@ -23,8 +23,10 @@ public:
     virtual ~DbRead();
 
     virtual void processAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec);
-
     
+protected:
+    virtual void processAGameWithAThread(ThreadRecord* t, const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec);
+
 public:
     static SearchField getMoveField(SQLite::Database* db, bool* hashMoves = nullptr);
 
@@ -35,6 +37,8 @@ public:
                                 SQLite::Statement* queryComments,
                                 bslib::BoardCore* board);
     
+    bool readADb(const std::string& dbPath, const std::string& sqlString);
+
 public:
     static const std::string fullGameQueryString;
     static const std::string searchFieldNames[];
@@ -44,14 +48,10 @@ protected:
     virtual bool openDB(const std::string& dbPath);
     virtual void closeDb();
 
-    bool readADb(const std::string& dbPath, const std::string& sqlString);
-
     static void printGamePGNByIDs(SQLite::Database& db, const std::vector<int>& gameIDVec, SearchField);
     
     static void printGamePGNByIDs(QueryGameRecord&, const std::vector<int>&);
 
-protected:
-    void queryInfo();
 
 protected:
     std::function<bool(const std::vector<uint64_t>&, const bslib::BoardCore*, const bslib::PgnRecord*)> checkToStop = nullptr;

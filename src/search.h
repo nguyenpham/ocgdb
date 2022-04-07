@@ -28,8 +28,8 @@ public:
     void setupForBench(ParaRecord& paraRecord);
 
 private:
-    virtual void processAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec) override;
-    virtual void processPGNGameByAThread(const std::unordered_map<char*, char*>&, const char *) override;
+    virtual void processAGameWithAThread(ThreadRecord* t, const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec) override;
+    virtual void processPGNGameWithAThread(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *) override;
 
     virtual bool openDB(const std::string& dbPath) override;
     virtual void closeDb() override;

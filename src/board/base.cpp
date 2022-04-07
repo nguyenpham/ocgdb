@@ -718,7 +718,7 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
     std::lock_guard<std::mutex> dolock(dataMutex);
 
     enum class State {
-        none, move, comment, evalsym, variant, counter
+        none, move, comment, commentRestOfLine, evalsym, variant, counter
     };
     
     auto st = State::none;
@@ -747,8 +747,13 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
                     esym = ch;
                     st = State::evalsym;
                 } else if (ch == '{') {
+                    // comments by semicolon or escape mechanism % in the header,
                     comment.clear();
                     st = State::comment;
+                } else if (ch == ';' || (ch == '%' && (i == 0 || prevch == '\r' || prevch == '\n'))) {
+                    // comments by semicolon or escape mechanism % in the header,
+                    comment.clear();
+                    st = State::commentRestOfLine;
                 } else if (ch == '(') {
                     st = State::variant;
                     level++;
@@ -789,8 +794,10 @@ bool BoardCore::fromMoveList(const PgnRecord* record,
                 break;
 
 
+            case State::commentRestOfLine:
             case State::comment:
-                if (ch == '}') {
+                if ((st == State::comment && ch == '}')
+                    || (st == State::commentRestOfLine && (ch == '\n' || ch == '\r'))) {
                     comment = bslib::Funcs::rtrim(comment);
                     if ((flag & ParseMoveListFlag_discardComment) == 0 && !comment.empty()) {
                         auto k = moveStringVec.size();

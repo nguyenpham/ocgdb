@@ -31,16 +31,28 @@ namespace ocgdb {
 
 class Builder : public PGNRead
 {
-private:
-    virtual void processPGNGameByAThread(const std::unordered_map<char*, char*>&, const char *) override;
+protected:
+    void create();
+
+    bool createDb(const std::string& path);
+
+protected:
     virtual void runTask() override;
+    virtual int getEventNameId(char* name);
+    virtual int getSiteNameId(char* name);
+    virtual int getPlayerNameId(char* name, int elo);
+
+    void setupTagVec(const std::vector<std::string>& tagVec, int optionFlag);
+
+    virtual IDInteger getNewGameID();
+
+    virtual void updateInfoTable();
+
+private:
+    bool createInsertStatements(SQLite::Database& mDb);
+    virtual void processPGNGameWithAThread(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *) override;
     
     static SQLite::Database* createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec);
-    bool createInsertStatements(SQLite::Database& mDb);
-
-    int getEventNameId(char* name);
-    int getSiteNameId(char* name);
-    int getPlayerNameId(char* name, int elo);
 
     IDInteger getNameId(char* name, int elo, IDInteger& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, IDInteger>& idMap);
 
@@ -54,6 +66,13 @@ public:
     static std::string standardizeDate(const std::string& date);
     static std::string encodeString(const std::string& name);
 
+protected:
+    std::vector<std::string> create_tagVec;
+    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, commentMutex;
+
+    mutable std::mutex create_tagFieldMutex;
+    std::unordered_map<std::string, int> create_tagMap;
+
 private:
     std::unordered_map<std::string, IDInteger> playerIdMap, eventIdMap, siteIdMap;
 
@@ -64,11 +83,7 @@ private:
 
     SQLite::Statement *benchStatement = nullptr;
 
-    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, commentMutex;
 
-    std::vector<std::string> create_tagVec;
-    std::unordered_map<std::string, int> create_tagMap;
-    mutable std::mutex create_tagFieldMutex;
 };
 
 

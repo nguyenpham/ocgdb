@@ -219,7 +219,7 @@ namespace bslib {
     class PgnRecord
     {
     public:
-        int gameID = -1;
+        int gameID = -1, eventID = -1, siteID = -1, whiteID = -1, blackID = -1;
         std::unordered_map<std::string, std::string> tags;
         std::string fenText, result, moveString;
         const char* moveText = nullptr;

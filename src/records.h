@@ -29,8 +29,8 @@ class QueryGameRecord;
 // Developer may change this string
 const std::string VersionUserDatabaseString = "0.1";
 
-const std::string VersionString = "Beta 7";
-const std::string VersionDatabaseString = "0.5";
+const std::string VersionString = "Beta 8";
+const std::string VersionDatabaseString = "0.6";
 
 // Current limit is about 4 billion, we can change later by changing this define
 #define IDInteger uint32_t
@@ -43,7 +43,8 @@ enum class Task
     query,
     bench,
     getgame,
-    dup
+    dup,
+    none,
 };
 
 enum {
@@ -87,7 +88,7 @@ public:
     std::vector<std::string> queries;
     int optionFlag = 0;
 
-    Task task = Task::create;
+    Task task = Task::none;
     int cpuNumber = -1, limitElo = 0, limitLen = 0;
     std::vector<int> gameIDVec;
     
@@ -99,6 +100,8 @@ public:
     std::string getErrorString() const {
         return errorString;
     }
+
+    static std::string toString(Task task);
     std::string toString() const;
     bool isValid() const;
     
