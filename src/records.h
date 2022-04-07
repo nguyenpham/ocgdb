@@ -77,6 +77,10 @@ enum {
 
     dup_flag_remove                     = 1 << 15,
     dup_flag_embededgames               = 1 << 16,
+    
+    lichess_flag_nobot                  = 1 << 20,
+    lichess_flag_bot                    = 1 << 21,
+
 };
 
 class ParaRecord

@@ -161,6 +161,9 @@ static const std::map<std::string, int> optionNameMap = {
 
     {"remove", 15},
     {"embededgames", 16},
+
+    {"nobot", 20},
+    {"bot", 21},
 };
 
 std::string ParaRecord::toString(Task task)

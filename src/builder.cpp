@@ -447,7 +447,7 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
     std::unordered_map<std::string, const char*> stringMap;
     std::unordered_map<std::string, int> intMap;
 
-    auto whiteElo = 0, blackElo = 0, plyCount = 0;
+    auto whiteElo = 0, blackElo = 0, plyCount = 0, botCnt = 0;
     char* whiteName = nullptr, *blackName = nullptr;
     std::string fenString, ecoString;
 
@@ -467,6 +467,16 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
         }
         if (strcmp(it.first, "SetUp") == 0) {
             continue;
+        }
+
+        // Lichess bot
+        if ((paraRecord.optionFlag & (lichess_flag_nobot | lichess_flag_bot)) &&
+            (strcmp(it.first, "WhiteTitle") == 0 || strcmp(it.first, "BlackTitle") == 0) &&
+            strcmp(it.second, "BOT") == 0) {
+            if (paraRecord.optionFlag & lichess_flag_nobot) {
+                return;
+            }
+            botCnt++;
         }
 
         auto it2 = create_tagMap.find(it.first);
@@ -577,6 +587,10 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
         } // if (it2 != create_fieldMap.end())
         
         
+        if ((paraRecord.optionFlag & lichess_flag_bot) && !botCnt) {
+            return;
+        }
+
         if ((paraRecord.optionFlag & create_flag_accept_new_tags) &&
             addNewField(it.first)) {
             if (t->insertGameStatement) {

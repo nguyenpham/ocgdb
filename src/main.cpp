@@ -239,6 +239,8 @@ void print_usage()
     "    printpgn           print simple PGNs of results (for querying)\n" \
     "    embededgames       duplicate included games inside other games\n" \
     "    remove             remove duplicate games (for checking duplicates)\n" \
+    "    nobot              Lichess: ignore BOT games (for creating a database)\n" \
+    "    bot                Lichess: count games with BOT (for creating a database)\n" \
     "\n" \
     "Examples:\n" \
     " ocgdb -create -pgn big.png -db big.ocgdb.db3 -cpu 4 -o moves\n" \
