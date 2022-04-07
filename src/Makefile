@@ -11,7 +11,7 @@ all:
 	g++ -std=c++17 -DNDEBUG -O3 -c board/*.cpp
 	g++ -std=c++17 -DNDEBUG -O3 -c 3rdparty/SQLiteCpp/*.cpp
 	gcc -DNDEBUG -O3 -c 3rdparty/sqlite3/*.c
-	g++ -o ocgdb *.o
+	g++ -o ocgdb *.o -lpthread -ldl
 
 clean:
 	rm -f ocgdb *.o ./board/*.o ./3rdparty/SQLiteCpp/*.o ./3rdparty/sqlite3/*.o
