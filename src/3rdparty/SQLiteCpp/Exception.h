@@ -10,6 +10,8 @@
  */
 #pragma once
 
+#include "../sqlite3/sqlite3.h"
+
 #include <stdexcept>
 #include <string>
 

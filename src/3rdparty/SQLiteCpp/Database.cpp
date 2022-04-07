@@ -15,7 +15,6 @@
 #include "Exception.h"
 #include "Statement.h"
 
-#include "../sqlite3/sqlite3.h"
 #include <fstream>
 #include <string.h>
 

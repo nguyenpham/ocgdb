@@ -10,12 +10,6 @@
  */
 #include "Exception.h"
 
-#ifdef _MSC_VER
-#include "..\sqlite3\sqlite3.h"
-#else
-#include "sqlite3.h"
-#endif
-
 
 namespace SQLite
 {

@@ -10,11 +10,11 @@
  */
 #include "Column.h"
 
-#ifdef _MSC_VER
-#include "..\sqlite3\sqlite3.h"
-#else
-#include "sqlite3.h"
-#endif
+//#ifdef _MSC_VER
+//#include "..\sqlite3\sqlite3.h"
+//#else
+//#include "sqlite3.h"
+//#endif
 
 #include <iostream>
 

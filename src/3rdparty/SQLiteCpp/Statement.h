@@ -10,6 +10,8 @@
  */
 #pragma once
 
+#include "../sqlite3/sqlite3.h"
+
 #include "Exception.h"
 #include "Utils.h" // SQLITECPP_PURE_FUNC
 
