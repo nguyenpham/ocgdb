@@ -27,14 +27,23 @@
     <ClCompile Include="..\src\3rdparty\SQLiteCpp\Savepoint.cpp" />
     <ClCompile Include="..\src\3rdparty\SQLiteCpp\Statement.cpp" />
     <ClCompile Include="..\src\3rdparty\SQLiteCpp\Transaction.cpp" />
+    <ClCompile Include="..\src\addgame.cpp" />
     <ClCompile Include="..\src\board\base.cpp" />
     <ClCompile Include="..\src\board\chess.cpp" />
     <ClCompile Include="..\src\board\chesstypes.cpp" />
     <ClCompile Include="..\src\board\funcs.cpp" />
     <ClCompile Include="..\src\builder.cpp" />
+    <ClCompile Include="..\src\dbcore.cpp" />
+    <ClCompile Include="..\src\dbread.cpp" />
+    <ClCompile Include="..\src\duplicate.cpp" />
+    <ClCompile Include="..\src\exporter.cpp" />
+    <ClCompile Include="..\src\extract.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\parser.cpp" />
-    <ClCompile Include="..\src\sqllib.cpp" />
+    <ClCompile Include="..\src\pgnread.cpp" />
+    <ClCompile Include="..\src\records.cpp" />
+    <ClCompile Include="..\src\report.cpp" />
+    <ClCompile Include="..\src\search.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\3rdparty\sqlite3\sqlite3.h" />
@@ -51,13 +60,23 @@
     <ClInclude Include="..\src\3rdparty\SQLiteCpp\Utils.h" />
     <ClInclude Include="..\src\3rdparty\SQLiteCpp\VariadicBind.h" />
     <ClInclude Include="..\src\3rdparty\threadpool\thread_pool.hpp" />
+    <ClInclude Include="..\src\addgame.h" />
     <ClInclude Include="..\src\board\base.h" />
     <ClInclude Include="..\src\board\chess.h" />
     <ClInclude Include="..\src\board\chesstypes.h" />
     <ClInclude Include="..\src\board\funcs.h" />
     <ClInclude Include="..\src\board\types.h" />
     <ClInclude Include="..\src\builder.h" />
+    <ClInclude Include="..\src\dbcore.h" />
+    <ClInclude Include="..\src\dbread.h" />
+    <ClInclude Include="..\src\duplicate.h" />
+    <ClInclude Include="..\src\exporter.h" />
+    <ClInclude Include="..\src\extract.h" />
     <ClInclude Include="..\src\parser.h" />
+    <ClInclude Include="..\src\pgnread.h" />
+    <ClInclude Include="..\src\records.h" />
+    <ClInclude Include="..\src\report.h" />
+    <ClInclude Include="..\src\search.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\src\3rdparty\SQLiteCpp\README.md" />
