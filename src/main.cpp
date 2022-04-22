@@ -253,12 +253,12 @@ void print_usage()
     " ocgdb -db big.ocgdb.db3 -dup -o remove -r report.txt\n"
     "\n" \
     "Main functions/features:\n" \
-    "1. create a SQLite database from multi PGN files\n" \
-    "2. merge/add games from some PGN files/databases into a SQLite database\n" \
+    "1. create an SQLite database from multi PGN files\n" \
+    "2. merge/add games from multi PGN files/databases into an SQLite database\n" \
     "3. export multi SQLite databases to a PGN file\n" \
-    "4. get/display PGN games/FEN strings with game IDs from a SQLite database\n" \
-    "5. find duplicates/embeded games from multi SQLite databases\n" \
-    "6. query games from multi SQLite databases or PGN files, using PQL (Position Query Language)\n" \
+    "4. get/display PGN games/FEN strings with game IDs from an SQLite database\n" \
+    "5. find duplicates/embedded games from multi SQLite databases\n" \
+    "6. query games from multi SQLite databases or PGN files, using PQL (Position Query Language)\n"
     ;
 
     std::cerr << str << std::endl;

@@ -398,8 +398,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1021"
-            endingLineNumber = "1021"
+            startingLineNumber = "1004"
+            endingLineNumber = "1004"
             landmarkName = "BoardCore::fromMoveList(record, moveVec, flag, shouldStop)"
             landmarkType = "7">
          </BreakpointContent>
@@ -622,8 +622,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "866"
-            endingLineNumber = "866"
+            startingLineNumber = "849"
+            endingLineNumber = "849"
             landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
             landmarkType = "7">
          </BreakpointContent>
@@ -638,8 +638,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "908"
-            endingLineNumber = "908"
+            startingLineNumber = "891"
+            endingLineNumber = "891"
             landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
             landmarkType = "7">
          </BreakpointContent>
@@ -654,8 +654,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "915"
-            endingLineNumber = "915"
+            startingLineNumber = "898"
+            endingLineNumber = "898"
             landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
             landmarkType = "7">
          </BreakpointContent>
@@ -670,8 +670,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "911"
-            endingLineNumber = "911"
+            startingLineNumber = "894"
+            endingLineNumber = "894"
             landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
             landmarkType = "7">
          </BreakpointContent>
@@ -686,8 +686,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1161"
-            endingLineNumber = "1161"
+            startingLineNumber = "1144"
+            endingLineNumber = "1144"
             landmarkName = "BoardCore::toSimplePgn()"
             landmarkType = "7">
          </BreakpointContent>
@@ -702,8 +702,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "945"
-            endingLineNumber = "945"
+            startingLineNumber = "928"
+            endingLineNumber = "928"
             landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
             landmarkType = "7">
          </BreakpointContent>
@@ -718,8 +718,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "737"
-            endingLineNumber = "737"
+            startingLineNumber = "720"
+            endingLineNumber = "720"
             landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
             landmarkType = "7">
          </BreakpointContent>
@@ -734,8 +734,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "964"
-            endingLineNumber = "964"
+            startingLineNumber = "947"
+            endingLineNumber = "947"
             landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
             landmarkType = "7">
          </BreakpointContent>
@@ -798,8 +798,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "198"
-            endingLineNumber = "198"
+            startingLineNumber = "181"
+            endingLineNumber = "181"
             landmarkName = "BoardCore::equalMoveLists(oBoard, embeded)"
             landmarkType = "7">
          </BreakpointContent>
@@ -814,8 +814,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "193"
-            endingLineNumber = "193"
+            startingLineNumber = "176"
+            endingLineNumber = "176"
             landmarkName = "BoardCore::equalMoveLists(oBoard, embeded)"
             landmarkType = "7">
          </BreakpointContent>
@@ -830,8 +830,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "200"
-            endingLineNumber = "200"
+            startingLineNumber = "183"
+            endingLineNumber = "183"
             landmarkName = "BoardCore::equalMoveLists(oBoard, embeded)"
             landmarkType = "7">
          </BreakpointContent>
@@ -846,8 +846,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "204"
-            endingLineNumber = "204"
+            startingLineNumber = "187"
+            endingLineNumber = "187"
             landmarkName = "BoardCore::equalMoveLists(oBoard, embeded)"
             landmarkType = "7">
          </BreakpointContent>
@@ -926,8 +926,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1051"
-            endingLineNumber = "1051"
+            startingLineNumber = "1034"
+            endingLineNumber = "1034"
             landmarkName = "BoardCore::fromMoveList(record, moveVec, flag, shouldStop)"
             landmarkType = "7">
          </BreakpointContent>
@@ -958,8 +958,8 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1050"
-            endingLineNumber = "1050"
+            startingLineNumber = "1033"
+            endingLineNumber = "1033"
             landmarkName = "BoardCore::fromMoveList(record, moveVec, flag, shouldStop)"
             landmarkType = "7">
          </BreakpointContent>

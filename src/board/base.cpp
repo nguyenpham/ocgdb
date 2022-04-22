@@ -170,23 +170,6 @@ void BoardCore::setHashKey(uint64_t key)
 
 bool BoardCore::equalMoveLists(const BoardCore* oBoard, bool embeded) const
 {
-//    assert(oBoard);
-//
-//    auto n = histList.size();
-//    if (n != oBoard->histList.size()) {
-//        return false;
-//    }
-//
-//    for(size_t i = 0; i < n; ++i) {
-//        if (histList.at(i).move != oBoard->histList.at(i).move) {
-//            return false;
-//        }
-//    }
-//
-//    return true;
-
-    
-    
     assert(oBoard && startFen == oBoard->startFen);
 
     auto n0 = histList.size(), n1 = oBoard->histList.size();

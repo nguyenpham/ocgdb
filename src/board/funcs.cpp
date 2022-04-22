@@ -396,5 +396,4 @@ std::ofstream Funcs::openOfstream2write(const std::string& path)
 #else
     return std::ofstream(path, std::ios_base::out | std::ios_base::app);
 #endif
-
 }

@@ -77,7 +77,7 @@ void PGNRead::processDataBlock(char* buffer, long sz, bool connectBlock)
                 if (ch == '[') {
                     p++;
                     // Check carefully to avoid [ in middle of a line or without tag name
-                    if (*p < 'A' || *p > 'Z' || (p > buffer && *(p - 2) >= ' ')) { // if (!isalpha(*p)) {
+                    if (*p < 'A' || *p > 'Z' || (p > buffer + 1 && *(p - 2) >= ' ')) { // if (!isalpha(*p)) {
                         continue;
                     }
                     
@@ -265,8 +265,6 @@ uint64_t PGNRead::processPgnFile(const std::string& path)
 
 void doProcessPGNGame(PGNRead* instance, const std::unordered_map<char*, char*>& tagMap, const char* moves)
 {
-//    assert(pgnReadInstance);
-//    pgnReadInstance->processPGNGameByAThread(tagMap, moves);
     assert(instance);
     instance->processPGNGameByAThread(tagMap, moves);
 }
