@@ -18,6 +18,7 @@
 #include "builder.h"
 #include "extract.h"
 #include "addgame.h"
+#include "converter.h"
 
 #include "board/chess.h"
 
@@ -66,6 +67,11 @@ void runTask(ocgdb::ParaRecord& param)
             dbCore = new ocgdb::AddGame;
             break;
         }
+        case ocgdb::Task::convert:
+        {
+            dbCore = new ocgdb::Converter;
+            break;
+        }
 
         default:
             break;
@@ -109,7 +115,7 @@ int main(int argc, const char * argv[]) {
             debugMode = true;
             continue;
         }
-        if (str == "-create" || str == "-merge" || str == "-export" || str == "-dup") {
+        if (str == "-create" || str == "-merge" || str == "-export" || str == "-dup" || str == "-convert") {
             if (str == "-create") {
                 paraRecord.task = ocgdb::Task::create;
             } else if (str == "-merge") {
@@ -118,6 +124,8 @@ int main(int argc, const char * argv[]) {
                 paraRecord.task = ocgdb::Task::export_;
             } else if (str == "-dup") {
                 paraRecord.task = ocgdb::Task::dup;
+            } else if (str == "-convert") {
+                paraRecord.task = ocgdb::Task::convert;
             }
             if (oldTask != ocgdb::Task::none) {
                 errCnt++;
@@ -128,7 +136,7 @@ int main(int argc, const char * argv[]) {
 
         if (i + 1 >= argc) continue;
 
-        if (str == "-pgn") {
+        if (str == "-pgn" || str == "-csv") {
             paraRecord.pgnPaths.push_back(std::string(argv[++i]));
             continue;
         }
@@ -213,10 +221,12 @@ void print_usage()
     " -merge                merge multi PGN files or databases into the first database, works with -db, -pgn\n" \
     " -dup                  check duplicate games in databases, works with -db\n" \
     " -export               export from a database into a PGN file, works with -db, -pgn\n" \
+    " -convert              convert CSV file (Lichess Puzzles) into a database, works with -db, -csv\n" \
     " -bench                benchmarch querying games speed, works with -db\n" \
     " -q <query>            querying positions, repeat to add multi queries, works with -db, -pgn\n" \
     " -g <id>               get game with game ID numbers (repeat to add multi IDs), works with -db, -pgn\n" \
     " -pgn <file>           PGN game database file, repeat to add multi files\n" \
+    " -csv <file>           CSV file - Lichess Puzzles, repeat to add multi files\n" \
     " -db <file>            database file, extension should be .ocgdb.db3, repeat to add multi files\n" \
     " -r <file>             report file, works with -g, -q, -dup\n" \
     "                       use :memory: to create in-memory database\n" \

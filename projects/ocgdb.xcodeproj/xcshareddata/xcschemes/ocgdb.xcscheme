@@ -32,8 +32,8 @@
    </TestAction>
    <LaunchAction
       buildConfiguration = "Release"
-      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
-      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      selectedDebuggerIdentifier = ""
+      selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
@@ -53,6 +53,10 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-create"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-convert"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
@@ -60,23 +64,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/Carlsen.pgn"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/carlsen.ocgdb.db3"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/carlsen2.ocgdb.db3"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
             argument = "-export"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/Downloads/carlsen.ocgdb.db3.pgn"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -84,19 +72,11 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/mb-3.45.pgn"
-            isEnabled = "YES">
-         </CommandLineArgument>
-         <CommandLineArgument
             argument = "-db /Users/nguyenpham/Downloads/345.ocgdb.db3"
-            isEnabled = "YES">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/mb-3.45.ocgdb.db3"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/Downloads/tmp.pgn"
+            argument = "-db /Users/nguyenpham/Downloads/mb-3.45.ocgdb.db3"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -105,22 +85,6 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-db :memory:"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/bsg/BanksiaMatch/db/lichess_db_standard_rated_2021-08.pgn"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/lichess2021.ocgdb.db3"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-dup"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-r /Users/nguyenpham/Downloads/r.txt"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -172,10 +136,6 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-o moves,moves1,discardsites,printall,printfen,printpgn"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
             argument = "-o printall,printfen,printpgn"
             isEnabled = "NO">
          </CommandLineArgument>
@@ -220,32 +180,12 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/Downloads/60_games_with_doubles.pgn"
-            isEnabled = "NO">
+            argument = "-db /Users/nguyenpham/Downloads/lichesspuzzles.ocgdb.db3"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/60_games_with_doubles.db3"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/Downloads/imbedded_duplicates.pgn"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/imbedded_duplicates.db3"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/Downloads/t.pgn"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-pgn /Users/nguyenpham/Downloads/24_games_1_embedded_duplicate.pgn"
-            isEnabled = "NO">
-         </CommandLineArgument>
-         <CommandLineArgument
-            argument = "-db /Users/nguyenpham/Downloads/24_games_1_embedded_duplicate.db3"
-            isEnabled = "NO">
+            argument = "-csv /Users/nguyenpham/Downloads/lichess_db_puzzle.csv"
+            isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>
    </LaunchAction>

@@ -131,17 +131,7 @@ void Builder::create()
     }
 
     // init
-    {
-        playerIdMap.reserve(8 * 1024 * 1024);
-        eventIdMap.reserve(128 * 1024);
-        siteIdMap.reserve(128 * 1024);
-
-        auto dbPath = paraRecord.dbPaths.front();
-        if (!createDb(dbPath) || !mDb) {
-            return;
-        }
-        createInsertStatements(*mDb);
-    }
+    initDb();
 
     processPgnFiles(paraRecord.pgnPaths);
 
@@ -156,6 +146,19 @@ void Builder::create()
         if (siteInsertStatement) delete siteInsertStatement;
         siteInsertStatement = nullptr;
     }
+}
+
+void Builder::initDb()
+{
+    playerIdMap.reserve(8 * 1024 * 1024);
+    eventIdMap.reserve(128 * 1024);
+    siteIdMap.reserve(128 * 1024);
+
+    auto dbPath = paraRecord.dbPaths.front();
+    if (!createDb(dbPath) || !mDb) {
+        return;
+    }
+    createInsertStatements(*mDb);
 }
 
 void Builder::updateInfoTable()
@@ -439,7 +442,7 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
     t->init(mDb);
     assert(t->board);
 
-    if (itemMap.size() < 3) {
+    if (itemMap.empty()) {
         t->errCnt++;
         return;
     }
@@ -478,6 +481,9 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
             }
             botCnt++;
         }
+        
+        intMap["EventID"] = 1; // empty
+        intMap["SiteID"] = 1;
 
         auto it2 = create_tagMap.find(it.first);
         if (it2 != create_tagMap.end()) {
@@ -493,7 +499,6 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
                 case TagIdx_Site:
                 {
                     if (paraRecord.optionFlag & create_flag_discard_sites) {
-                        intMap["SiteID"] = 1; // empty
                         break;
                     }
 

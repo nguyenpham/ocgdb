@@ -41,7 +41,10 @@ public:
     void addAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec);
 
     bool createConvertingIDMaps(SQLite::Database* db);
-    
+
+protected:
+    bool openDb(const std::string& dbPath);
+
 private:
     virtual void runTask() override;
 

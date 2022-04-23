@@ -41,6 +41,7 @@ protected:
     virtual int getEventNameId(char* name);
     virtual int getSiteNameId(char* name);
     virtual int getPlayerNameId(char* name, int elo);
+    void initDb();
 
     void setupTagVec(const std::vector<std::string>& tagVec, int optionFlag);
 
@@ -48,15 +49,17 @@ protected:
 
     virtual void updateInfoTable();
 
+    virtual void processPGNGameWithAThread(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *) override;
+    
+    virtual void printStats() const override;
+
 private:
     bool createInsertStatements(SQLite::Database& mDb);
-    virtual void processPGNGameWithAThread(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *) override;
     
     static SQLite::Database* createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec);
 
     IDInteger getNameId(char* name, int elo, IDInteger& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, IDInteger>& idMap);
 
-    virtual void printStats() const override;
 
     bool addNewField(const std::string& fieldName);
 

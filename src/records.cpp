@@ -57,6 +57,7 @@ bool ParaRecord::isValid() const
             break;
         }
         case Task::create:
+        case Task::convert:
         {
             if (!hasPgn || dbPaths.empty()) {
                 errorString = "Must have a database path and at least one PGN path. Mising or wrong parameter -db -pgn";
@@ -90,6 +91,7 @@ bool ParaRecord::isValid() const
             ok = true;
             break;
         }
+            
 
         case Task::export_:
         {
@@ -176,6 +178,7 @@ std::string ParaRecord::toString(Task task)
         "bench",
         "get game",
         "duplicate",
+        "convert",
         "none"
     };
         

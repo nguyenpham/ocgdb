@@ -32,6 +32,7 @@
 		B189EABA27228BE70075EA55 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = B189EAB927228BE60075EA55 /* Makefile */; };
 		B189EABD272296330075EA55 /* funcs.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B189EABB272296330075EA55 /* funcs.cpp */; };
 		B1DDA40F27887B2200E5E2B6 /* parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1DDA40D27887B2200E5E2B6 /* parser.cpp */; };
+		B1F41E952812F41F00A0B897 /* converter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1F41E932812F41F00A0B897 /* converter.cpp */; };
 		B1F8A18427BA0218004942BA /* records.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1F8A18227BA0217004942BA /* records.cpp */; };
 /* End PBXBuildFile section */
 
@@ -109,6 +110,8 @@
 		B1E693BD2756D54C00997777 /* thread_pool.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = thread_pool.hpp; sourceTree = "<group>"; };
 		B1E693BE2756D54C00997777 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		B1E693BF2756D54C00997777 /* LICENSE.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
+		B1F41E932812F41F00A0B897 /* converter.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = converter.cpp; sourceTree = "<group>"; };
+		B1F41E942812F41F00A0B897 /* converter.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = converter.h; sourceTree = "<group>"; };
 		B1F8A18227BA0217004942BA /* records.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = records.cpp; sourceTree = "<group>"; };
 		B1F8A18327BA0218004942BA /* records.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = records.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -173,6 +176,8 @@
 				B10DE86427E7E785008EEC72 /* pgnread.h */,
 				B10DE86627E98CC4008EEC72 /* addgame.cpp */,
 				B10DE86727E98CC4008EEC72 /* addgame.h */,
+				B1F41E932812F41F00A0B897 /* converter.cpp */,
+				B1F41E942812F41F00A0B897 /* converter.h */,
 			);
 			name = src;
 			path = ../src;
@@ -324,6 +329,7 @@
 				B189EABD272296330075EA55 /* funcs.cpp in Sources */,
 				B10DE85327E61DDC008EEC72 /* exporter.cpp in Sources */,
 				B189EAB727224A410075EA55 /* Transaction.cpp in Sources */,
+				B1F41E952812F41F00A0B897 /* converter.cpp in Sources */,
 				B189EAAE27224A410075EA55 /* builder.cpp in Sources */,
 				B10DE85927E63397008EEC72 /* search.cpp in Sources */,
 				B189EAB427224A410075EA55 /* Statement.cpp in Sources */,

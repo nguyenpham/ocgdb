@@ -8,8 +8,8 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef SqlLib_hpp
-#define SqlLib_hpp
+#ifndef _records_h_
+#define _records_h_
 
 #include <vector>
 #include <unordered_map>
@@ -44,6 +44,7 @@ enum class Task
     bench,
     getgame,
     dup,
+    convert,
     none,
 };
 
@@ -182,4 +183,4 @@ private:
 
 }
 
-#endif /* SqlLib_hpp */
+#endif /* _records_h_ */

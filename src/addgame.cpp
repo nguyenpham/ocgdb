@@ -19,17 +19,38 @@ AddGame::AddGame()
 
 void AddGame::runTask()
 {
+    createMode = false;
+
     assert(!paraRecord.dbPaths.empty());
     auto dbPath = paraRecord.dbPaths.front();
 
+    if (!openDb(dbPath)) {
+        return;
+    }
+    
+
+    // add games from PGN files
+    processPgnFiles(paraRecord.pgnPaths);
+    
+    // add games from SQLite databases
+    dbRead.addGameInstance = this;
+    dbRead.setOptionFlag(paraRecord.optionFlag | query_flag_print_pgn); // for calling extractHeader
+    for(size_t i = 1; i < paraRecord.dbPaths.size(); i++) {
+        addDb(paraRecord.dbPaths.at(i));
+    }
+
+    updateInfoTable();
+}
+
+bool AddGame::openDb(const std::string& dbPath)
+{
     mDb = new SQLite::Database(dbPath, SQLite::OPEN_READWRITE);
     if (!mDb) {
         createMode = true;
         Builder::runTask();
-        return;
+        return false;
     }
 
-    createMode = false;
 
     {
         searchField = SearchField::none;
@@ -85,17 +106,7 @@ void AddGame::runTask()
         queryInfo();
     }
 
-    // add games from PGN files
-    processPgnFiles(paraRecord.pgnPaths);
-    
-    // add games from SQLite databases
-    dbRead.addGameInstance = this;
-    dbRead.setOptionFlag(paraRecord.optionFlag | query_flag_print_pgn); // for calling extractHeader
-    for(size_t i = 1; i < paraRecord.dbPaths.size(); i++) {
-        addDb(paraRecord.dbPaths.at(i));
-    }
-
-    updateInfoTable();
+    return true;
 }
 
 IDInteger AddGame::getNewGameID()
