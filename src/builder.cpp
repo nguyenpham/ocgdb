@@ -219,7 +219,7 @@ bool Builder::createDb(const std::string& dbPath)
     }, paraRecord.optionFlag);
         
     // Create database
-    mDb = createDb(dbPath, paraRecord.optionFlag, create_tagVec);
+    mDb = createDb(dbPath, paraRecord.optionFlag, create_tagVec, paraRecord.desc);
     return mDb != nullptr;
 }
 
@@ -263,7 +263,7 @@ void Builder::setupTagVec(const std::vector<std::string>& tagVec, int optionFlag
     }
 }
 
-SQLite::Database* Builder::createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec)
+SQLite::Database* Builder::createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec, const std::string& dbDescription)
 {
     assert(!path.empty());
 
@@ -281,6 +281,7 @@ SQLite::Database* Builder::createDb(const std::string& path, int optionFlag, con
         mDb->exec("INSERT INTO Info (Name, Value) VALUES ('Version', '" + VersionUserDatabaseString + "')");
         mDb->exec("INSERT INTO Info (Name, Value) VALUES ('Variant', 'standard')");
         mDb->exec("INSERT INTO Info (Name, Value) VALUES ('License', 'free')");
+        mDb->exec("INSERT INTO Info (Name, Value) VALUES ('Description', '" + dbDescription + "')");
 
         mDb->exec("DROP TABLE IF EXISTS Events");
         mDb->exec("CREATE TABLE Events (ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT UNIQUE)");
@@ -439,7 +440,7 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
     t->init(mDb);
     assert(t->board);
 
-    if (itemMap.size() < 3) {
+    if (itemMap.empty()) {
         t->errCnt++;
         return;
     }
@@ -479,6 +480,9 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
             botCnt++;
         }
 
+        intMap["EventID"] = 1; // empty
+        intMap["SiteID"] = 1; // empty
+
         auto it2 = create_tagMap.find(it.first);
         if (it2 != create_tagMap.end()) {
             while(*s <= ' ' && *s > 0) s++; // trim left
@@ -493,7 +497,6 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
                 case TagIdx_Site:
                 {
                     if (paraRecord.optionFlag & create_flag_discard_sites) {
-                        intMap["SiteID"] = 1; // empty
                         break;
                     }
 

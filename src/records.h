@@ -87,7 +87,7 @@ class ParaRecord
 {
 public:
     std::vector<std::string> pgnPaths, dbPaths;
-    std::string reportPath;
+    std::string reportPath, desc;
 
     std::vector<std::string> queries;
     int optionFlag = 0;

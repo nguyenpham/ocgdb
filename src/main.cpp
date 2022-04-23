@@ -161,6 +161,10 @@ int main(int argc, const char * argv[]) {
             paraRecord.resultNumberLimit = std::atoi(argv[++i]);
             continue;
         }
+        if (str == "-desc") {
+            paraRecord.desc = std::string(argv[++i]);
+            continue;
+        }
         if (str == "-q" || str == "-g") {
             if (str == "-q") {
                 paraRecord.task = ocgdb::Task::query;
@@ -224,6 +228,7 @@ void print_usage()
     " -plycount <n>         discard games with ply-count under n (for creating)\n" \
     " -resultcount <n>      stop querying if the number of results above n (for querying)\n" \
     " -cpu <n>              number of threads, should <= total physical cores, omit it for using all cores\n" \
+    " -desc \"<string>\"      a description to write to the table Info when creating a new database\n" \
     " -o [<options>,]       options, separated by commas\n" \
     "    moves              create text move field Moves\n" \
     "    moves1             create binary move field Moves, 1-byte encoding\n" \

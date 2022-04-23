@@ -52,7 +52,7 @@ private:
     bool createInsertStatements(SQLite::Database& mDb);
     virtual void processPGNGameWithAThread(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *) override;
     
-    static SQLite::Database* createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec);
+    static SQLite::Database* createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec, const std::string& dbDescription);
 
     IDInteger getNameId(char* name, int elo, IDInteger& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, IDInteger>& idMap);
 
