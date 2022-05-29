@@ -915,7 +915,7 @@ std::vector<LexWord> Parser::lexParse(const char* s)
                 
             case State::text:
                 if (!isalnum(*p)) {
-                    if (*p == '/' || *p == '-') {
+                    if (*p == '/') {
                         state = State::fen;
                         --p;
                         break;
@@ -932,8 +932,6 @@ std::vector<LexWord> Parser::lexParse(const char* s)
                         word.lex = Lex::operator_and;
                     } else if (text == "or") {
                         word.lex = Lex::operator_or;
-//                    } else if (text == "fen") {
-//                        word.lex = Lex::fen;
                     }
                     words.push_back(word);
                     break;

@@ -8,8 +8,8 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef OCDB_BUILDER_H
-#define OCDB_BUILDER_H
+#ifndef OCGDB_BUILDER_H
+#define OCGDB_BUILDER_H
 
 #include <vector>
 #include <unordered_map>
@@ -23,13 +23,14 @@
 
 #include "records.h"
 #include "pgnread.h"
+#include "dbcore.h"
 
 
 namespace ocgdb {
 
 
 
-class Builder : public PGNRead
+class Builder : virtual public PGNRead, virtual public DbCore
 {
 protected:
     void create();
@@ -48,7 +49,9 @@ protected:
 
     virtual void updateInfoTable();
 
+    
 private:
+
     bool createInsertStatements(SQLite::Database& mDb);
     virtual void processPGNGameWithAThread(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *) override;
     
@@ -74,6 +77,10 @@ protected:
     std::unordered_map<std::string, int> create_tagMap;
 
 private:
+    mutable std::mutex transactionMutex;
+    const int TransactionCommit = 256 * 1024;
+    int transactionCnt = 0;
+    
     std::unordered_map<std::string, IDInteger> playerIdMap, eventIdMap, siteIdMap;
 
     /// Prepared statements
@@ -88,4 +95,4 @@ private:
 
 
 } // namespace ocdb
-#endif // OCDB_BUILDER_H
+#endif // OCGDB_BUILDER_H

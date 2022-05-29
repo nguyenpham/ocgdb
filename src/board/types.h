@@ -23,10 +23,6 @@ enum class CommentComputerInfoType {
     none, standard, tcec, max
 };
 
-enum class FENCharactorSet {
-    standard, set2
-};
-
 enum Notation {
     san, lan, algebraic_coordinate
 };

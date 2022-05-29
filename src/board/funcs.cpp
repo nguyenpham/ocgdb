@@ -342,6 +342,16 @@ char* Funcs::trim(char* s)
     return s;
 }
 
+bool Funcs::endsWith(const std::string& str, const std::string& suffix)
+{
+    return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
+}
+
+bool Funcs::startsWith(const std::string& str, const std::string& prefix)
+{
+    return str.size() >= prefix.size() && 0 == str.compare(0, prefix.size(), prefix);
+}
+
 size_t Funcs::getFileSize(FILE * file)
 {
     assert(file);

@@ -8,8 +8,8 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef SqlLib_hpp
-#define SqlLib_hpp
+#ifndef OCGDB_RECORDS_H
+#define OCGDB_RECORDS_H
 
 #include <vector>
 #include <unordered_map>
@@ -182,4 +182,4 @@ private:
 
 }
 
-#endif /* SqlLib_hpp */
+#endif /* OCGDB_RECORDS_H */

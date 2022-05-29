@@ -8,8 +8,8 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef Parser_hpp
-#define Parser_hpp
+#ifndef OCGDB_PARSER_H
+#define OCGDB_PARSER_H
 
 #include <vector>
 #include <unordered_map>
@@ -142,4 +142,4 @@ private:
 
 } // namespace ocdb
 
-#endif /* Parser_hpp */
+#endif /* OCGDB_PARSER_H */

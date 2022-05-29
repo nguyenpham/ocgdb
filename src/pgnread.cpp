@@ -193,7 +193,7 @@ uint64_t PGNRead::processPgnFile(const std::string& path)
 {
     std::cout << "Processing PGN file: '" << path << "'" << std::endl;
 
-    auto transactionCnt = 0;
+//    auto transactionCnt = 0;
 
     {
         char *buffer = (char*)malloc(blockSz + 16);
@@ -215,23 +215,13 @@ uint64_t PGNRead::processPgnFile(const std::string& path)
             
             buffer[k] = 0;
             if (file.read(buffer, k)) {
-                if (mDb && transactionCnt <= 0) {
-                    transactionCnt = 400;
-                    mDb->exec("BEGIN");
-                    // std::cout << "BEGIN TRANSACTION" << std::endl;
-                }
 
                 blockCnt++;
                 processedPgnSz += k;
                 processDataBlock(buffer, k, true);
+
                 pool->wait_for_tasks();
-
-                transactionCnt--;
-                if (mDb && transactionCnt <= 0) {
-                    mDb->exec("COMMIT");
-                    // std::cout << "COMMIT TRANSACTION" << std::endl;
-                }
-
+                
                 if (idx && (idx & 0xf) == 0) {
                     printStats();
                 }
@@ -245,7 +235,6 @@ uint64_t PGNRead::processPgnFile(const std::string& path)
         if (halfBuf) {
             if (halfBufSz > 0) {
                 processDataBlock(halfBuf, halfBufSz, false);
-                pool->wait_for_tasks();
             }
             
             free(halfBuf);
@@ -253,9 +242,9 @@ uint64_t PGNRead::processPgnFile(const std::string& path)
         }
     }
     
-    if (mDb && transactionCnt > 0) {
-        mDb->exec("COMMIT");
-    }
+//    if (mDb && transactionCnt > 0) {
+//        mDb->exec("COMMIT");
+//    }
 
     printStats();
 

@@ -47,6 +47,9 @@ public:
     static std::string& trim(std::string& s);
     static std::string& rtrim(std::string& s);
     static char* trim(char*);
+    static bool endsWith(const std::string& str, const std::string& suffix);
+    static bool startsWith(const std::string& str, const std::string& prefix);
+
 
     static std::vector<std::string> splitString(const std::string &s, char delim);
     static std::vector<std::string> splitString(const std::string& s, const std::string& del);

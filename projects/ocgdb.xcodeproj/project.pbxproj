@@ -31,6 +31,7 @@
 		B189EAB827224A410075EA55 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B189EAAA27224A400075EA55 /* main.cpp */; };
 		B189EABA27228BE70075EA55 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = B189EAB927228BE60075EA55 /* Makefile */; };
 		B189EABD272296330075EA55 /* funcs.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B189EABB272296330075EA55 /* funcs.cpp */; };
+		B1D6792F28183CB100EC6DA3 /* core.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1D6792D28183CB100EC6DA3 /* core.cpp */; };
 		B1DDA40F27887B2200E5E2B6 /* parser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1DDA40D27887B2200E5E2B6 /* parser.cpp */; };
 		B1F8A18427BA0218004942BA /* records.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B1F8A18227BA0217004942BA /* records.cpp */; };
 /* End PBXBuildFile section */
@@ -104,6 +105,8 @@
 		B189EABC272296330075EA55 /* funcs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = funcs.h; sourceTree = "<group>"; };
 		B189EABE27257EF20075EA55 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; name = README.md; path = ../README.md; sourceTree = "<group>"; };
 		B1B7B937274A1F8E0075294F /* SqlCmd.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = SqlCmd.md; path = ../SqlCmd.md; sourceTree = "<group>"; };
+		B1D6792D28183CB100EC6DA3 /* core.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = core.cpp; sourceTree = "<group>"; };
+		B1D6792E28183CB100EC6DA3 /* core.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = core.h; sourceTree = "<group>"; };
 		B1DDA40D27887B2200E5E2B6 /* parser.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = parser.cpp; sourceTree = "<group>"; };
 		B1DDA40E27887B2200E5E2B6 /* parser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = parser.h; sourceTree = "<group>"; };
 		B1E693BD2756D54C00997777 /* thread_pool.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = thread_pool.hpp; sourceTree = "<group>"; };
@@ -145,10 +148,18 @@
 		B189EA8427224A400075EA55 /* src */ = {
 			isa = PBXGroup;
 			children = (
+				B189EA8527224A400075EA55 /* board */,
+				B1D6792D28183CB100EC6DA3 /* core.cpp */,
+				B1D6792E28183CB100EC6DA3 /* core.h */,
+				B10DE84E27E6140D008EEC72 /* dbcore.cpp */,
+				B10DE84F27E6140D008EEC72 /* dbcore.h */,
+				B10DE85D27E63845008EEC72 /* dbread.cpp */,
+				B10DE85E27E63845008EEC72 /* dbread.h */,
+				B10DE86327E7E785008EEC72 /* pgnread.cpp */,
+				B10DE86427E7E785008EEC72 /* pgnread.h */,
 				B10DE85127E61DDC008EEC72 /* exporter.cpp */,
 				B10DE85227E61DDC008EEC72 /* exporter.h */,
 				B189EAB927228BE60075EA55 /* Makefile */,
-				B189EA8527224A400075EA55 /* board */,
 				B189EA8D27224A400075EA55 /* builder.cpp */,
 				B189EA8E27224A400075EA55 /* builder.h */,
 				B189EA9127224A400075EA55 /* 3rdparty */,
@@ -157,20 +168,14 @@
 				B1DDA40E27887B2200E5E2B6 /* parser.h */,
 				B1F8A18227BA0217004942BA /* records.cpp */,
 				B1F8A18327BA0218004942BA /* records.h */,
-				B10DE84E27E6140D008EEC72 /* dbcore.cpp */,
-				B10DE84F27E6140D008EEC72 /* dbcore.h */,
 				B10DE85427E61E34008EEC72 /* duplicate.cpp */,
 				B10DE85527E61E34008EEC72 /* duplicate.h */,
 				B10DE85727E63397008EEC72 /* search.cpp */,
 				B10DE85827E63397008EEC72 /* search.h */,
 				B10DE85A27E63738008EEC72 /* report.cpp */,
 				B10DE85B27E63738008EEC72 /* report.h */,
-				B10DE85D27E63845008EEC72 /* dbread.cpp */,
-				B10DE85E27E63845008EEC72 /* dbread.h */,
 				B10DE86027E730AF008EEC72 /* extract.cpp */,
 				B10DE86127E730AF008EEC72 /* extract.h */,
-				B10DE86327E7E785008EEC72 /* pgnread.cpp */,
-				B10DE86427E7E785008EEC72 /* pgnread.h */,
 				B10DE86627E98CC4008EEC72 /* addgame.cpp */,
 				B10DE86727E98CC4008EEC72 /* addgame.h */,
 			);
@@ -307,6 +312,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1D6792F28183CB100EC6DA3 /* core.cpp in Sources */,
 				B189EABA27228BE70075EA55 /* Makefile in Sources */,
 				B10DE85627E61E34008EEC72 /* duplicate.cpp in Sources */,
 				B189EAAD27224A410075EA55 /* chess.cpp in Sources */,

@@ -8,8 +8,8 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef ADDGAME_H
-#define ADDGAME_H
+#ifndef OCGDB_ADDGAME_H
+#define OCGDB_ADDGAME_H
 
 #include "dbread.h"
 #include "builder.h"
@@ -66,4 +66,4 @@ private:
 
 } // namespace ocdb
 
-#endif /* ADDGAME_H */
+#endif /* OCGDB_ADDGAME_H */

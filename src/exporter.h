@@ -8,8 +8,8 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef EXPORTER_H
-#define EXPORTER_H
+#ifndef OCGDB_EXPORTER_H
+#define OCGDB_EXPORTER_H
 
 #include "dbread.h"
 
@@ -34,4 +34,4 @@ private:
 
 } // namespace ocdb
 
-#endif /* EXPORTER_H */
+#endif /* OCGDB_EXPORTER_H */

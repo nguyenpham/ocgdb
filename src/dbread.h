@@ -8,8 +8,8 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef DBREAD_H
-#define DBREAD_H
+#ifndef OCGDB_DBREAD_H
+#define OCGDB_DBREAD_H
 
 #include "dbcore.h"
 
@@ -37,7 +37,7 @@ public:
                                 SQLite::Statement* queryComments,
                                 bslib::BoardCore* board);
     
-    bool readADb(const std::string& dbPath, const std::string& sqlString);
+    virtual bool readADb(const std::string& dbPath, const std::string& sqlString);
 
 public:
     static const std::string fullGameQueryString;
@@ -67,4 +67,4 @@ private:
 
 } // namespace ocdb
 
-#endif /* DBREAD_H */
+#endif /* OCGDB_DBREAD_H */

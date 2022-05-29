@@ -8,8 +8,8 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef REPORT_H
-#define REPORT_H
+#ifndef OCGDB_REPORT_H
+#define OCGDB_REPORT_H
 
 #include <stdio.h>
 #include "records.h"

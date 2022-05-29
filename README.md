@@ -70,7 +70,7 @@ However, it has some advantages:
 - Users can query directly
 - Supported by a lot of tools
 - SQL: is a very strong and flexible way to make queries
-- Come with many strong, matrual SQL engines and libraries
+- Come with many strong, mature SQL engines and libraries
 
 
 ### Overcome drawbacks
@@ -146,6 +146,13 @@ Even though Moves1 can create the smallest databases, users should consider usin
 Dates in PGN have format YYYY.MM.DD (such as "2022.02.21"). They are must be converted into SQLite's date standard (IS0-8601) as YYYY-MM-DD (such as "2022-02-21"). Dates are stored as text fields.
 
 Some details of PGN dates may be missing and displayed as question (?) marks. The program simply replace each question mark by '1'. E.g., from "1950.??.??" to be "1950.11.11".
+
+## Info Table
+### Variant
+Store chess variant information.
+
+### GameCount
+Store number of records in Games table. It is useful for quickly retracting that number since querying by statement "SELECT COUNT" could take a while for huge database
 
 ## Converting speed
 We tested on an iMac 3.6 GHz Quad-Core i7, 16 GB RAM (the year 2017), converting a PGN file with 3.45 million games, size 2.42 GB.

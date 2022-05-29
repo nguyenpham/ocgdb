@@ -30,26 +30,26 @@ bool BoardCore::fromOriginPosition() const
     return startFen.empty();
 }
 
-std::string BoardCore::getStartingFen(FENCharactorSet) const
+std::string BoardCore::getStartingFen() const
 {
     return startFen;
 }
 
-std::string BoardCore::getFen(FENCharactorSet) const
+std::string BoardCore::getFen() const
 {
     auto k = std::max<int>(fullMoveCnt, (histList.size() + 1) / 2);
     return getFen(quietCnt / 2, k);
 }
 
-std::string BoardCore::getEPD(FENCharactorSet theSet) const
+std::string BoardCore::getEPD() const
 {
     auto hist = histList.empty() ? Hist() : getLastHist();
-    return getEPD(hist, theSet);
+    return getEPD(hist);
 }
 
-std::string BoardCore::getEPD(const Hist& hist, FENCharactorSet theSet) const
+std::string BoardCore::getEPD(const Hist& hist) const
 {
-    auto str = getFen(-1, -1, theSet);
+    auto str = getFen(-1, -1);
 
     auto k = std::max<int>(fullMoveCnt, (histList.size() + 1) / 2);
 
@@ -79,9 +79,9 @@ MoveFull BoardCore::createFullMove(int from, int dest, int promotion) const
     return move;
 }
 
-std::string BoardCore::getUciPositionString(const Move& pondermove, FENCharactorSet charSet) const
+std::string BoardCore::getUciPositionString(const Move& pondermove) const
 {
-    std::string str = "position " + (fromOriginPosition() ? "startpos" : ("fen " + getStartingFen(charSet)));
+    std::string str = "position " + (fromOriginPosition() ? "startpos" : ("fen " + getStartingFen()));
 
     if (!histList.empty()) {
         str += " moves";

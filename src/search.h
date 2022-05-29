@@ -8,8 +8,8 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef SEARCH_H
-#define SEARCH_H
+#ifndef OCGDB_SEARCH_H
+#define OCGDB_SEARCH_H
 
 #include "dbread.h"
 #include "pgnread.h"

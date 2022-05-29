@@ -8,16 +8,15 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef PGNREAD_H
-#define PGNREAD_H
+#ifndef OCGDB_PGNREAD_H
+#define OCGDB_PGNREAD_H
 
-#include "dbread.h"
-#include "parser.h"
+#include "core.h"
 
 namespace ocgdb {
 
 
-class PGNRead : public virtual DbCore
+class PGNRead : public virtual Core
 {
 public:
     virtual void processPGNGame(const std::unordered_map<char*, char*>&, const char *);
@@ -25,9 +24,9 @@ public:
     virtual void processPGNGameByAThread(const std::unordered_map<char*, char*>&, const char *);
 
 protected:
-    uint64_t processPgnFiles(const std::vector<std::string>& pgnPaths);
-    uint64_t processPgnFile(const std::string& path);
-    void processDataBlock(char* buffer, long sz, bool);
+    virtual uint64_t processPgnFiles(const std::vector<std::string>& pgnPaths);
+    virtual uint64_t processPgnFile(const std::string& path);
+    virtual void processDataBlock(char* buffer, long sz, bool);
 
 private:
     void processHalfBegin(char* buffer, long len);
@@ -42,4 +41,4 @@ private:
 
 } // namespace ocdb
 
-#endif /* PGNREAD_H */
+#endif /* OCGDB_PGNREAD_H */

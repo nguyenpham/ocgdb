@@ -12,75 +12,6 @@
 
 using namespace ocgdb;
 
-thread_pool* DbCore::pool = nullptr;
-
-DbCore::DbCore()
-{
-}
-
-DbCore::~DbCore()
-{
-    threadMap.clear();
-    if (mDb) delete mDb;
-
-    if (pool) {
-        delete pool;
-        pool = nullptr;
-    }
-}
-
-void DbCore::run(const ocgdb::ParaRecord& param)
-{
-    printOut.init((param.optionFlag & query_flag_print_all) && (param.optionFlag & query_flag_print_pgn), param.reportPath);
-
-    paraRecord = param;
-    createPool();
-
-    runTask();
-
-    ocgdb::printOut.close();
-    std::cout << "Completed! " << std::endl;
-}
-
-std::chrono::steady_clock::time_point DbCore::getNow()
-{
-    return std::chrono::steady_clock::now();
-}
-
-void DbCore::createPool()
-{
-    auto cpu = paraRecord.cpuNumber;
-    if (cpu < 0) cpu = std::thread::hardware_concurrency();
-    if (pool) {
-        if (pool->get_thread_count() == cpu) {
-            return;
-        }
-        delete pool;
-    }
-    pool = new thread_pool(cpu);
-    std::cout << "Thread count: " << pool->get_thread_count() << std::endl;
-}
-
-void DbCore::printStats() const
-{
-    int64_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(getNow() - startTime).count() + 1;
-    
-    std::lock_guard<std::mutex> dolock(printMutex);
-
-    std::cout << "#games: " << gameCnt
-              << ", elapsed: " << elapsed << "ms "
-              << bslib::Funcs::secondToClockString(static_cast<int>(elapsed / 1000), ":")
-              << ", speed: " << gameCnt * 1000ULL / elapsed
-              << " games/s";
-}
-
-ThreadRecord* DbCore::getThreadRecord()
-{
-    auto threadId = std::this_thread::get_id();
-    std::lock_guard<std::mutex> dolock(threadMapMutex);
-    return &threadMap[threadId];
-}
-
 void DbCore::queryInfo()
 {
     playerCnt = eventCnt = gameCnt = siteCnt = -1;
@@ -119,5 +50,12 @@ void DbCore::queryInfo()
         if (query.executeStep()) {
             playerCnt = query.getColumn(0).getInt();
         }
+    }
+}
+
+void DbCore::sendTransaction(SQLite::Database* db, bool begin)
+{
+    if (db) {
+        db->exec(begin ? "BEGIN" : "COMMIT");
     }
 }

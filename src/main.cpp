@@ -26,44 +26,44 @@ extern bool debugMode;
 
 void runTask(ocgdb::ParaRecord& param)
 {
-    ocgdb::DbCore* dbCore = nullptr;
+    ocgdb::Core* core = nullptr;
 
     switch (param.task) {
         case ocgdb::Task::create:
         {
-            dbCore = new ocgdb::Builder;
+            core = new ocgdb::Builder;
             break;
         }
         case ocgdb::Task::export_:
         {
-            dbCore = new ocgdb::Exporter;
+            core = new ocgdb::Exporter;
             break;
         }
         case ocgdb::Task::dup:
         {
-            dbCore = new ocgdb::Duplicate;
+            core = new ocgdb::Duplicate;
             break;
         }
         case ocgdb::Task::bench:
         {
             auto search = new ocgdb::Search;
             search->setupForBench(param);
-            dbCore = search;
+            core = search;
             break;
         }
         case ocgdb::Task::query:
         {
-            dbCore = new ocgdb::Search;
+            core = new ocgdb::Search;
             break;
         }
         case ocgdb::Task::getgame:
         {
-            dbCore = new ocgdb::Extract;
+            core = new ocgdb::Extract;
             break;
         }
         case ocgdb::Task::merge:
         {
-            dbCore = new ocgdb::AddGame;
+            core = new ocgdb::AddGame;
             break;
         }
 
@@ -71,9 +71,9 @@ void runTask(ocgdb::ParaRecord& param)
             break;
     }
     
-    if (dbCore) {
-        dbCore->run(param);
-        delete dbCore;
+    if (core) {
+        core->run(param);
+        delete core;
     }
 }
 
@@ -248,8 +248,8 @@ void print_usage()
     "    bot                Lichess: count games with BOT (for creating a database)\n" \
     "\n" \
     "Examples:\n" \
-    " ocgdb -create -pgn big.png -db big.ocgdb.db3 -cpu 4 -o moves\n" \
-    " ocgdb -create -pgn big1.png -pgn big2.png -db :memory: -elo 2100 -o moves,moves1,discardsites\n" \
+    " ocgdb -create -pgn big.pgn -db big.ocgdb.db3 -cpu 4 -o moves\n" \
+    " ocgdb -create -pgn big1.pgn -pgn big2.pgn -db :memory: -elo 2100 -o moves,moves1,discardsites\n" \
     " ocgdb -bench -db big.ocgdb.db3 -cpu 4\n" \
     " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"Q=3\" -q\"P[d4, e5, f4, g4] = 4 and kb7\"\n" \
     " ocgdb -db big.ocgdb.db3 -cpu 4 -q \"fen[K7/N7/k7/8/3p4/8/N7/8 w - - 0 1]\"\n" \

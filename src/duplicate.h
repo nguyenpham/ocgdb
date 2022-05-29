@@ -8,8 +8,8 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef DUPLICATE_H
-#define DUPLICATE_H
+#ifndef OCGDB_DUPLICATE_H
+#define OCGDB_DUPLICATE_H
 
 #include "dbread.h"
 

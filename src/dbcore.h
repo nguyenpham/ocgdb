@@ -8,60 +8,31 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef DBCORE_H
-#define DBCORE_H
-
-#include <stdio.h>
-#include <unordered_map>
+#ifndef OCGDB_DBCORE_H
+#define OCGDB_DBCORE_H
 
 #include "3rdparty/SQLiteCpp/SQLiteCpp.h"
-#include "3rdparty/threadpool/thread_pool.hpp"
 
-#include "records.h"
-#include "report.h"
+#include "core.h"
 
 namespace ocgdb {
 
 
-class DbCore
+class DbCore : virtual public Core
 {
-public:
-    DbCore();
-    virtual ~DbCore();
-
-    virtual void run(const ocgdb::ParaRecord&);
-    ThreadRecord* getThreadRecord();
-
 protected:
-    virtual void runTask() = 0;
-
-    void createPool();
-    virtual void printStats() const;
-    static std::chrono::steady_clock::time_point getNow();
-
-    void queryInfo();
+    virtual void queryInfo();
     
-protected:
-    bslib::ChessVariant chessVariant = bslib::ChessVariant::standard;
+    static void sendTransaction(SQLite::Database* db, bool begin);
+    void sendTransaction(bool begin) {
+        sendTransaction(mDb, begin);
+    }
 
-    ParaRecord paraRecord;
+protected:
     SearchField searchField;
-
     SQLite::Database* mDb = nullptr;
-
-    mutable std::mutex threadMapMutex;
-    mutable std::mutex printMutex;
-    
-    static thread_pool* pool;
-    std::unordered_map<std::thread::id, ThreadRecord> threadMap;
-    
-    IDInteger gameCnt, eventCnt, playerCnt, siteCnt, commentCnt;
-
-    /// For stats
-    std::chrono::steady_clock::time_point startTime;
-    int64_t blockCnt, processedPgnSz, errCnt, succCount;
 };
 
 } // namespace ocdb
 
-#endif /* DBCORE_H */
+#endif /* OCGDB_DBCORE_H */

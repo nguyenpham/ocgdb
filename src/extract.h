@@ -8,8 +8,8 @@
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef EXTRACT_H
-#define EXTRACT_H
+#ifndef OCGDB_EXTRACT_H
+#define OCGDB_EXTRACT_H
 
 #include "dbread.h"
 
@@ -28,4 +28,4 @@ private:
 
 } // namespace ocdb
 
-#endif /* EXTRACT_H */
+#endif /* OCGDB_EXTRACT_H */

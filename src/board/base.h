@@ -334,11 +334,11 @@ namespace bslib {
         virtual void _setFen(const std::string& fen) = 0;
         virtual bool isFenValid(const std::string& fen) const = 0;
 
-        virtual std::string getFen(FENCharactorSet = FENCharactorSet::standard) const;
-        virtual std::string getFen(int halfCount, int fullMoveCount, FENCharactorSet = FENCharactorSet::standard) const = 0;
+        virtual std::string getFen() const;
+        virtual std::string getFen(int halfCount, int fullMoveCount) const = 0;
 
-        virtual std::string getEPD(FENCharactorSet = FENCharactorSet::standard) const;
-        virtual std::string getEPD(const Hist&, FENCharactorSet = FENCharactorSet::standard) const;
+        virtual std::string getEPD() const;
+        virtual std::string getEPD(const Hist&) const;
 
         virtual uint64_t initHashKey() const = 0;
         
@@ -354,8 +354,8 @@ namespace bslib {
 
     public:
         bool fromOriginPosition() const;
-        virtual std::string getStartingFen(FENCharactorSet = FENCharactorSet::standard) const;
-        std::string getUciPositionString(const Move& pondermove = Move::illegalMove, FENCharactorSet charSet = FENCharactorSet::standard) const;
+        virtual std::string getStartingFen() const;
+        std::string getUciPositionString(const Move& pondermove = Move::illegalMove) const;
         
         void newGame(std::string fen = "");
         virtual void _newGame(std::string fen = "");

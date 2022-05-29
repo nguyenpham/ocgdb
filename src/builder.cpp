@@ -143,7 +143,15 @@ void Builder::create()
         createInsertStatements(*mDb);
     }
 
-    processPgnFiles(paraRecord.pgnPaths);
+    transactionCnt = 0;
+    for(auto && path : paraRecord.pgnPaths) {
+        processPgnFile(path);
+
+        if (transactionCnt > 0) {
+            sendTransaction(false);
+        }
+        transactionCnt = 0;
+    }
 
     // completing
     {
@@ -158,9 +166,13 @@ void Builder::create()
     }
 }
 
+
 void Builder::updateInfoTable()
 {
-    std::string str = "DELETE FROM Info WHERE Name='GameCount' OR Name='PlayerCount' OR Name='EventCount' OR Name='SiteCount' OR Name='CommentCount'";
+    std::string str = "DELETE FROM Info WHERE Name='Variant' OR Name='GameCount' OR Name='PlayerCount' OR Name='EventCount' OR Name='SiteCount' OR Name='CommentCount'";
+    mDb->exec(str);
+    
+    str = std::string("INSERT INTO Info (Name, Value) VALUES ('Variant', '") + bslib::Funcs::chessVariant2String(chessVariant) + "')";
     mDb->exec(str);
 
     str = std::string("INSERT INTO Info (Name, Value) VALUES ('GameCount', '") + std::to_string(gameCnt) + "')";
@@ -445,6 +457,18 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
         return;
     }
     
+    {
+        std::lock_guard<std::mutex> dolock(transactionMutex);
+        if (transactionCnt > TransactionCommit) {
+            sendTransaction(false);
+            transactionCnt = 0;
+        }
+        if (transactionCnt == 0) {
+            sendTransaction(true);
+        }
+        transactionCnt++;
+    }
+    
     std::unordered_map<std::string, const char*> stringMap;
     std::unordered_map<std::string, int> intMap;
 
@@ -594,13 +618,26 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
             return;
         }
 
-        if ((paraRecord.optionFlag & create_flag_accept_new_tags) &&
-            addNewField(it.first)) {
-            if (t->insertGameStatement) {
-                delete t->insertGameStatement;
-                t->insertGameStatement = nullptr;
+        if (paraRecord.optionFlag & create_flag_accept_new_tags) {
+            if (addNewField(it.first)) {
+                if (t->insertGameStatement) {
+                    delete t->insertGameStatement;
+                    t->insertGameStatement = nullptr;
+                }
+                stringMap[it.first] = s;
             }
-            stringMap[it.first] = s;
+        } else {
+            // some PGNs have only UTCDate, UTCTime but Date, Time. Use those values instead
+            if (strstr(it.first, "UTCTime")) {
+                if (stringMap.find("Time") == stringMap.end() && create_tagMap.find("Time") != create_tagMap.end()) {
+                    stringMap["Time"] = s;
+                }
+            } else if (strstr(it.first, "UTCDate")) {
+                if (stringMap.find("Date") == stringMap.end() && create_tagMap.find("Date") != create_tagMap.end()) {
+                    standardizeDate(s);
+                    stringMap["Date"] = s;
+                }
+            }
         }
     }
 
