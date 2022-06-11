@@ -169,6 +169,12 @@ namespace bslib {
             assert(isPositionValid(pos));
             return pieces[size_t(pos)].type == EMPTY;
         }
+        bool _isEmpty() const {
+            for(auto && piece : pieces) {
+                if (!piece.isEmpty()) return false;
+            }
+            return true;
+        }
 
         bool isPiece(int pos, int type, Side side) const {
             std::lock_guard<std::mutex> dolock(dataMutex);
@@ -334,11 +340,11 @@ namespace bslib {
         virtual void _setFen(const std::string& fen) = 0;
         virtual bool isFenValid(const std::string& fen) const = 0;
 
-        virtual std::string getFen() const;
-        virtual std::string getFen(int halfCount, int fullMoveCount) const = 0;
+        virtual std::string getFen(bool enpassantLegal = false) const;
+        virtual std::string getFen(bool enpassantLegal, int halfCount, int fullMoveCount) const = 0;
 
-        virtual std::string getEPD() const;
-        virtual std::string getEPD(const Hist&) const;
+        virtual std::string getEPD(bool enpassantLegal, bool withRecords) const;
+        virtual std::string getEPD(bool enpassantLegal, bool withRecords, const Hist&) const;
 
         virtual uint64_t initHashKey() const = 0;
         
@@ -359,6 +365,7 @@ namespace bslib {
         
         void newGame(std::string fen = "");
         virtual void _newGame(std::string fen = "");
+        void _clear();
 
         MoveFull createFullMove(int from, int dest, int promote) const;
         virtual int charactorToPieceType(char ch) const = 0;

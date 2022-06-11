@@ -137,7 +137,7 @@ void Search::runTask()
         std::cout << "Search with query " << query <<  "..." << std::endl;
         
         assert(paraRecord.task != Task::create);
-        if (!parser.parse(query.c_str())) {
+        if (!parser.parse(chessVariant, query.c_str())) {
             std::cerr << "Error: " << parser.getErrorString() << std::endl;
             continue;;
         }

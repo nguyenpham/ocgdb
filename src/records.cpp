@@ -259,13 +259,19 @@ void ParaRecord::setupOptions(const std::string& optionString)
     }
 }
 
-void ThreadRecord::init(SQLite::Database* mDb)
+bool ThreadRecord::initForBoards(bslib::ChessVariant variant)
 {
-    if (board) return;
-    
+    if (board) return false;
+    board = bslib::Funcs::createBoard(variant);
+    board2 = bslib::Funcs::createBoard(variant);
+    return true;
+}
+
+void ThreadRecord::init(SQLite::Database* mDb, bslib::ChessVariant variant)
+{
+    if (!initForBoards(variant)) return;
+
     errCnt = 0;
-    
-    board = bslib::Funcs::createBoard(bslib::ChessVariant::standard);
     buf = new int8_t[1024 * 2];
 
     if (mDb) {

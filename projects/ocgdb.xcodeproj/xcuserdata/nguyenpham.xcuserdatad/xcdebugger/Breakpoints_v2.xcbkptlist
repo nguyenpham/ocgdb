@@ -7,22 +7,6 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "4197FEEE-2DA4-4A6F-BBD8-472BC6DB6C1A"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/parser.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "852"
-            endingLineNumber = "852"
-            landmarkName = "Parser::lexParse(s)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
             uuid = "F5527B4E-5F94-41CF-A648-89F4AB19B721"
             shouldBeEnabled = "No"
             ignoreCount = "0"
@@ -30,42 +14,10 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "386"
-            endingLineNumber = "386"
+            startingLineNumber = "565"
+            endingLineNumber = "565"
             landmarkName = "unknown"
             landmarkType = "0">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "2F9527A7-56BD-4FEE-9292-BB01AD9F9CAD"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/parser.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "867"
-            endingLineNumber = "867"
-            landmarkName = "Parser::lexParse(s)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "356AA96E-B71B-4900-88C5-DBF1C0E32C00"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/parser.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "976"
-            endingLineNumber = "976"
-            landmarkName = "Parser::lexParse(s)"
-            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -78,9 +30,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "455"
-            endingLineNumber = "455"
-            landmarkName = "Parser::parse(s)"
+            startingLineNumber = "641"
+            endingLineNumber = "641"
+            landmarkName = "Parser::parse(_variant, s)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -94,9 +46,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "453"
-            endingLineNumber = "453"
-            landmarkName = "Parser::parse(s)"
+            startingLineNumber = "640"
+            endingLineNumber = "640"
+            landmarkName = "Parser::parse(_variant, s)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -110,8 +62,8 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "715"
-            endingLineNumber = "715"
+            startingLineNumber = "1009"
+            endingLineNumber = "1009"
             landmarkName = "Parser::parse_factor(from)"
             landmarkType = "7">
          </BreakpointContent>
@@ -126,8 +78,8 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "810"
-            endingLineNumber = "810"
+            startingLineNumber = "1104"
+            endingLineNumber = "1104"
             landmarkName = "Parser::parse_piecename(from)"
             landmarkType = "7">
          </BreakpointContent>
@@ -142,8 +94,8 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "686"
-            endingLineNumber = "686"
+            startingLineNumber = "980"
+            endingLineNumber = "980"
             landmarkName = "Parser::parse_term(from)"
             landmarkType = "7">
          </BreakpointContent>
@@ -158,8 +110,8 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "750"
-            endingLineNumber = "750"
+            startingLineNumber = "1044"
+            endingLineNumber = "1044"
             landmarkName = "Parser::parse_piece(from)"
             landmarkType = "7">
          </BreakpointContent>
@@ -174,8 +126,8 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "786"
-            endingLineNumber = "786"
+            startingLineNumber = "1080"
+            endingLineNumber = "1080"
             landmarkName = "Parser::parse_squareset(node, from)"
             landmarkType = "7">
          </BreakpointContent>
@@ -190,8 +142,8 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "116"
-            endingLineNumber = "116"
+            startingLineNumber = "117"
+            endingLineNumber = "117"
             landmarkName = "Node::selectSquare(s)"
             landmarkType = "7">
          </BreakpointContent>
@@ -206,8 +158,8 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "781"
-            endingLineNumber = "781"
+            startingLineNumber = "1075"
+            endingLineNumber = "1075"
             landmarkName = "Parser::parse_squareset(node, from)"
             landmarkType = "7">
          </BreakpointContent>
@@ -222,8 +174,8 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "788"
-            endingLineNumber = "788"
+            startingLineNumber = "1082"
+            endingLineNumber = "1082"
             landmarkName = "Parser::parse_squareset(node, from)"
             landmarkType = "7">
          </BreakpointContent>
@@ -238,89 +190,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "825"
-            endingLineNumber = "825"
+            startingLineNumber = "1119"
+            endingLineNumber = "1119"
             landmarkName = "Parser::parse_piecename(from)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "6BF80C5F-04F4-4064-9B5F-59752FC1C91B"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/parser.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "971"
-            endingLineNumber = "971"
-            landmarkName = "Parser::lexParse(s)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "463A00E4-997A-40A6-8F9A-325B8A761881"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/parser.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "970"
-            endingLineNumber = "970"
-            landmarkName = "Parser::lexParse(s)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "B37F0D81-3D61-4749-876F-0D1A896314BC"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/parser.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "969"
-            endingLineNumber = "969"
-            landmarkName = "Parser::lexParse(s)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "CDD5EDC6-BBBB-4820-AF01-14B73A6F44C9"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/parser.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "991"
-            endingLineNumber = "991"
-            landmarkName = "Parser::lexParse(s)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            uuid = "857DB098-BCAF-4E6E-8B1B-119EADA2F7B1"
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "../src/parser.cpp"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "959"
-            endingLineNumber = "959"
-            landmarkName = "Parser::lexParse(s)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -334,8 +206,8 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "214"
-            endingLineNumber = "214"
+            startingLineNumber = "241"
+            endingLineNumber = "241"
             landmarkName = "Node::evaluate(bitboardVec)"
             landmarkType = "7">
          </BreakpointContent>
@@ -350,8 +222,8 @@
             filePath = "../src/board/chess.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "3166"
-            endingLineNumber = "3166"
+            startingLineNumber = "3196"
+            endingLineNumber = "3196"
             landmarkName = "ChessBoard::decode1Byte(d)"
             landmarkType = "7">
          </BreakpointContent>
@@ -366,8 +238,8 @@
             filePath = "../src/board/chess.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "3175"
-            endingLineNumber = "3175"
+            startingLineNumber = "3205"
+            endingLineNumber = "3205"
             landmarkName = "ChessBoard::decode1Byte(d)"
             landmarkType = "7">
          </BreakpointContent>
@@ -382,8 +254,8 @@
             filePath = "../src/board/chess.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "3155"
-            endingLineNumber = "3155"
+            startingLineNumber = "3185"
+            endingLineNumber = "3185"
             landmarkName = "ChessBoard::decode1Byte(d)"
             landmarkType = "7">
          </BreakpointContent>
@@ -398,9 +270,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1004"
-            endingLineNumber = "1004"
-            landmarkName = "BoardCore::fromMoveList(record, moveVec, flag, shouldStop)"
+            startingLineNumber = "1013"
+            endingLineNumber = "1013"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -414,8 +286,8 @@
             filePath = "../src/board/chess.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "3168"
-            endingLineNumber = "3168"
+            startingLineNumber = "3198"
+            endingLineNumber = "3198"
             landmarkName = "ChessBoard::decode1Byte(d)"
             landmarkType = "7">
          </BreakpointContent>
@@ -430,8 +302,8 @@
             filePath = "../src/board/chess.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2913"
-            endingLineNumber = "2913"
+            startingLineNumber = "2943"
+            endingLineNumber = "2943"
             landmarkName = "ChessBoard::staticInit()"
             landmarkType = "7">
          </BreakpointContent>
@@ -446,8 +318,8 @@
             filePath = "../src/board/chess.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2918"
-            endingLineNumber = "2918"
+            startingLineNumber = "2948"
+            endingLineNumber = "2948"
             landmarkName = "ChessBoard::staticInit()"
             landmarkType = "7">
          </BreakpointContent>
@@ -462,8 +334,8 @@
             filePath = "../src/board/chess.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2914"
-            endingLineNumber = "2914"
+            startingLineNumber = "2944"
+            endingLineNumber = "2944"
             landmarkName = "ChessBoard::staticInit()"
             landmarkType = "7">
          </BreakpointContent>
@@ -622,9 +494,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "849"
-            endingLineNumber = "849"
-            landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
+            startingLineNumber = "858"
+            endingLineNumber = "858"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -638,9 +510,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "891"
-            endingLineNumber = "891"
-            landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
+            startingLineNumber = "900"
+            endingLineNumber = "900"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -654,9 +526,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "898"
-            endingLineNumber = "898"
-            landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
+            startingLineNumber = "907"
+            endingLineNumber = "907"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -670,9 +542,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "894"
-            endingLineNumber = "894"
-            landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
+            startingLineNumber = "903"
+            endingLineNumber = "903"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -686,9 +558,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1144"
-            endingLineNumber = "1144"
-            landmarkName = "BoardCore::toSimplePgn()"
+            startingLineNumber = "1153"
+            endingLineNumber = "1153"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -702,9 +574,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "928"
-            endingLineNumber = "928"
-            landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
+            startingLineNumber = "937"
+            endingLineNumber = "937"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -718,9 +590,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "720"
-            endingLineNumber = "720"
-            landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
+            startingLineNumber = "729"
+            endingLineNumber = "729"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -734,9 +606,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "947"
-            endingLineNumber = "947"
-            landmarkName = "BoardCore::fromMoveList(record, notation, flag, shouldStop)"
+            startingLineNumber = "956"
+            endingLineNumber = "956"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -782,8 +654,8 @@
             filePath = "../src/board/chess.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "2183"
-            endingLineNumber = "2183"
+            startingLineNumber = "2204"
+            endingLineNumber = "2204"
             landmarkName = "unknown"
             landmarkType = "0">
          </BreakpointContent>
@@ -798,9 +670,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "181"
-            endingLineNumber = "181"
-            landmarkName = "BoardCore::equalMoveLists(oBoard, embeded)"
+            startingLineNumber = "190"
+            endingLineNumber = "190"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -814,9 +686,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "176"
-            endingLineNumber = "176"
-            landmarkName = "BoardCore::equalMoveLists(oBoard, embeded)"
+            startingLineNumber = "185"
+            endingLineNumber = "185"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -830,9 +702,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "183"
-            endingLineNumber = "183"
-            landmarkName = "BoardCore::equalMoveLists(oBoard, embeded)"
+            startingLineNumber = "192"
+            endingLineNumber = "192"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -846,9 +718,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "187"
-            endingLineNumber = "187"
-            landmarkName = "BoardCore::equalMoveLists(oBoard, embeded)"
+            startingLineNumber = "196"
+            endingLineNumber = "196"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -862,8 +734,8 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "515"
-            endingLineNumber = "515"
+            startingLineNumber = "707"
+            endingLineNumber = "707"
             landmarkName = "Parser::parse_fenclause(from)"
             landmarkType = "7">
          </BreakpointContent>
@@ -878,9 +750,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "437"
-            endingLineNumber = "437"
-            landmarkName = "Parser::parse(s)"
+            startingLineNumber = "616"
+            endingLineNumber = "616"
+            landmarkName = "Parser::parse(_variant, s)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -894,8 +766,8 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "519"
-            endingLineNumber = "519"
+            startingLineNumber = "711"
+            endingLineNumber = "711"
             landmarkName = "Parser::parse_fenclause(from)"
             landmarkType = "7">
          </BreakpointContent>
@@ -910,9 +782,9 @@
             filePath = "../src/parser.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "441"
-            endingLineNumber = "441"
-            landmarkName = "Parser::parse(s)"
+            startingLineNumber = "628"
+            endingLineNumber = "628"
+            landmarkName = "Parser::parse(_variant, s)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -926,9 +798,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1034"
-            endingLineNumber = "1034"
-            landmarkName = "BoardCore::fromMoveList(record, moveVec, flag, shouldStop)"
+            startingLineNumber = "1043"
+            endingLineNumber = "1043"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -942,9 +814,9 @@
             filePath = "../src/board/base.cpp"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1033"
-            endingLineNumber = "1033"
-            landmarkName = "BoardCore::fromMoveList(record, moveVec, flag, shouldStop)"
+            startingLineNumber = "1042"
+            endingLineNumber = "1042"
+            landmarkName = "BoardCore::getEPD(enpassantLegal, withRecords, hist)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -1170,6 +1042,22 @@
             endingLineNumber = "166"
             landmarkName = "main(argc, argv)"
             landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "E2F989C1-9917-4961-9372-235CC1737A05"
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/pgnread.cpp"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "113"
+            endingLineNumber = "113"
+            landmarkName = "PGNRead::processDataBlock(buffer, sz, connectBlock)"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

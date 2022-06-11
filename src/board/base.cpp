@@ -35,30 +35,32 @@ std::string BoardCore::getStartingFen() const
     return startFen;
 }
 
-std::string BoardCore::getFen() const
+std::string BoardCore::getFen(bool enpassantLegal) const
 {
     auto k = std::max<int>(fullMoveCnt, (histList.size() + 1) / 2);
-    return getFen(quietCnt / 2, k);
+    return getFen(enpassantLegal, quietCnt / 2, k);
 }
 
-std::string BoardCore::getEPD() const
+std::string BoardCore::getEPD(bool enpassantLegal, bool withRecords) const
 {
     auto hist = histList.empty() ? Hist() : getLastHist();
-    return getEPD(hist);
+    return getEPD(enpassantLegal, withRecords, hist);
 }
 
-std::string BoardCore::getEPD(const Hist& hist) const
+std::string BoardCore::getEPD(bool enpassantLegal, bool withRecords, const Hist& hist) const
 {
-    auto str = getFen(-1, -1);
+    auto str = getFen(enpassantLegal, -1, -1);
 
-    auto k = std::max<int>(fullMoveCnt, (histList.size() + 1) / 2);
+    if (withRecords) {
+        auto k = std::max<int>(fullMoveCnt, (histList.size() + 1) / 2);
 
-    // hmvc halfmove clock, fmvn fullmove number
-    str += " hmvc " + std::to_string(quietCnt / 2) + "; fmvn " + std::to_string(k) + ";";
+        // hmvc halfmove clock, fmvn fullmove number
+        str += " hmvc " + std::to_string(quietCnt / 2) + "; fmvn " + std::to_string(k) + ";";
 
-    if (!hist.esVec.empty()) {
-        auto es = hist.esVec.begin();
-        str += es->toEPDString();
+        if (!hist.esVec.empty()) {
+            auto es = hist.esVec.begin();
+            str += es->toEPDString();
+        }
     }
 
     return str;
@@ -135,6 +137,13 @@ void BoardCore::_newGame(std::string fen)
     result.reset();
 
     assert(_isHashKeyValid());
+}
+
+void BoardCore::_clear()
+{
+    for(auto && piece : pieces) {
+        piece.setEmpty();
+    }
 }
 
 void BoardCore::setupPieceIndexes()

@@ -16,6 +16,7 @@ thread_pool* Core::pool = nullptr;
 
 Core::Core()
 {
+    resetCnts();
 }
 
 Core::~Core()
@@ -78,4 +79,10 @@ ThreadRecord* Core::getThreadRecord()
     auto threadId = std::this_thread::get_id();
     std::lock_guard<std::mutex> dolock(threadMapMutex);
     return &threadMap[threadId];
+}
+
+void Core::resetCnts()
+{
+    gameCnt = eventCnt = playerCnt = siteCnt = commentCnt = epdCnt = itemCnt = 0;
+    blockCnt = processedPgnSz = processedCnt = workingGameIdx = errCnt = succCount = 0;
 }

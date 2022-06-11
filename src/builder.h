@@ -37,6 +37,8 @@ protected:
 
     bool createDb(const std::string& path);
 
+    void createDb_EPD();
+
 protected:
     virtual void runTask() override;
     virtual int getEventNameId(char* name);
@@ -54,7 +56,8 @@ private:
 
     bool createInsertStatements(SQLite::Database& mDb);
     virtual void processPGNGameWithAThread(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *) override;
-    
+    void processPGNGameWithAThread_OCGDB(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *);
+
     static SQLite::Database* createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec, const std::string& dbDescription);
 
     IDInteger getNameId(char* name, int elo, IDInteger& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, IDInteger>& idMap);
@@ -68,6 +71,16 @@ public:
     static void standardizeDate(char* date);
     static std::string standardizeDate(const std::string& date);
     static std::string encodeString(const std::string& name);
+
+private:
+    void processFile_EPD(const std::string& path);
+    void updateInfoTable_EPD();
+    bool createDb_EPD(const std::string& path, const std::string& description);
+
+    static EPDRecord processALine_EPD(const std::string&);
+    void saveToDb_EPD();
+    void processPGNGameWithAThread_EPD(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *);
+    EPDRecord process_addBoard_EPD(const bslib::BoardCore* board, const bslib::Hist*);
 
 protected:
     std::vector<std::string> create_tagVec;
@@ -90,6 +103,15 @@ private:
 
     SQLite::Statement *benchStatement = nullptr;
 
+    mutable std::mutex epdRecordVecMutex;
+    std::vector<EPDRecord> epdRecordVec;
+    mutable std::mutex epdVistedHashSetMutex;
+    std::set<uint64_t> epdVistedHashSet;
+
+    SQLite::Statement *epdInsertStatement = nullptr;
+    std::vector<std::string> epdFieldList;
+
+    bslib::BoardCore* epdBoard = nullptr;
 
 };
 

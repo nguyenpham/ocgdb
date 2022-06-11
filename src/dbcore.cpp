@@ -59,3 +59,19 @@ void DbCore::sendTransaction(SQLite::Database* db, bool begin)
         db->exec(begin ? "BEGIN" : "COMMIT");
     }
 }
+
+SQLite::Database* DbCore::openDB(const std::string& dbPath, bool readonly)
+{
+    auto mDb = new SQLite::Database(dbPath, readonly ? SQLite::OPEN_READONLY : SQLite::OPEN_READWRITE);
+    if (!mDb) {
+        std::cerr << "Error: can't open database " << dbPath << std::endl;
+        return mDb;
+    }
+
+//    searchField = DbRead::getMoveField(mDb);
+//    if (searchField == SearchField::none) {
+//        std::cerr << "Error: database " << dbPath << " has not any move field" << std::endl;
+//        return false;
+//    }
+    return mDb;
+}

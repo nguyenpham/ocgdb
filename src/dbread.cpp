@@ -259,9 +259,8 @@ void DbRead::printGamePGNByIDs(QueryGameRecord& qgr, const std::vector<int>& gam
 
 bool DbRead::openDB(const std::string& dbPath)
 {
-    mDb = new SQLite::Database(dbPath, (paraRecord.optionFlag & dup_flag_remove) ? SQLite::OPEN_READWRITE : SQLite::OPEN_READONLY);
+    mDb = DbCore::openDB(dbPath, (paraRecord.optionFlag & dup_flag_remove) == 0);
     if (!mDb) {
-        std::cerr << "Error: can't open database " << dbPath << std::endl;
         return false;
     }
 

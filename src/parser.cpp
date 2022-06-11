@@ -12,6 +12,7 @@
 #include <string.h>
 #include <iostream>
 #include <sstream>
+#include <map>
 #include <set>
 
 #include "parser.h"
@@ -209,6 +210,32 @@ int Node::selectSquare(const std::string& from, const std::string& to)
     return -1;
 }
 
+
+bool Node::isValid() const
+{
+    switch (nodeType) {
+        case NodeType::fen:
+            return !fenHashSet.empty();
+
+        case NodeType::op:
+            return lhs && rhs && lhs->isValid() && rhs->isValid() && op < Operator::none;
+            
+        case NodeType::piece:
+            return !lhs && !rhs;
+            
+        case NodeType::number:
+            return !lhs && !rhs;
+
+        case NodeType::pattern:
+            return !patternBitBoards.empty() && patternTolerance >= 0;
+
+        default:
+            break;
+    }
+    
+    return false;
+}
+
 int Node::evaluate(const std::vector<uint64_t>& bitboardVec) const
 {
     switch (nodeType) {
@@ -327,6 +354,24 @@ int Node::evaluate(const std::vector<uint64_t>& bitboardVec) const
             assert(number == std::atoi(string.c_str()));
             return number;
             
+        case NodeType::pattern:
+        {
+            assert(!patternBitBoards.empty());
+            auto i = 0;
+            for(auto && patternVec : patternBitBoards) {
+                if (patternOperand == PatternOperand::greaterthan) {
+                    if (evaluate_pattern(bitboardVec, patternVec, PatternOperand::lessthan, patternTolerance)) {
+                        return 1;
+                    }
+                }
+                if (evaluate_pattern(patternVec, bitboardVec, patternOperand, patternTolerance)) {
+                    return 1;
+                }
+                i++;
+            }
+            break;
+        }
+
         default:
             break;
     }
@@ -334,27 +379,158 @@ int Node::evaluate(const std::vector<uint64_t>& bitboardVec) const
     return 0;
 }
 
-
-bool Node::isValid() const
+bool Node::evaluate_pattern(const std::vector<uint64_t>& bbSubVec, const std::vector<uint64_t>& bbSuperVec, PatternOperand operand, int tolerance) const
 {
-    switch (nodeType) {
-        case NodeType::fen:
-            return !fenHashSet.empty();
+    auto blackSb = bbSubVec[static_cast<int>(bslib::BBIdx::black)], whiteSb = bbSubVec[static_cast<int>(bslib::BBIdx::white)];
+    auto blackSp = bbSuperVec[static_cast<int>(bslib::BBIdx::black)], whiteSp = bbSuperVec[static_cast<int>(bslib::BBIdx::white)];
 
-        case NodeType::op:
-            return lhs && rhs && lhs->isValid() && rhs->isValid() && op < Operator::none;
-            
-        case NodeType::piece:
-            return !lhs && !rhs;
-            
-        case NodeType::number:
-            return !lhs && !rhs;
+    uint64_t blackDif, whiteDif;
 
-        default:
-            break;
+    if (operand == PatternOperand::equal) {
+        blackDif = (blackSb | blackSp) & ~(blackSb & blackSp);
+        whiteDif = (whiteSb | whiteSp) & ~(whiteSb & whiteSp);
+    } else {
+        blackDif = blackSb & ~(blackSb & blackSp);
+        whiteDif = whiteSb & ~(whiteSb & whiteSp);
     }
-    
-    return false;
+
+    auto cnt = popCount(blackDif | whiteDif);
+
+    if (cnt > tolerance) return false;
+
+    // check further, each position
+    uint64_t d = 0;
+    for(auto idx = static_cast<int>(bslib::BBIdx::kings); idx < static_cast<int>(bslib::BBIdx::max); ++idx) {
+        auto sb = bbSubVec[idx], sp = bbSuperVec[idx];
+
+        uint64_t dif;
+
+        if (operand == PatternOperand::equal) {
+            dif = (sb | sp) & ~(sb & sp);
+        } else {
+            dif = sb & ~(sb & sp);
+        }
+
+        d |= dif;
+    }
+
+    return popCount(d) <= tolerance;
+}
+
+void Node::pattern_shift()
+{
+    assert(patternBitBoards.size() == 1);
+
+    auto v = patternBitBoards.at(0);
+
+    while (pattern_shift_up(v)) {
+        patternBitBoards.push_back(v);
+        auto v2 = v;
+        while (pattern_shift_left(v2)) {
+            patternBitBoards.push_back(v2);
+        }
+        v2 = v;
+        while (pattern_shift_right(v2)) {
+            patternBitBoards.push_back(v2);
+        }
+    }
+
+    v = patternBitBoards.at(0);
+    while (pattern_shift_down(v)) {
+        patternBitBoards.push_back(v);
+        auto v2 = v;
+        while (pattern_shift_left(v2)) {
+            patternBitBoards.push_back(v2);
+        }
+        v2 = v;
+        while (pattern_shift_right(v2)) {
+            patternBitBoards.push_back(v2);
+        }
+    }
+}
+
+bool Node::pattern_shift_up(std::vector<uint64_t>& v)
+{
+    assert(!v.empty());
+    auto bb = v[static_cast<int>(bslib::BBIdx::black)] | v[static_cast<int>(bslib::BBIdx::white)];
+    assert(bb);
+
+    if (bb & bslib::ChessBoard::bb_edge_top)
+        return false;
+
+    for(int i = static_cast<int>(bslib::BBIdx::black); i < static_cast<int>(bslib::BBIdx::max); i++) {
+        v[i] <<= 8;
+
+        // Pawn can't go to the top line
+        if (i == static_cast<int>(bslib::BBIdx::pawns) && (v[i] & bslib::ChessBoard::bb_edge_top)) {
+            return false;
+        }
+    }
+
+    v[static_cast<int>(bslib::BBIdx::blackkingsquare)] += 8;
+    v[static_cast<int>(bslib::BBIdx::whitekingsquare)] += 8;
+
+    return true;
+}
+
+bool Node::pattern_shift_down(std::vector<uint64_t>& v)
+{
+    assert(!v.empty());
+    auto bb = v[static_cast<int>(bslib::BBIdx::black)] | v[static_cast<int>(bslib::BBIdx::white)];
+    assert(bb);
+
+    if (bb & bslib::ChessBoard::bb_edge_bottom)
+        return false;
+
+    for(int i = static_cast<int>(bslib::BBIdx::black); i < static_cast<int>(bslib::BBIdx::max); i++) {
+        v[i] >>= 8;
+
+        // Pawn can't go to the bottom line
+        if (i == static_cast<int>(bslib::BBIdx::pawns) && (v[i] & bslib::ChessBoard::bb_edge_bottom)) {
+            return false;
+        }
+    }
+
+    v[static_cast<int>(bslib::BBIdx::blackkingsquare)] -= 8;
+    v[static_cast<int>(bslib::BBIdx::whitekingsquare)] -= 8;
+
+    return true;
+}
+
+bool Node::pattern_shift_left(std::vector<uint64_t>& v)
+{
+    assert(!v.empty());
+    auto bb = v[static_cast<int>(bslib::BBIdx::black)] | v[static_cast<int>(bslib::BBIdx::white)];
+    assert(bb);
+
+    if (bb & bslib::ChessBoard::bb_edge_left)
+        return false;
+
+    for(int i = static_cast<int>(bslib::BBIdx::black); i < static_cast<int>(bslib::BBIdx::max); i++) {
+        v[i] >>= 1;
+    }
+
+    v[static_cast<int>(bslib::BBIdx::blackkingsquare)]--;
+    v[static_cast<int>(bslib::BBIdx::whitekingsquare)]--;
+    return true;
+}
+
+bool Node::pattern_shift_right(std::vector<uint64_t>& v)
+{
+    assert(!v.empty());
+    auto bb = v[static_cast<int>(bslib::BBIdx::black)] | v[static_cast<int>(bslib::BBIdx::white)];
+    assert(bb);
+
+    if (bb & bslib::ChessBoard::bb_edge_right)
+        return false;
+
+    for(int i = static_cast<int>(bslib::BBIdx::black); i < static_cast<int>(bslib::BBIdx::max); i++) {
+        v[i] <<= 1;
+    }
+
+    v[static_cast<int>(bslib::BBIdx::blackkingsquare)]++;
+    v[static_cast<int>(bslib::BBIdx::whitekingsquare)]++;
+    return true;
 }
 
 ////////////////////////////////////
@@ -365,6 +541,9 @@ Parser::Parser()
 Parser::~Parser()
 {
     deleteTree();
+
+    if (board) delete board;
+    if (board2) delete board2;
 }
 
 void Parser::deleteTree()
@@ -391,7 +570,7 @@ static const std::string errorStrings[] = {
     "missing term",
     "missing factor",
     "missing close bracket",
-    "invalid",
+    "input invalid",
 };
 
 std::string Parser::getErrorString(ParseError error)
@@ -431,12 +610,20 @@ int Parser::evaluate(const std::vector<uint64_t>& bitboardVec) const
     return root && root->evaluate(bitboardVec);
 }
 
-bool Parser::parse(const char* s)
+bool Parser::parse(bslib::ChessVariant _variant, const char* s)
 {
     assert(s);
     deleteTree();
     error = ParseError::none;
-    
+    variant = _variant;
+
+    if (board) delete board;
+    if (board2) delete board2;
+
+    board = bslib::Funcs::createBoard(variant);
+    board2 = bslib::Funcs::createBoard(variant);
+
+
     lexVec = lexParse(s);
     if (error == ParseError::none && lexVec.empty()) {
         error = ParseError::noinput;
@@ -451,7 +638,12 @@ bool Parser::parse(const char* s)
     size_t from = 0;
     while (from < lexVec.size()) {
         auto node = parse_condition(from);
-        
+        if (!node) {
+            node = parse_fenstring(from);
+        }
+        if (!node) {
+            node = parse_pattern(from);
+        }
         if (!node) {
             break;
         }
@@ -546,6 +738,107 @@ Node* Parser::parse_fenclause(size_t& from)
     return node;
 }
 
+Node* Parser::parse_fenstring(size_t& from)
+{
+    if (from < lexVec.size() && lexVec.at(from).lex == Lex::fen) {
+        auto lex = lexVec.at(from);
+        from++;
+
+        board->newGame(lex.string);
+        auto node = new Node();
+        node->nodeType = NodeType::fen;
+        node->fenHashSet.insert(board->hashKey);
+        return node;
+    }
+    return nullptr;
+}
+
+const std::map<std::string, ocgdb::PatternOperand> patternOperandMap {
+    {"=", PatternOperand::equal},
+    { "==", PatternOperand::equal},
+    { "<", PatternOperand::lessthan},
+    { ">", PatternOperand::greaterthan},
+    { "#", PatternOperand::shift}
+};
+
+Node* Parser::parse_pattern(size_t& from)
+{
+    assert(from <= lexVec.size());
+    if (lexVec.at(from).string != "{") {
+        return nullptr;
+    }
+
+    auto patternOperand = PatternOperand::equal;
+    auto patternOperandDelta = 0;
+    board->_clear();
+
+    auto cnt = 0;
+    for(++from; from < lexVec.size(); ++from) {
+        auto lex = lexVec.at(from);
+        if (lex.lex == Lex::fen) {
+            board2->newGame(lex.string);
+
+            for(auto i = 0; i < board2->size(); ++i) {
+                auto piece = board2->getPiece(i);
+                if (piece.isEmpty()) continue;
+                board->_setPiece(i, piece);
+            }
+            continue;
+        }
+
+        if (lex.string == ",") {
+            cnt++;
+            continue;
+        }
+        if (lex.string == "}") {
+            from++;
+            break;
+        }
+
+        auto it = patternOperandMap.find(lex.string);
+        if (it != patternOperandMap.end()) {
+            patternOperand = it->second;
+            continue;
+        }
+
+        auto node = parse_piece(from);
+        if (node) {
+            if (!node->locSet.empty() && node->pieceSide != bslib::Side::none) {
+                bslib::Piece piece(node->pieceType, node->pieceSide);
+                for(auto && sq : node->locSet) {
+                    board->_setPiece(sq, piece);
+                }
+            }
+
+            delete node;
+            continue;
+        }
+
+        if (std::isdigit(lex.string.at(0))) {
+            patternOperandDelta = std::stoi(lex.string);
+            continue;
+        }
+    }
+
+    if (board->_isEmpty()) {
+        return nullptr;
+    }
+
+    auto node = new Node();
+    node->nodeType = NodeType::pattern;
+    node->patternBitBoards.push_back(board->posToBitboards());
+
+    node->patternOperand = patternOperand;
+    node->patternTolerance = patternOperandDelta;
+
+    // shift
+    if (patternOperand == PatternOperand::shift) {
+        node->pattern_shift();
+    }
+
+    return node;
+}
+
 Node* Parser::parse_condition(size_t& from)
 {
     assert(from <= lexVec.size());
@@ -604,6 +897,7 @@ Node* Parser::parse_condition(size_t& from)
 
     return r;
 }
+
 Node* Parser::parse_expression(size_t& from)
 {
     assert(from <= lexVec.size());
@@ -837,16 +1131,18 @@ Node* Parser::parse_piecename(size_t& from)
 std::vector<LexWord> Parser::lexParse(const char* s)
 {
     assert(s && error == ParseError::none);
-    
+
     enum class State {
         none, text, number, comparison, fen
     };
-    
+
     std::vector<LexWord> words;
-    
+
     std::string text;
     auto state = State::none;
     auto ok = true;
+
+    static const char* comparisonChars = "=<>!";
     for(auto p = s; ok && error == ParseError::none; ++p) {
         switch (state) {
             case State::none:
@@ -866,8 +1162,8 @@ std::vector<LexWord> Parser::lexParse(const char* s)
                     text = *p;
                     break;
                 }
-                
-                if (strchr("=<>!", *p)) {
+
+                if (strchr(comparisonChars, *p)) {
                     state = State::comparison;
                     text = *p;
                     break;
@@ -887,6 +1183,11 @@ std::vector<LexWord> Parser::lexParse(const char* s)
                     case '/':
                         word.lex = Lex::operator_div;
                         break;
+                    case '#':
+                        word.lex = Lex::operator_pattern_shift;
+                        break;
+                    case '{':
+                    case '}':
                     case '(':
                     case ')':
                     case '[':
@@ -912,22 +1213,22 @@ std::vector<LexWord> Parser::lexParse(const char* s)
                 }
                 break;
             }
-                
+
             case State::text:
                 if (!isalnum(*p)) {
-                    if (*p == '/') {
+                    if (*p == '/') { //  || *p == '-'
                         state = State::fen;
                         --p;
                         break;
                     }
-                    
+
                     state = State::none;
                     --p;
-                    
+
                     LexWord word;
                     word.lex = Lex::string;
                     word.string = text;
-                    
+
                     if (text == "and") {
                         word.lex = Lex::operator_and;
                     } else if (text == "or") {
@@ -943,11 +1244,11 @@ std::vector<LexWord> Parser::lexParse(const char* s)
                 if (!isalnum(*p) && *p != '/' && *p != '-' && *p != ' ') {
                     state = State::none;
                     --p;
-                    
+
                     LexWord word;
                     word.lex = Lex::fen;
                     word.string = text;
-                    
+
                     words.push_back(word);
                     break;
                 }
@@ -956,14 +1257,14 @@ std::vector<LexWord> Parser::lexParse(const char* s)
 
             case State::comparison:
             {
-                if (strchr("=<>!", *p)) {
+                if (strchr(comparisonChars, *p)) {
                     text += *p;
                     break;
                 }
 
                 state = State::none;
                 --p;
-                
+
                 if (string2operator(text) >= Operator::none) {
                     // wrong
                     error = ParseError::wrong_lexical;
@@ -975,7 +1276,7 @@ std::vector<LexWord> Parser::lexParse(const char* s)
                 words.push_back(word);
                 break;
             }
- 
+
             case State::number:
                 if (!isdigit(*p)) {
                     if (isalnum(*p) || *p == '/' || *p == '-') {
@@ -985,14 +1286,14 @@ std::vector<LexWord> Parser::lexParse(const char* s)
                     }
 
                     state = State::none;
-                    
+
                     if (isalpha(*p)) {
                         // wrong
                         error = ParseError::wrong_lexical;
                         break;
                     }
                     --p;
-                    
+
                     LexWord word;
                     word.lex = Lex::number;
                     word.string = text;
@@ -1001,12 +1302,11 @@ std::vector<LexWord> Parser::lexParse(const char* s)
                 }
                 text += *p;
                 break;
- 
+
             default:
                 break;
         }
     }
-    
+
     return words;
 }
-

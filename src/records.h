@@ -116,7 +116,8 @@ class ThreadRecord
 {
 public:
     ~ThreadRecord();
-    void init(SQLite::Database* mDb);
+    void init(SQLite::Database* mDb, bslib::ChessVariant);
+    bool initForBoards(bslib::ChessVariant);
 
     bool createInsertGameStatement(SQLite::Database* mDb, const std::vector<std::string>&);
     
@@ -178,6 +179,75 @@ public:
     
 private:
     std::mutex queryMutex;
+};
+
+class EPDOperation
+{
+public:
+    std::string opcode, stringOperand, sanMove, numberOperand;
+
+    void reset() {
+        opcode = stringOperand = sanMove = numberOperand = "";
+    }
+
+    bool isValid() const {
+        if (!opcode.empty()) {
+            auto cnt = 0;
+            if (!stringOperand.empty()) {
+                cnt++;
+            }
+            if (!sanMove.empty()) {
+                cnt++;
+            }
+            if (!numberOperand.empty()) {
+                cnt++;
+            }
+
+            return cnt == 1;
+        }
+        return false;
+    }
+
+    std::string toString() const {
+        std::string s = opcode + " ";
+        if (!stringOperand.empty()) {
+            s += stringOperand;
+        } else if (!sanMove.empty()) {
+            s += sanMove;
+        } else if (!numberOperand.empty()) {
+            s += numberOperand;
+        }
+
+        return s;
+    }
+};
+
+class EPDRecord
+{
+public:
+    std::string epdString;
+    std::vector<EPDOperation> vec;
+
+    bool isValid() const {
+        if (epdString.size() > 10) {
+            for(auto && v : vec) {
+                if (!v.isValid()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    std::string toString() const {
+        std::string s = epdString;
+        for(auto && v : vec) {
+            s += "; " + v.toString();
+        }
+        return s;
+    }
+
 };
 
 }

@@ -449,7 +449,7 @@ void Builder::processPGNGameWithAThread(ThreadRecord* t, const std::unordered_ma
 {
     assert(t);
 
-    t->init(mDb);
+    t->init(mDb, chessVariant);
     assert(t->board);
 
     if (itemMap.empty()) {

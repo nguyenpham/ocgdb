@@ -30,6 +30,7 @@ public:
 
     virtual void run(const ocgdb::ParaRecord&);
     ThreadRecord* getThreadRecord();
+    virtual void resetCnts();
 
 protected:
     virtual void runTask() = 0;
@@ -49,11 +50,11 @@ protected:
     static thread_pool* pool;
     std::unordered_map<std::thread::id, ThreadRecord> threadMap;
     
-    IDInteger gameCnt, eventCnt, playerCnt, siteCnt, commentCnt;
+    IDInteger gameCnt, eventCnt, playerCnt, siteCnt, commentCnt, epdCnt, itemCnt;
 
     /// For stats
     std::chrono::steady_clock::time_point startTime;
-    int64_t blockCnt, processedPgnSz, errCnt, succCount;
+    int64_t blockCnt, processedPgnSz, processedCnt, workingGameIdx, errCnt, succCount;
 };
 
 } // namespace ocdb

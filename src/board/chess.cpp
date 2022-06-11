@@ -395,7 +395,24 @@ std::string ChessBoard::getFenCastleRights() const {
     return s;
 }
 
-std::string ChessBoard::getFen(int halfCount, int fullMoveCount) const
+// check if opponent could capture the last advanced-2-rows Pawn
+bool ChessBoard::canRivalCaptureEnpassant() const
+{
+    if (enpassant > 0 && enpassant < 64) {
+        auto col = getColumn(enpassant), row = getRank(enpassant);
+        if (row == 2) {
+            return ((col && _isPiece(enpassant + 7, static_cast<int>(PieceTypeStd::pawn), Side::white)) ||
+             (col < 7 && _isPiece(enpassant + 9, static_cast<int>(PieceTypeStd::pawn), Side::white)));
+        } else {
+            return ((col && _isPiece(enpassant - 9, static_cast<int>(PieceTypeStd::pawn), Side::black)) ||
+                 (col < 7 && _isPiece(enpassant - 7, static_cast<int>(PieceTypeStd::pawn), Side::black)));
+        }
+    }
+
+    return false;
+}
+
+std::string ChessBoard::getFen(bool enpassantLegal, int halfCount, int fullMoveCount) const
 {
     std::ostringstream stringStream;
     
@@ -423,16 +440,20 @@ std::string ChessBoard::getFen(int halfCount, int fullMoveCount) const
         }
     }
     
-    stringStream << (side == Side::white ? " w " : " b ")
-                 << getFenCastleRights() << " ";
+    std::string epStr = "-";
+    if (enpassant > 0 && (!enpassantLegal || canRivalCaptureEnpassant())) {
+        epStr = posToCoordinateString(enpassant);
+    }
 
-    stringStream << (enpassant > 0 ? posToCoordinateString(enpassant) : "-");
-    
+    stringStream << (side == Side::white ? " w " : " b ")
+                 << getFenCastleRights() << " " << epStr;
+
     if (halfCount >= 0 && fullMoveCount >= 0) {
         stringStream << " " << halfCount << " " << fullMoveCount;
     }
-    
+
     return stringStream.str();
+
 }
 
 void ChessBoard::gen_addMove(std::vector<MoveFull>& moveList, int from, int dest, bool captureOnly) const
@@ -2869,6 +2890,7 @@ std::string ChessBoard::getLastEcoString() const
 
 //////////////////////
 uint64_t ChessBoard::_posToBitboard[64];
+uint64_t ChessBoard::bb_edge_left, ChessBoard::bb_edge_right, ChessBoard::bb_edge_top, ChessBoard::bb_edge_bottom;
 
 static const int toSFPos[] {
     SQ_A8, SQ_B8, SQ_C8, SQ_D8, SQ_E8, SQ_F8, SQ_G8, SQ_H8,
@@ -2897,14 +2919,22 @@ static std::vector<int> bishopStartPointsVec;
 
 void ChessBoard::staticInit()
 {
+    bb_edge_left = bb_edge_right = 0;
+    bb_edge_bottom = 0xffULL;
+    bb_edge_top = 0xffULL << 56;
+
     for(int i = 0; i < 64; ++i) {
         _posToBitboard[i] = 1ULL << toSFPos[i];
         
         bishopStartPointsVec.push_back(0);
         
-//        auto sfpos = toSFPos[i]; assert(sfpos >= 0 && sfpos < 64);
-//        auto pos = fromSFPos[sfpos]; assert(pos >= 0 && pos < 64);
-//        assert(pos == i);
+        auto c = i % 8;
+        if (c == 0) {
+            bb_edge_left |= 1ULL << i;
+        } else
+        if (c == 7) {
+            bb_edge_right |= 1ULL << i;
+        }
     }
     
     // for encoding/decoding a bishop move into one byte

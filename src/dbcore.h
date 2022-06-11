@@ -27,6 +27,7 @@ protected:
     void sendTransaction(bool begin) {
         sendTransaction(mDb, begin);
     }
+    static SQLite::Database* openDB(const std::string& dbPath, bool readonly);
 
 protected:
     SearchField searchField;
