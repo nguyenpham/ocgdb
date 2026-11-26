@@ -1,77 +1,41 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021-2022 Developers
+ * Copyright (c) 2019-2026 Nguyen Hong Pham (github@nguyenpham)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#include "3rdparty/SQLiteCpp/VariadicBind.h"
-#include "3rdparty/sqlite3/sqlite3.h"
+#include <iostream>
 
 #include "dbread.h"
+#include "report.h"
 
 using namespace ocgdb;
 
-const std::string DbRead::fullGameQueryString =
-    "SELECT e.Name Event, s.Name Site, w.Name White, b.Name Black, g.* " \
-    "FROM Games g " \
-    "INNER JOIN Players w ON WhiteID = w.ID " \
-    "INNER JOIN Players b ON BlackID = b.ID " \
-    "INNER JOIN Events e ON EventID = e.ID " \
-    "INNER JOIN Sites s ON SiteID = s.ID";
-
-const std::string DbRead::searchFieldNames[] = {
-    "",
-    "Moves",
-    "Moves1",
-    "Moves2"
-};
-
-
-const char* DbRead::tagNames[] = {
-    "GameID", // Not real PGN tag, added for convernience
-    
-    "Event", "Site", "Date", "Round",
-    "White", "WhiteElo", "Black", "BlackElo",
-    "Result", "TimeControl", "ECO", "PlyCount", "FEN",
-
-    nullptr, nullptr
-};
-
-
-
-
-DbRead::DbRead()
-{
-}
+DbRead::DbRead() { }
 
 DbRead::~DbRead()
 {
-    closeDb();
+    working = false;
+    drainGameBatches();
 }
 
-void DbRead::closeDb()
+bool DbRead::openToRead(const std::string& dbPath, const std::string& password)
 {
-    if (mDb) {
-        delete mDb;
-        mDb = nullptr;
-    }
+    paraRecord.password = password;
+    return openOCGDB(dbPath, true);
 }
 
-
-SearchField DbRead::getMoveField(SQLite::Database* db, bool* hashMoves)
+SearchField DbRead::getMoveField(SQLite::Database& db)
 {
-    assert(db);
     auto searchField = SearchField::none;
-    if (hashMoves) *hashMoves = false;
 
-    SQLite::Statement stmt(*db, "PRAGMA table_info(Games)");
+    SQLite::Statement stmt(db, "PRAGMA table_info(Games)");
     while (stmt.executeStep()) {
-        std::string fieldName = stmt.getColumn(1).getText();
-        
+        std::string fieldName = stmt.getColumn(1).getString();
+
         if (fieldName == "Moves2") {
             searchField = SearchField::moves2;
             break;
@@ -80,9 +44,7 @@ SearchField DbRead::getMoveField(SQLite::Database* db, bool* hashMoves)
             if (searchField < SearchField::moves1) {
                 searchField = SearchField::moves1;
             }
-        }
-        if (fieldName == "Moves") {
-            if (hashMoves) *hashMoves = true;
+        } else if (fieldName == "Moves") {
             if (searchField < SearchField::moves) {
                 searchField = SearchField::moves;
             }
@@ -92,14 +54,22 @@ SearchField DbRead::getMoveField(SQLite::Database* db, bool* hashMoves)
     return searchField;
 }
 
-
-
-void DbRead::extractHeader(SQLite::Statement& query, bslib::PgnRecord& record)
+void DbRead::blobToMoveVec(const SQLite::Column& c, std::vector<int8_t>& moveVec)
 {
-    for(int i = 0, cnt = query.getColumnCount(); i < cnt; ++i) {
+    moveVec.clear();
+    if (c.isNull()) return;
+    auto n = c.getBytes();
+    if (n <= 0) return;
+    auto p = static_cast<const int8_t*>(c.getBlob());
+    moveVec.assign(p, p + n);
+}
+
+void DbRead::extractHeader(SQLite::Statement& query, banksia::PgnRecord& record)
+{
+    for (int i = 0, cnt = query.getColumnCount(); i < cnt; ++i) {
         auto c = query.getColumn(i);
         std::string name = c.getName();
-        if (name == "ID") {
+        if (name == "ID" || name == "GID") {
             record.gameID = c.getInt();
             continue;
         }
@@ -124,43 +94,28 @@ void DbRead::extractHeader(SQLite::Statement& query, bslib::PgnRecord& record)
         if (name == "Moves" || name == "Moves1" || name == "Moves2") {
             continue;
         }
-        
-        std::string str;
-        
-        switch (c.getType())
-        {
-            case SQLITE_INTEGER:
-            {
-                auto k = c.getInt();
-                str = std::to_string(k);
-                break;
-            }
-            case SQLITE_FLOAT:
-            {
-                auto k = c.getDouble();
-                str = std::to_string(k);
-                break;
-            }
-            case SQLITE_BLOB:
-            {
-                // something wrong
-                break;
-            }
-            case SQLITE_NULL:
-            {
-                // something wrong
-                break;
-            }
-            case SQLITE3_TEXT:
-            {
-                str = c.getString();
-                if (name == "FEN") record.fenText = str;
-                break;
-            }
 
-            default:
-                assert(0);
+        std::string str;
+        switch (c.getType()) {
+            case SQLITE_INTEGER:
+                str = std::to_string(c.getInt64());
                 break;
+            case SQLITE_FLOAT:
+                str = std::to_string(c.getDouble());
+                break;
+            case SQLITE3_TEXT:
+                str = c.getString();
+                break;
+            default: // NULL, BLOB
+                break;
+        }
+
+        if (name == "FEN") {
+            record.fenText = str;
+            continue;
+        }
+        if (name == "Result") {
+            record.result = str;
         }
 
         if (name != "Event" && str.empty()) {
@@ -170,225 +125,334 @@ void DbRead::extractHeader(SQLite::Statement& query, bslib::PgnRecord& record)
     }
 }
 
-
-void DbRead::queryForABoard(bslib::PgnRecord& record,
-                            SearchField searchField,
-                            SQLite::Statement* query,
-                            SQLite::Statement* queryComments,
-                            bslib::BoardCore* board)
+DbRead::CommentMap DbRead::loadComments(SQLite::Database& db)
 {
-    assert(query && board);
+    CommentMap map;
+    if (!hasTable(db, "Comments")) {
+        return map;
+    }
+    SQLite::Statement q(db, "SELECT GameID, Ply, Comment FROM Comments");
+    while (q.executeStep()) {
+        auto c = q.getColumn(2);
+        if (c.isNull()) continue;
+        map[q.getColumn(0).getInt()].emplace_back(q.getColumn(1).getInt(), c.getString());
+    }
+    return map;
+}
 
-    extractHeader(*query, record);
+/// whether the table Comments has an index starting with GameID
+static bool hasCommentIndex(SQLite::Database& db)
+{
+    SQLite::Statement q(db, "SELECT name FROM pragma_index_list('Comments')");
+    while (q.executeStep()) {
+        SQLite::Statement c(db, "SELECT name FROM pragma_index_info(?) WHERE seqno = 0");
+        c.bind(1, q.getColumn(0).getString());
+        if (c.executeStep() && c.getColumn(0).getString() == "GameID") {
+            return true;
+        }
+    }
+    return false;
+}
+
+void DbRead::queryForABoard(banksia::PgnRecord& record, SearchField searchField, SQLite::Statement& query,
+                            SQLite::Statement* queryComments, banksia::BoardCore* board, const CommentMap* comments)
+{
+    assert(board);
+
+    extractHeader(query, record);
+    record.variant = board->variant;
 
     board->newGame(record.fenText);
 
     // Tables games may have 0-2 columns for moves
     if (searchField == SearchField::moves1 || searchField == SearchField::moves2) {
-        auto moveName = "Moves2";
+        std::string moveName = "Moves2";
 
-        int flag = bslib::BoardCore::ParseMoveListFlag_create_san;
+        int flag = banksia::ParseMoveListFlag_create_san | banksia::ParseMoveListFlag_quick_check;
 
         if (searchField == SearchField::moves1) {
-            flag |= bslib::BoardCore::ParseMoveListFlag_move_size_1_byte;
+            flag |= banksia::ParseMoveListFlag_move_size_1_byte;
             moveName = "Moves1";
         }
 
-        auto c = query->getColumn(moveName);
-        auto moveBlob = static_cast<const int8_t*>(c.getBlob());
+        std::vector<int8_t> moveVec;
+        blobToMoveVec(query.getColumn(moveName.c_str()), moveVec);
 
-        if (moveBlob) {
-            std::vector<int8_t> moveVec;
-            auto sz = c.size();
-            for(auto i = 0; i < sz; ++i) {
-                moveVec.push_back(moveBlob[i]);
+        if (!moveVec.empty()) {
+            board->fromMoveList(record, moveVec, flag);
+        }
+
+        /// the comments: Ply is the index of the move in the history, the variations' moves
+        /// included (-1 for the comment before the first move)
+        auto setComment = [board](int ply, const std::string& comment) {
+            if (comment.empty()) return;
+            if (ply >= 0 && ply < board->getHistListSize()) {
+                board->_getHistPointerAt(ply)->comment = comment;
+            } else if (ply < 0) {
+                board->setFirstComment(comment);
             }
-
-            board->fromMoveList(&record, moveVec, flag, nullptr);
-
-            if (queryComments) {
-                queryComments->reset();
-                queryComments->bind(1, record.gameID);
-                while (queryComments->executeStep()) {
-                    auto comment = queryComments->getColumn("Comment").getString();
-                    if (comment.empty()) continue;
-
-                    auto ply = queryComments->getColumn("Ply").getInt();
-                    if (ply >= 0 && ply < board->getHistListSize()) {
-                        board->_getHistPointerAt(ply)->comment = comment;
-                    } else {
-                        board->setFirstComment(comment);
-                    }
+        };
+        if (comments) {
+            auto it = comments->find(record.gameID);
+            if (it != comments->end()) {
+                for (auto&& [ply, comment] : it->second) {
+                    setComment(ply, comment);
+                }
+            }
+        } else if (queryComments) {
+            queryComments->reset();
+            queryComments->bind(1, record.gameID);
+            while (queryComments->executeStep()) {
+                auto cc = queryComments->getColumn(1);
+                if (!cc.isNull()) {
+                    setComment(queryComments->getColumn(0).getInt(), cc.getString());
                 }
             }
         }
     } else if (searchField == SearchField::moves) {
-        record.moveString = query->getColumn("Moves").getString();
+        auto c = query.getColumn("Moves");
+        record.moveString = c.isNull() ? "" : c.getString();
 
-        int flag = bslib::BoardCore::ParseMoveListFlag_quick_check
-                    | bslib::BoardCore::ParseMoveListFlag_discardComment
-                    | bslib::BoardCore::ParseMoveListFlag_create_san;
-
-        board->fromMoveList(&record, bslib::Notation::san, flag, nullptr);
+        /// the text has its comments and variations: kept
+        int flag = banksia::ParseMoveListFlag_quick_check | banksia::ParseMoveListFlag_create_san;
+        board->fromMoveList(record, banksia::Notation::san, banksia::ParseVariation::parse, banksia::moveFormat, flag);
+        record.moveString.clear();
     }
+
+    board->result.result = banksia::string2ResultType(record.result);
 }
 
-
-/*
- This function is just an example how to query and extract data from a record with a given game ID
- */
-void DbRead::printGamePGNByIDs(SQLite::Database& db, const std::vector<int>& gameIDVec, SearchField searchField)
+std::string DbRead::gamesQuery(bool withHeaders) const
 {
-    QueryGameRecord qgr(db, searchField);
-    printGamePGNByIDs(qgr, gameIDVec);
-}
-
-
-void DbRead::printGamePGNByIDs(QueryGameRecord& qgr, const std::vector<int>& gameIDVec)
-{
-    for(auto && gameID : gameIDVec) {
-        bslib::PgnRecord record;
-        record.gameID = gameID;
-        
-        std::string str = "\n\n;ID: " + std::to_string(gameID) + "\n"
-                + qgr.queryAndCreatePGNByGameID(record);
-        printOut.printOut(str);
+    std::string sql;
+    if (withHeaders || !paraRecord.where.empty()) {
+        sql = fullGameQueryString;
+    } else {
+        sql = "SELECT g.ID, g.FEN, g.Result";
+        if (gameFieldSet.count("PlyCount")) sql += ", g.PlyCount";
+        if (gameFieldSet.count("WhiteElo")) sql += ", g.WhiteElo";
+        if (gameFieldSet.count("BlackElo")) sql += ", g.BlackElo";
+        if (searchField != SearchField::none) {
+            sql += ", g." + searchFieldNames[static_cast<int>(searchField)];
+        }
+        sql += " FROM Games g";
     }
+
+    std::string cond;
+    if (!paraRecord.where.empty()) {
+        cond = "(" + paraRecord.where + ")";
+    }
+    if (paraRecord.limitLen > 0 && gameFieldSet.count("PlyCount")) {
+        if (!cond.empty()) cond += " AND ";
+        cond += "g.PlyCount >= " + std::to_string(paraRecord.limitLen);
+    }
+    if (paraRecord.limitElo > 0 && gameFieldSet.count("WhiteElo") && gameFieldSet.count("BlackElo")) {
+        if (!cond.empty()) cond += " AND ";
+        cond += "g.WhiteElo >= " + std::to_string(paraRecord.limitElo) + " AND g.BlackElo >= "
+                + std::to_string(paraRecord.limitElo);
+    }
+    if (!cond.empty()) {
+        sql += " WHERE " + cond;
+    }
+    return sql;
 }
 
-
-bool DbRead::openDB(const std::string& dbPath)
+bool DbRead::readGames(const std::string& sqlString)
 {
-    mDb = DbCore::openDB(dbPath, (paraRecord.optionFlag & dup_flag_remove) == 0);
-    if (!mDb) {
+    assert(mDb && pool);
+
+    SQLite::Statement statement(*mDb, sqlString);
+
+    int idIdx = -1, fenIdx = -1, resultIdx = -1, moveIdx = -1;
+    for (int i = 0, n = statement.getColumnCount(); i < n; i++) {
+        std::string name = statement.getColumnName(i);
+        if ((name == "GID") || (name == "ID" && idIdx < 0)) {
+            idIdx = i;
+        } else if (name == "FEN") {
+            fenIdx = i;
+        } else if (name == "Result") {
+            resultIdx = i;
+        } else if (name == searchFieldNames[static_cast<int>(searchField)]) {
+            moveIdx = i;
+        }
+    }
+
+    if (idIdx < 0 || moveIdx < 0) {
+        std::cerr << "Error: the query must give the columns ID and " << searchFieldNames[static_cast<int>(searchField)]
+                  << std::endl;
         return false;
     }
 
-    searchField = DbRead::getMoveField(mDb);
-    if (searchField == SearchField::none) {
-        std::cerr << "Error: database " << dbPath << " has not any move field" << std::endl;
-        return false;
-    }
-    return true;
-}
-
-bool DbRead::readADb(const std::string& dbPath, const std::string& sqlString)
-{
-    if (!openDB(dbPath)) {
-        return false;
-    }
-    
-    for(auto && t : threadMap) {
+    for (auto&& t : threadMap) {
         t.second.resetStats();
     }
 
-    auto moveName = DbRead::searchFieldNames[static_cast<int>(searchField)];
-    assert(!moveName.empty());
-    
-    int flag = bslib::BoardCore::ParseMoveListFlag_quick_check | bslib::BoardCore::ParseMoveListFlag_discardComment;
-    if (searchField == SearchField::moves1) {
-        flag |= bslib::BoardCore::ParseMoveListFlag_move_size_1_byte;
-    }
+    int64_t readCnt = 0;
+    while (working && statement.executeStep()) {
+        if (paraRecord.gameNumberLimit > 0 && readCnt >= paraRecord.gameNumberLimit) {
+            break;
+        }
+        readCnt++;
 
-    {
-        SQLite::Statement statement(*mDb, sqlString);
-        
-        for (gameCnt = 0; statement.executeStep(); ++gameCnt) {
-            if (paraRecord.limitLen) {
-                auto c = statement.getColumn("PlyCount");
-                if (!c.isNull() && c.getInt() < paraRecord.limitLen) {
-                    continue;
-                }
-            }
+        banksia::PgnRecord record;
+        record.variant = variant;
+        record.gameID = statement.getColumn(idIdx).getInt();
 
-            bslib::PgnRecord record;
-
-            record.gameID = statement.getColumn("ID").getInt();
-            record.fenText = statement.getColumn("FEN").getText();
-            std::vector<int8_t> moveVec;
-
-            if (searchField == SearchField::moves) {
-                record.moveString = statement.getColumn("Moves").getText();
-                if (record.moveString.empty()) {
-                    continue;
-                }
-            } else {
-                auto c = statement.getColumn(moveName.c_str());
-                auto moveBlob = static_cast<const int8_t*>(c.getBlob());
-                
-                if (moveBlob) {
-                    auto sz = c.size();
-                    for(auto i = 0; i < sz; ++i) {
-                        moveVec.push_back(moveBlob[i]);
-                    }
-                }
-                
-                if (moveVec.empty()) {
-                    continue;
-                }
-            }
-
-            if (paraRecord.optionFlag & query_flag_print_pgn) {
-                DbRead::extractHeader(statement, record);
-            }
-            threadProcessAGame(record, moveVec);
-
-            if (gameCnt && (gameCnt & 0xffff) == 0) {
-                printStats();
-            }
-
-            if (succCount >= paraRecord.resultNumberLimit) {
-                break;
-            }
+        if (fenIdx >= 0) {
+            auto c = statement.getColumn(fenIdx);
+            if (!c.isNull()) record.fenText = c.getString();
+        }
+        if (resultIdx >= 0) {
+            auto c = statement.getColumn(resultIdx);
+            if (!c.isNull()) record.result = c.getString();
         }
 
-        pool->wait_for_tasks();
-        printStats();
+        if (wantHeaders) {
+            extractHeader(statement, record);
+        }
+
+        std::vector<int8_t> moveVec;
+        auto c = statement.getColumn(moveIdx);
+        if (searchField == SearchField::moves) {
+            record.moveString = c.isNull() ? "" : c.getString();
+        } else {
+            blobToMoveVec(c, moveVec);
+        }
+
+        gameBatch.emplace_back(std::move(record), std::move(moveVec));
+        if (gameBatch.size() >= 64) {
+            flushGameBatch();
+        }
+
+        if ((readCnt & 0xfff) == 0) {
+            printProgress();
+        }
     }
 
-    int64_t delCnt = 0;
-    for(auto && t : threadMap) {
-        t.second.deleteAllStatements();
-        delCnt += t.second.delCnt;
-    }
-
-    // Update table Info
-    if (delCnt > 0) {
-        int64_t gCnt = gameCnt - delCnt;
-        
-        std::string sqlstr = "UPDATE Info SET Value = '" + std::to_string(gCnt) + "' WHERE Name = 'GameCount'";
-        mDb->exec(sqlstr);
-
-        mDb->exec("COMMIT");
-    }
-
-    closeDb();
+    drainGameBatches();
+    pool->wait_for_tasks();
     return true;
 }
 
-void doProcessAGame(DbRead* instance, const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
+void DbRead::flushGameBatch()
 {
-    assert(instance);
-    instance->processAGame(record, moveVec);
+    if (gameBatch.empty() || !pool) {
+        return;
+    }
+    auto batch = std::make_shared<std::vector<std::pair<banksia::PgnRecord, std::vector<int8_t>>>>(std::move(gameBatch));
+    gameBatch.clear();
+    batchFutures.push_back(pool->submit([this, batch]() {
+        for (auto&& [record, moveVec] : *batch) {
+            if (!working) break;
+            processAGame(record, moveVec);
+        }
+    }));
+
+    /// enough queued work to keep every thread busy while the reader reads, and no more
+    const size_t maxInFlight = 4 * std::max<size_t>(1, pool->get_thread_count());
+    while (batchFutures.size() > maxInFlight) {
+        batchFutures.front().wait();
+        batchFutures.pop_front();
+    }
 }
 
-void DbRead::threadProcessAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
+void DbRead::drainGameBatches()
 {
-    assert(pool);
-    pool->submit(doProcessAGame, this, record, moveVec);
+    flushGameBatch();
+    for (auto&& f : batchFutures) {
+        f.wait();
+    }
+    batchFutures.clear();
 }
 
-
-void DbRead::processAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
+void DbRead::processAGame(const banksia::PgnRecord& record, const std::vector<int8_t>& moveVec)
 {
-    assert(!record.moveString.empty() || record.moveText || !moveVec.empty());
-    assert(record.gameID > 0);
-
-    auto t = getThreadRecord(); assert(t);
-    processAGameWithAThread(t, record, moveVec);
+    if (working) {
+        processedCnt++;
+        auto t = getThreadRecord();
+        assert(t);
+        processAGameWithAThread(t, record, moveVec);
+    }
 }
 
-void DbRead::processAGameWithAThread(ThreadRecord* t, const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
+void DbRead::extractBoard(banksia::BoardCore* board, const banksia::PgnRecord& record,
+                          const std::vector<int8_t>& moveVec, bool mainLineOnly)
 {
-    
+    board->newGame(record.fenText);
+
+    int flag = banksia::ParseMoveListFlag_quick_check;
+    if (wantBitboards) {
+        flag |= banksia::ParseMoveListFlag_create_bitboard;
+    }
+    if (wantHeaders) {
+        flag |= banksia::ParseMoveListFlag_create_san;
+    }
+
+    if (searchField == SearchField::moves) { // there is a text move only
+        flag |= banksia::ParseMoveListFlag_discardComment;
+        board->fromMoveList(record, banksia::Notation::san,
+                            mainLineOnly ? banksia::ParseVariation::discard : banksia::ParseVariation::parse,
+                            banksia::moveFormat, flag, checkToStop);
+    } else {
+        if (mainLineOnly) {
+            flag |= banksia::ParseMoveListFlag_ignore_high_levels;
+        }
+        if (searchField == SearchField::moves1) {
+            flag |= banksia::ParseMoveListFlag_move_size_1_byte;
+        }
+        board->fromMoveList(record, moveVec, flag, checkToStop);
+    }
+
+    board->result.result = banksia::string2ResultType(record.result);
+}
+
+void DbRead::processAGameWithAThread(ThreadRecord* t, const banksia::PgnRecord& record,
+                                     const std::vector<int8_t>& moveVec)
+{
+    assert(t);
+
+    t->initForBoards(variant);
+    assert(t->board);
+
+    extractBoard(t->board, record, moveVec, mainLineOnly);
+
+    t->hdpLen += t->board->getHistListSize();
+    t->gameCnt++;
+
+    if (boardCallback) {
+        boardCallback(t->board, &record);
+    }
+}
+
+void DbRead::forEachGameAsPgn(const std::function<bool(const std::string&)>& f)
+{
+    assert(mDb);
+
+    QueryGameRecord qgr(*mDb, searchField, fullGameQueryString, variant);
+
+    /// the full rows, one pass: the comments are looked up per game (indexed by GameID)
+    auto sql = fullGameQueryString;
+    if (!paraRecord.where.empty()) {
+        sql += " WHERE (" + paraRecord.where + ")";
+    }
+    sql += " ORDER BY g.ID";
+
+    CommentMap comments;
+    auto preload = hasTable(*mDb, "Comments") && !hasCommentIndex(*mDb);
+    if (preload) {
+        comments = loadComments(*mDb);
+    }
+
+    SQLite::Statement statement(*mDb, sql);
+    auto board = createBoard(variant);
+
+    while (working && statement.executeStep()) {
+        banksia::PgnRecord record;
+        queryForABoard(record, searchField, statement, qgr.queryComments, board, preload ? &comments : nullptr);
+        if (!f(toPgnString(board, record))) {
+            break;
+        }
+    }
+
+    delete board;
 }

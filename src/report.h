@@ -1,8 +1,7 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021-2022 Developers
+ * Copyright (c) 2019-2026 Nguyen Hong Pham (github@nguyenpham)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -11,38 +10,34 @@
 #ifndef OCGDB_REPORT_H
 #define OCGDB_REPORT_H
 
-#include <stdio.h>
-#include "records.h"
+#include <fstream>
+#include <mutex>
+#include <string>
 
 namespace ocgdb {
 
-class Report
-{
-public:
-    Report() {}
-    ~Report() {
-        close();
-    }
-    
-    bool isOn() const {
-        return printConsole || openingstream;
-    }
+    /// Where results go: the console, and the report file of -r when there is one.
+    class Report
+    {
+    public:
+        Report() { }
+        ~Report() { close(); }
 
-    void init(bool print, const std::string& path);
-    void printOut(const std::string& str);
-    void printOutPgn(const bslib::PgnRecord& record);
+        bool isOn() const { return printConsole || openingstream; }
 
-    void close();
+        void init(bool print, const std::string& path);
+        void printOut(const std::string& str);
 
-public:
-    bool printConsole = true, openingstream = false;
-    mutable std::mutex printMutex, ofsMutex;
-    std::ofstream ofs;
-};
+        void close();
 
-extern Report printOut;
+    public:
+        bool printConsole = true, openingstream = false;
+        mutable std::mutex printMutex;
+        std::ofstream ofs;
+    };
 
-}
+    extern Report printOut;
 
+} // namespace ocgdb
 
-#endif /* REPORT_H */
+#endif /* OCGDB_REPORT_H */

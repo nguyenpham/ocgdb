@@ -1,177 +1,237 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021-2022 Developers
+ * Copyright (c) 2019-2026 Nguyen Hong Pham (github@nguyenpham)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
  */
 
-#ifndef OCGDB_PARSER_H
-#define OCGDB_PARSER_H
+#ifndef Parser_hpp
+#define Parser_hpp
 
 #include <vector>
 #include <unordered_map>
 #include <fstream>
 
-#include "board/types.h"
-#include "board/base.h"
+#include "base/types.h"
+#include "base/base.h"
 
 namespace ocgdb {
 
-enum class ParseError
-{
-    none,
-    noinput,
-    wrong_lexical,
-    missing_condition,
-    missing_op_comparison,
-    missing_term,
-    missing_factor,
-    missing_close,
-    invalid,
-    max
-};
+    enum class ParseError {
+        none,
+        noinput,
+        wrong_lexical,
+        missing_condition,
+        missing_op_comparison,
+        missing_term,
+        missing_factor,
+        missing_close,
+        invalid,
+        unexpected,      // a token left over after a complete query
+        unknown_word,    // a word that is neither a keyword nor a piece
+        wrong_move,      // a move in move[...] or line[...] that cannot be read
+        max
+    };
 
-enum class Lex
-{
-    none, string, number, fen,
+    enum class Lex {
+        none,
+        string,
+        number,
+        fen,
 
-    operator_begin,
-    operator_and = operator_begin, operator_or,
-    operator_add, operator_sub,
-    operator_multi, operator_div,
-    operator_comparison,
-    operator_pattern_shift,
+        operator_begin,
+        operator_and = operator_begin,
+        operator_or,
+        operator_not,
+        operator_then,
+        operator_add,
+        operator_sub,
+        operator_multi,
+        operator_div,
+        operator_comparison,
+        operator_pattern_shift,
 
-    no_node,
-    comma = no_node,
-    bracket,
-};
+        no_node,
+        comma = no_node,
+        bracket,
+        raw,    // the text inside move[...] or line[...], read by the parser itself
+    };
 
-class LexWord
-{
-public:
-    Lex lex = Lex::none;
-    std::string string;
-};
+    class LexWord
+    {
+    public:
+        Lex lex = Lex::none;
+        std::string string;
+    };
 
 
-enum class Operator
-{
-    op_and, op_or, op_add, op_sub, op_multi, op_div,
-    op_eq, op_l, op_le, op_g, op_ge, op_ne,
-    none
-};
+    enum class Operator {
+        op_and,
+        op_or,
+        op_add,
+        op_sub,
+        op_multi,
+        op_div,
+        op_eq,
+        op_l,
+        op_le,
+        op_g,
+        op_ge,
+        op_ne,
+        op_not,
+        none
+    };
 
-enum class NodeType
-{
-    none, piece, number, op, fen, pattern
-};
+    /// keyword: ply, check, mate, capture, promotion, wtm, btm (Node::keyword);
+    /// move: move[...] (Node::moveSpecVec); line: line[...] (Node::lineMoves)
+    enum class NodeType { none, piece, number, op, fen, pattern, keyword, move, line };
 
-enum class PatternOperand
-{
-    equal, lessthan, greaterthan, shift, none
-};
+    enum class Keyword { none, ply, check, mate, capture, promotion, wtm, btm };
 
-class Node
-{
-public:
-    Node() {}
-    Node(const LexWord& w);
+    /// What a query is evaluated on: the position's bitboards, and the board it came from, whose
+    /// history gives the move that led to the position (`board` may be null: then move conditions
+    /// are false).
+    class PqlContext
+    {
+    public:
+        const banksia::BitboardBase* bb = nullptr;
+        const banksia::BoardCore* board = nullptr;
+    };
 
-    std::string toString() const;
-    int evaluate(const std::vector<uint64_t>& bitboardVec) const;
-    bool isValid() const;
+    /// One move pattern of move[...]: every field left at its default matches anything.
+    class MoveSpec
+    {
+    public:
+        int pieceType = -1;
+        banksia::Side side = banksia::Side::none;
+        int from = -1, fromCol = -1, dest = -1, promotion = -1;
+        bool capture = false;
+        int castle = 0; // 1 short (O-O), 2 long (O-O-O)
+    };
 
-    int selectSquare(const char*);
-    int selectSquare(const std::string& from, const std::string& to);
-    
-    bool isInFenHashSet(uint64_t hash) const {
-        return fenHashSet.find(hash) != fenHashSet.end();
-    }
-    
-    void pattern_shift();
 
-private:
-    bool evaluate_pattern(const std::vector<uint64_t>& bbVec0, const std::vector<uint64_t>& bbVec1, PatternOperand, int tolerance) const;
+    class Node
+    {
+    public:
+        Node(banksia::ChessVariant variant) : variant(variant) { }
+        Node(banksia::ChessVariant variant, const LexWord& w);
+        virtual ~Node();
 
-    bool pattern_shift_up(std::vector<uint64_t>&);
-    bool pattern_shift_down(std::vector<uint64_t>&);
-    bool pattern_shift_left(std::vector<uint64_t>&);
-    bool pattern_shift_right(std::vector<uint64_t>&);
+        std::string toString() const;
+        int evaluate(const PqlContext&) const;
+        bool isValid() const;
 
-public:
-    NodeType nodeType = NodeType::none;
-    std::string string;
-    int number;
-    Operator op = Operator::none;
-    Node *lhs = nullptr, *rhs = nullptr;
-    
-    std::set<uint64_t> fenHashSet;
+        int selectSquare(const char*);
+        int selectSquare(const std::string& from, const std::string& to);
 
-    bool hassquareset = false, negative = false;
-    int64_t squareset = 0;
+        bool isInFenHashSet(uint64_t hash) const { return fenHashSet.find(hash) != fenHashSet.end(); }
 
-    int pieceType = -1;
-    bslib::Side pieceSide = bslib::Side::none;
-    std::set<int> locSet;
-    std::vector<std::vector<uint64_t>> patternBitBoards;
 
-    PatternOperand patternOperand;
-    int patternTolerance = 0;
-};
+    private:
+        int evaluate_keyword(const PqlContext&) const;
+        bool evaluate_move(const PqlContext&) const;
+        bool evaluate_line(const PqlContext&) const;
 
-class Parser
-{
-public:
-    Parser();
-    virtual ~Parser();
+        bool evaluate_pattern(const banksia::BitboardBase* bbVec0, const banksia::BitboardBase* bbVec1,
+                              PatternOperand, int tolerance) const;
 
-    bool parse(bslib::ChessVariant _variant, const char*);
+    public:
+        NodeType nodeType = NodeType::none;
+        std::string string;
+        int number;
+        Operator op = Operator::none;
+        Node *lhs = nullptr, *rhs = nullptr;
 
-    std::string getErrorString() const;
-    void printError() const;
+        std::set<uint64_t> fenHashSet;
 
-    int evaluate(const std::vector<uint64_t>& bitboardVec) const;
-    void printTree() const;
+        banksia::BB* squareBB = nullptr;
 
-private:
-    void deleteTree();
-    void deleteTree(Node* node) const;
+        int pieceType = -1;
+        banksia::Side pieceSide = banksia::Side::none;
+        std::set<int> locSet;
+        std::vector<banksia::BitboardBase*> patternBitBoards;
 
-    std::vector<LexWord> lexParse(const char*);
+        PatternOperand patternOperand;
+        int patternTolerance = 0;
 
-    Node* parse_fenclause(size_t&);
-    Node* parse_condition(size_t&);
-    Node* parse_expression(size_t&);
-    Node* parse_term(size_t&);
-    Node* parse_factor(size_t&);
-    Node* parse_piece(size_t&);
-    Node* parse_piecename(size_t&);
-    Node* parse_square(size_t&);
-    Node* parse_fenstring(size_t&);
-    Node* parse_pattern(size_t&);
-    void parse_squareset(Node*, size_t&);
- 
-    void parse_patternterm(size_t&);
-    void parse_patterncondition(size_t&);
+        Keyword keyword = Keyword::none;
+        std::vector<MoveSpec> moveSpecVec;
+        std::vector<banksia::Move> lineMoves;
+        uint64_t lineStartHash = 0;
 
-    void printTree(const Node* node, std::string prefix = "") const;
+        banksia::ChessVariant variant;
+    };
 
-    static std::string getErrorString(ParseError error);
+    class Parser
+    {
+    public:
+        Parser();
+        virtual ~Parser();
 
-private:
-    bslib::ChessVariant variant = bslib::ChessVariant::standard;
-    bslib::BoardCore *board = nullptr, *board2 = nullptr;
+        bool parse(banksia::ChessVariant, const char*);
 
-    std::vector<LexWord> lexVec;
-    Node* root = nullptr;
-    
-    ParseError error = ParseError::none;
-};
+        std::string getErrorString() const;
+        void printError() const;
+
+        /// The query's value on one position (for a `then` sequence: its first part's).
+        int evaluate(const PqlContext&) const;
+
+        /// For searching games position by position: `stage` belongs to the game being read and is 0
+        /// at its start. True when the query is satisfied -- for "A then B", when a position matches
+        /// B after an earlier one matched A.
+        bool match(const PqlContext&, int& stage) const;
+        bool isSequence() const { return stages.size() > 1; }
+
+        void printTree() const;
+
+    private:
+        void deleteTree();
+        void deleteTree(Node* node) const;
+
+        std::vector<LexWord> lexParse(const char*);
+
+        /// recursive descent, lowest precedence first: or, and, not, comparison, + -, * /, primary
+        Node* parse_or(size_t&);
+        Node* parse_and(size_t&);
+        Node* parse_not(size_t&);
+        Node* parse_comparison(size_t&);
+        Node* parse_sum(size_t&);
+        Node* parse_product(size_t&);
+        Node* parse_primary(size_t&);
+
+        Node* parse_fenclause(size_t&);
+        Node* parse_fenstring(size_t&);
+        Node* parse_pattern(size_t&);
+        Node* parse_move(size_t&);
+        Node* parse_line(size_t&);
+        bool parse_movespec(const std::string&, MoveSpec&) const;
+
+        Node* parse_piece(size_t&);
+        Node* parse_piecename(size_t&);
+        void parse_squareset(Node*, size_t&);
+
+        Node* newOperator(const LexWord&, Node* lhs, Node* rhs);
+        void setError(ParseError, size_t at);
+
+
+        void printTree(const Node* node, std::string prefix = "") const;
+
+        static std::string getErrorString(ParseError error);
+
+    private:
+        banksia::ChessVariant variant = banksia::ChessVariant::standard;
+        banksia::BoardCore *board = nullptr, *board2 = nullptr;
+
+        std::vector<LexWord> lexVec;
+        Node* root = nullptr;           // == stages.front()
+        std::vector<Node*> stages;      // the parts of "A then B then ..."
+
+        ParseError error = ParseError::none;
+        std::string errorNear;          // the token where the error was found
+    };
 
 } // namespace ocdb
 
-#endif /* OCGDB_PARSER_H */
+#endif /* Parser_hpp */

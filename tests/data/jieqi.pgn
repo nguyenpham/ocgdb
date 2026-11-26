@@ -1,0 +1,105 @@
+[Event "Jieqi random 1"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 0"]
+[Black "Black 0"]
+[Result "*"]
+[Variant "jieqi"]
+
+1.X0g2=P Xhc7=P 2.Xih0=C Xgi7=R 3.Xb1=B Ri8 4.Xce2=B Xa5=P
+5.Xhi2=P Xc5=P 6.Xi4=P Xa8=C 7.Xe4=N Xi5=C 8.Xa2=R Xca7=N
+9.Ch6 Xe5=A 10.Xg4=N Xg5=R 11.Ra1 Xb8=P 12.Xde1=C Rf5
+13.Ce6 Xd8=B 14.Ch6 Af6 15.Ra0 Xfe8=B 16.Xa4=P Rd5
+17.Ch3 Ae7 18.Ch5 Xg7=N 19.Cc1 Xf9=A 20.Ce5 Nc6
+21.Xe1=A Na7 22.Xd1=R Nh9 23.Af0 Rxd1 24.Bd3 Nc8
+25.Ae1 b7 26.Ni3 Ch5 27.Cg5 Na9 28.Ng4 b6
+29.Cb1 *
+
+[Event "Jieqi random 2"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 1"]
+[Black "Black 1"]
+[Result "*"]
+[Variant "jieqi"]
+
+1.X2i2=P Xii7=B 2.Xi1=P X7a7=A 3.Xb6=N Xbc7=N 4.Xba2=N Xa8=B
+5.Xe4=R Xg5=P 6.Xge2=P Xh4=R 7.Xf1=C Xe5=C 8.Xb0=P Xde8=P
+9.Ce1 Xg7=C 10.Ca1 Ne6 11.Cd1 Cf7 12.Xi4=A Cg7
+13.i3 Rh9 14.i2 Xi5=A 15.Xg4=C Rh5 16.Cd4 Cg6
+17.Cg3 Rh3 18.Cg0 Re3 19.Cd7 Ca5 20.Cd3 Xge7=P
+21.Nc4 Ch6 22.Cd1 Cd5 23.Ci0 Xa5=P 24.Xfe1=P Xc5=R
+25.Ne5 Rxi3 26.Rh4 Rc7 27.Cxi3 Axh4 28.Ca1 Cd8
+29.Xa4=A Ab6 30.Xc4=B Rc5 31.Cg3 Cd6 32.b1 Aa7
+ *
+
+[Event "Jieqi random 3"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 2"]
+[Black "Black 2"]
+[Result "*"]
+[Variant "jieqi"]
+
+1.Xh4=A Xb7c7=P 2.Xb3=A Xce7=C 3.Xi1=P Xi5=P 4.Xg2=R Xfe8=A
+5.Xce2=C Xg5=B 6.Xfe1=B Xi6=A 7.Xa1=B X7i7=N 8.Ac4 Ng6
+9.Xg4=N Xd8=R 10.Xa4=P Xa5=P 11.i2 Xa8=N 12.Xd1=P Xg7=R
+13.Ca2 Ad7 14.Ab3 Xe5=C 15.Xc4=P Ah7 16.Nh2 Rf7
+17.Xi4=P Xe8=P 18.Ai3 Cc5 19.Rb2 Kf9 20.Ca3 Ai8
+21.Ng4 Ce6 22.Ah4 Rf3 23.Xe2=C Cee5 24.Ca2 xa4
+25.xc5 Xi7=P 26.Cxa8 Rf0# *
+
+[Event "Jieqi random 4"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 0"]
+[Black "Black 3"]
+[Result "*"]
+[Variant "jieqi"]
+
+1.Xge2=P Xb7c7=C 2.X0g2=C Xa5=P 3.Xxh9=P Xde8=A 4.Xg4=C Xce7=C
+5.Xa1=A Ad9 6.Cf2 Xh0=B 7.X2a2=R Xa8=R 8.Xi1=B Rf8
+9.Xe4=B Xii7=A 10.Rd2 Xa7=P 11.Xde1=P Ce8 12.Xba2=P Ca8
+13.Xc4=R Xe8=B 14.Rd8 Cb8 15.Xi4=P Cb6 16.Rb4 Rf6
+17.Ab2 Xg5=P 18.Cxg9 Rf4 19.Rd5 Ch7 20.Cg2 Bf2
+21.Cf9 Xe5=N 22.i5 Ce7 23.Cxd9 Rf7 24.Kd0 Bh0
+25.Bc2 Ah8 26.Rb3 Kf9 27.Ac3 Cb8 28.Rd6 Rg7
+29.Cg3 Ag9 30.Rb5 *
+
+[Event "Jieqi random 5"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 1"]
+[Black "Black 0"]
+[Result "*"]
+[Variant "jieqi"]
+
+1.Xxh9=N Xb6=C 2.Xca2=P Xce7=P 3.Xd1=A Xde8=N 4.Xhg2=P Xg5=R
+5.Xgi2=B Xxh9=C 6.Xc4=P Xh2=P 7.Xe4=B Cb7 8.Xf2=C Xba7=P
+9.Cb2 Xa5=A 10.Xi4=P Nc7 11.Xh0=P Xi7=R 12.Cb6 Xc5=P
+13.Xa4=A Xi5=B 14.Cd6 Rh5 15.Xfe1=R xg2 16.Xc0=C Ab4
+17.xc5 *
+
+[Event "Jieqi random 6"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 2"]
+[Black "Black 1"]
+[Result "*"]
+[Variant "jieqi"]
+
+1.Xge2=P Xb6=P 2.Xa1=P Xce7=P 3.Xh3=P Xc7=P 4.Xi4=A Xb9=R
+5.X2c2=R Xa5=C 6.Xba2=B Xh6=B 7.Xhi2=R Xfe8=A 8.Xfe1=P Xi5=N
+9.Xh0=B Xgi7=B 10.Xg4=N Rb8 11.Xa4=C Xg7=C 12.Rd2 Cxa2
+13.h4 Ad7 14.Rg2 Bf4 15.Xxa2=C Ch7 16.h5 Xc5=N
+17.Ca8 Xg5=A 18.Xe4=P Xh9=R 19.C2a3 Nd3 20.Rh2 Nc5
+21.Ca9+ Rb9 22.C3a8 Xe5=P 23.Ci8 Bg9 24.Rh1 xe4
+25.Cg8 Bi7 26.h6 Ch8 27.Kf0 Nb3 28.Ni3 Nxa1
+29.Rd6 e3 30.Rf1 Bh2+ 31.Rg1 Rxa9 *
+

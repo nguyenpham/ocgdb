@@ -1,8 +1,7 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021-2022 Developers
+ * Copyright (c) 2019-2026 Nguyen Hong Pham (github@nguyenpham)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -11,110 +10,97 @@
 #ifndef OCGDB_BUILDER_H
 #define OCGDB_BUILDER_H
 
+#include <map>
 #include <vector>
 #include <unordered_map>
-#include <fstream>
+#include <unordered_set>
 
-#include "3rdparty/SQLiteCpp/SQLiteCpp.h"
-#include "3rdparty/threadpool/thread_pool.hpp"
-
-#include "board/types.h"
-#include "board/base.h"
-
-#include "records.h"
-#include "pgnread.h"
 #include "dbcore.h"
+#include "pgnread.h"
 
+#ifdef _XIANGQI_
+#include "wxfread.h"
+#endif
 
 namespace ocgdb {
 
+    /// -create: a new database from PGN files (xiangqi: also WXF files).
+    /// -merge: adds the games of PGN files and of other databases to an existing database.
+    /// The logic of the inserts is Banksia GUI's (ui/ocgdb/builder.cpp), so both programs write
+    /// the same databases.
+    class Builder : virtual public DbCore,
+#ifdef _XIANGQI_
+                    virtual public WXFRead
+#else
+                    virtual public PGNRead
+#endif
+    {
+    public:
+        static int standardizeFEN(char* fenBuf);
 
+    protected:
+        virtual bool runTask() override;
 
-class Builder : virtual public PGNRead, virtual public DbCore
-{
-protected:
-    void create();
+        bool create();
+        bool merge();
 
-    bool createDb(const std::string& path);
+        /// the tables of a new database
+        bool createDb(const std::string& path);
+        /// an existing database, ready for adding games: its columns, names and largest IDs
+        bool openForAppending(const std::string& path);
 
-    void createDb_EPD();
+        void setupTagVec(const std::vector<std::string>& tagVec, int optionFlag);
+        bool addNewField(const std::string& fieldName);
+        void updateInfoTable();
 
-protected:
-    virtual void runTask() override;
-    virtual int getEventNameId(char* name);
-    virtual int getSiteNameId(char* name);
-    virtual int getPlayerNameId(char* name, int elo);
+        /// the games of another database, added as if they came from a PGN file
+        void addGamesFromDb(const std::string& path);
 
-    void setupTagVec(const std::vector<std::string>& tagVec, int optionFlag);
+        IDInteger getEventNameId(ThreadRecord*, const char* name);
+        IDInteger getSiteNameId(ThreadRecord*, const char* name);
+        IDInteger getPlayerNameId(ThreadRecord*, const char* name, int elo);
+        IDInteger getNewGameID();
 
-    virtual IDInteger getNewGameID();
+        virtual void printStats(bool completed) const override;
 
-    virtual void updateInfoTable();
+    private:
+        virtual void processPGNGameWithAThread(ThreadRecord*, const std::unordered_map<const char*, char*>&,
+                                               const char*) override;
 
-    
-private:
+        IDInteger getNameId(const char* name, int elo, IDInteger& cnt, SQLite::Statement* insertStatement,
+                            std::unordered_map<std::string, IDInteger>& idMap);
+        void loadNameMap(const std::string& tableName, std::unordered_map<std::string, IDInteger>& idMap,
+                         IDInteger& maxId);
 
-    bool createInsertStatements(SQLite::Database& mDb);
-    virtual void processPGNGameWithAThread(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *) override;
-    void processPGNGameWithAThread_OCGDB(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *);
+        /// the game in t->board is a copy of one already added (option nodup)
+        bool isBoardDuplication(ThreadRecord* t, IDInteger& gameID);
 
-    static SQLite::Database* createDb(const std::string& path, int optionFlag, const std::vector<std::string>& tagVec, const std::string& dbDescription);
+        static std::string nameKey(const char* name);
 
-    IDInteger getNameId(char* name, int elo, IDInteger& cnt, SQLite::Statement* insertStatement, std::unordered_map<std::string, IDInteger>& idMap);
+    protected:
+        std::vector<std::string> create_tagVec;
+        std::map<std::string, int> create_tagMap;
+        mutable std::mutex create_tagFieldMutex;
 
-    virtual void printStats() const override;
+        mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex;
 
-    bool addNewField(const std::string& fieldName);
+        /// The ID of a game is its place in its file after the IDs of the files before it, so a
+        /// database is the same however its threads ran, and game N of a PGN file is the game
+        /// with ID N (when nothing is skipped: a game skipped leaves its ID unused).
+        /// fileBaseID: the largest ID before the current file; gameIDCnt: the largest ID given.
+        IDInteger fileBaseID = 0;
+        IDInteger gameIDCnt = 0;
+        void startAFile();
+        std::atomic<int64_t> addedCnt { 0 }, dupCnt { 0 };
 
-public:
-    static int standardizeFEN(char *fenBuf);
-    static void standardizeDate(char* date);
-    static std::string standardizeDate(const std::string& date);
-    static std::string encodeString(const std::string& name);
+    private:
+        std::unordered_map<std::string, IDInteger> playerIdMap, eventIdMap, siteIdMap;
 
-private:
-    void processFile_EPD(const std::string& path);
-    void updateInfoTable_EPD();
-    bool createDb_EPD(const std::string& path, const std::string& description);
+        mutable std::mutex dupHashKeyMutex;
+        /// the keys of the games added (option nodup)
+        std::unordered_set<uint64_t> gameKeySet;
+    };
 
-    static EPDRecord processALine_EPD(const std::string&);
-    void saveToDb_EPD();
-    void processPGNGameWithAThread_EPD(ThreadRecord*, const std::unordered_map<char*, char*>&, const char *);
-    EPDRecord process_addBoard_EPD(const bslib::BoardCore* board, const bslib::Hist*);
+} // namespace ocgdb
 
-protected:
-    std::vector<std::string> create_tagVec;
-    mutable std::mutex gameMutex, eventMutex, siteMutex, playerMutex, commentMutex;
-
-    mutable std::mutex create_tagFieldMutex;
-    std::unordered_map<std::string, int> create_tagMap;
-
-private:
-    mutable std::mutex transactionMutex;
-    const int TransactionCommit = 256 * 1024;
-    int transactionCnt = 0;
-    
-    std::unordered_map<std::string, IDInteger> playerIdMap, eventIdMap, siteIdMap;
-
-    /// Prepared statements
-    SQLite::Statement *playerInsertStatement = nullptr;
-    SQLite::Statement *eventInsertStatement = nullptr;
-    SQLite::Statement *siteInsertStatement = nullptr;
-
-    SQLite::Statement *benchStatement = nullptr;
-
-    mutable std::mutex epdRecordVecMutex;
-    std::vector<EPDRecord> epdRecordVec;
-    mutable std::mutex epdVistedHashSetMutex;
-    std::set<uint64_t> epdVistedHashSet;
-
-    SQLite::Statement *epdInsertStatement = nullptr;
-    std::vector<std::string> epdFieldList;
-
-    bslib::BoardCore* epdBoard = nullptr;
-
-};
-
-
-} // namespace ocdb
 #endif // OCGDB_BUILDER_H

@@ -1,0 +1,13 @@
+SQLite3 Multiple Ciphers 2.5.1 (SQLite 3.53.4), the amalgamation, unmodified.
+
+  source           https://github.com/utelle/SQLite3MultipleCiphers/releases/download/v2.5.1/sqlite3mc-2.5.1-sqlite-3.53.4-amalgamation.zip (3853170 bytes)
+  zip SHA-256      4125f8ff275ea953dabb3289331b20a0e76d4fc060f57148f4a5df3bf3b0d5e0 (equal to the release's sqlite3mc-2.5.1-SHA256SUMS)
+  attestation      verified with gh attestation verify -R utelle/SQLite3MultipleCiphers
+  SQLITE_SOURCE_ID 2026-07-24 19:02:57 bf7c7f30031888f4e796e429ab3978879485813aaca6f641c7b33e4e09459bcc
+  licence          MIT (SQLite3 Multiple Ciphers); SQLite itself is public domain
+
+Files: sqlite3mc_amalgamation.c/.h (SQLite with the ciphers), sqlite3.h and sqlite3ext.h (the
+original SQLite headers, as shipped in the zip). The zip's shell3mc_amalgamation.c and README.md
+are not kept. The name is not VERSION: this folder is on include paths, and on a case-insensitive
+file system #include <version> (C++20) would find that file.
+How it is built: docs/building.md §4 (the Makefile's SQLITE_DEFS).

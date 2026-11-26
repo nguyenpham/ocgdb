@@ -1,0 +1,99 @@
+[Event "Xiangqi random 1"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 0"]
+[Black "Black 0"]
+[Result "*"]
+
+1.Ch6 Na7 2.Ci2 Cbf7 3.Cg2 Ke8 4.Chh2 Cf1
+5.Ca2 Ra8 6.Cac2 Cb7 7.a4 Cg7 8.Ca2 Ce1
+9.Chb2 Ri7 10.Cb4 Ri9 11.Cab2 c5 12.Ra3 Kd8
+13.Cc4 Rb8 14.Ni2 Cb1 15.Cd2 Cbb7 16.Cd6 Cb3
+17.Ra0 Ri8 18.Cb4 Be7 19.Cd1 Rb6 20.Ri1 a5
+21.Ke1 Rb8 22.Ke0 Rh8 23.Cd6 Nb5 24.Ba2 Ade8
+25.Cxg6 Rc8 26.Rd1+ Ad7 27.Cgg4 Ch7 28.Bc0 Na7
+29.Raa1 *
+
+[Event "Xiangqi random 2"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 1"]
+[Black "Black 1"]
+[Result "*"]
+
+1.Ni2 Ci7 2.Ri1 Cb4 3.Chg2 Ci4 4.Ri0 Cf4
+5.Cbe2 Cf1 6.Ra2 Ra7 7.Rc2 Cc1 8.Rb2 Ke8
+9.Ce1 Rf7 10.Ci1 Re7 11.Cd1 Rb7 12.g4 a5
+13.i4 Rb4 14.Cd6 Cd1 15.e4 Ch7 16.Afe1 Rd4
+17.Ri1 Ch0+ 18.Be2 Ch5 19.Ad2 Nc7 20.i5 Ce1
+21.Cgxg6 Ch7 22.Ng1 Ch2 23.a4 Rc4 24.Ba2 Bge7
+25.Rb3 Cf1 26.Ni2 Cd1 27.Rb8+ Ke9 28.Rg1 Ch3
+29.Cg8 Rd4 30.Rb3 Rc4 31.Cxd1 Nf8 32.Ce1 Ri8
+ *
+
+[Event "Xiangqi random 3"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 2"]
+[Black "Black 2"]
+[Result "*"]
+
+1.Chc2 Ca7 2.Cb1 Ra8 3.Ade1 Ch5 4.Ra2 Ce5
+5.Ni2 Ci5 6.Ca1 e5 7.g4 Ch5 8.Cd1 Nc7
+9.a4 Ade8 10.Cd3 Ch3 11.Bge2 Ch7 12.Ccd2 Ci7
+13.Ng1 Ce7 14.Cd1 Cd7 15.Ad0 Cd4 16.c4 i5
+17.Cf1 Bge7 18.i4 xi4 19.Ca3 Ri5 20.Ade1 g5
+21.xg5 Rd8 22.Rb2 Cd3 23.Cf7 Nd9 24.Rc2 Axf7
+25.Rc1 Ri7 26.Bg4 Rd4 27.Rb1 Rd6 *
+
+[Event "Xiangqi random 4"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 0"]
+[Black "Black 3"]
+[Result "*"]
+
+1.Cbc2 Cb3 2.Ade1 Ch4 3.Ca2 Ch7 4.Cab2 Ni7
+5.g4 Cb8 6.Bge2 Chh8 7.Ch4 e5 8.Ch6 Che8
+9.Ni2 Bge7 10.c4 Cb3 11.Ra1 Ng8 12.Cb1 Nf6
+13.i4 Cd8 14.Nh4 Cd2 15.Cb2 Ke8 16.Nxi6 Rh9
+17.c5 Cd4 18.Cd2 Cxi4 19.Ba2 Ke9 20.Ch2 xc5
+21.Bc4 Ne4 22.Cd6 Ci5 23.Ch7 Rh8 24.Cd8 Bg9
+25.xe4 Ri8 26.Ch0 Ci4 27.Cb8 Cb6 28.Ch5 Rxi6
+29.Ad2 Bi7 30.Cf8 Ba7 31.Ch9+ Bg9 32.g5 Ra8
+33.Cf7 Ke8 34.Ci9 Ci3 35.Rh1 Ra9 36.Cii7 Rh6
+37.Ke1 Bc9 38.Rxi3 Cb4 *
+
+[Event "Xiangqi random 5"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 1"]
+[Black "Black 0"]
+[Result "*"]
+
+1.Ch3 Chc7 2.Nc2 Ri8 3.Ch6 Cb4 4.Ra1 Rh8
+5.Rb1 Cb3 6.c4 Rf8 7.Ca2 Rfa8 8.Cxa6 Cg7
+9.Ca7 Rb8 10.Cxe6 Raa8 11.Rxb3 i5 12.Cd7 *
+
+[Event "Xiangqi random 6"]
+[Site "?"]
+[Date "2026.10.06"]
+[Round "?"]
+[White "Red 2"]
+[Black "Black 1"]
+[Result "*"]
+
+1.Chf2 Bi7 2.Afe1 Ra8 3.Cfd2 Nc7 4.Bce2 Ba7
+5.Cb5 Cxb0+ 6.Rxb0 Ng7 7.Cb8 Rg9 8.Rb3 c5
+9.Bg4 Afe8 10.Ni2 Ch1 11.Rb5 Ch5 12.Cb2 Nxb5
+13.Af0 Ch0 14.Ke1 Nf9 15.Cb9+ Bc9 16.Cb0 Ch7
+17.Cxd9 g5 18.Cd7 Ad9 19.Ng1 Ch0 20.Ni2 Ch3
+21.Cf7 a5 22.B4e2 e5 23.g4 Rh9 24.Cf1 c4
+25.Cf2 Bg9 26.Ng1 Rb8 27.Cf4 Rb7 28.Ce4+ xe4
+29.Kf1 *
+

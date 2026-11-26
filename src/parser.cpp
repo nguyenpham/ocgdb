@@ -1,8 +1,7 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021-2022 Developers
+ * Copyright (c) 2019-2026 Nguyen Hong Pham (github@nguyenpham)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -12,43 +11,35 @@
 #include <string.h>
 #include <iostream>
 #include <sstream>
-#include <map>
 #include <set>
 
 #include "parser.h"
-#include "board/chess.h"
-#include "board/base.h"
 
-static int popCount(uint64_t x)
-{
-   int count = 0;
-   while (x) {
-       count++;
-       x &= x - 1; // reset LS1B
-   }
-   return count;
-}
+#if defined(_CHESS_) || defined(_XCHESS_)
+#include "chess/chess.h"
+#include "chess/chessbitboard.h"
+#endif
+
+#ifdef _XIANGQI_
+#include "xq/xq.h"
+#include "xq/xqbitboard.h"
+#endif
+
+#include "records.h"
+
 
 using namespace ocgdb;
 
-static const std::unordered_map<std::string, Operator> string2operatorMap{
-    {"and", Operator::op_and},
-    {"&&", Operator::op_and},
-    {"or", Operator::op_or},
-    {"||", Operator::op_or},
-    {"+", Operator::op_add},
-    {"-", Operator::op_sub },
-    {"*", Operator::op_multi},
-    {"/", Operator::op_div},
+static const std::unordered_map<std::string, Operator> string2operatorMap {
+    { "and", Operator::op_and }, { "&&", Operator::op_and }, { "or", Operator::op_or },
+    { "||", Operator::op_or },   { "+", Operator::op_add },  { "-", Operator::op_sub },
+    { "*", Operator::op_multi }, { "/", Operator::op_div },
 
-    {"=", Operator::op_eq},
-    {"==", Operator::op_eq},
-    {"<", Operator::op_l},
-    {"<=", Operator::op_le},
-    {">", Operator::op_g},
-    {">=", Operator::op_ge},
-    {"<>", Operator::op_ne},
-    {"!=", Operator::op_ne},
+    { "=", Operator::op_eq },    { "==", Operator::op_eq },  { "<", Operator::op_l },
+    { "<=", Operator::op_le },   { ">", Operator::op_g },    { ">=", Operator::op_ge },
+    { "<>", Operator::op_ne },   { "!=", Operator::op_ne },
+
+    { "not", Operator::op_not }, { "!", Operator::op_not },
 };
 
 static Operator string2operator(const std::string& s)
@@ -57,7 +48,21 @@ static Operator string2operator(const std::string& s)
     return it != string2operatorMap.end() ? it->second : Operator::none;
 }
 
-Node::Node(const LexWord& w)
+Node::~Node()
+{
+    for (auto&& bb : patternBitBoards) {
+        delete bb;
+    }
+    patternBitBoards.clear();
+
+    if (squareBB) {
+        delete squareBB;
+        squareBB = nullptr;
+    }
+}
+
+
+Node::Node(banksia::ChessVariant variant, const LexWord& w) : variant(variant)
 {
     assert(w.lex < Lex::no_node);
     string = w.string;
@@ -71,24 +76,21 @@ Node::Node(const LexWord& w)
 }
 
 
-static const std::string noteTypeStrings[] = {
-    "none", "piece", "number", "op"
-};
+static const std::string noteTypeStrings[] = { "none", "piece", "number", "op", "fen", "pattern", "keyword", "move", "line" };
 
 std::string Node::toString() const
 {
-    std::string s =
-        noteTypeStrings[static_cast<int>(nodeType)]
-        + " " + string
-        ;
-    
-    if (nodeType == NodeType::piece && hassquareset) {
-        s += "\n" + bslib::ChessBoard::bitboard2string(squareset);
+    std::string s = noteTypeStrings[static_cast<int>(nodeType)] + " " + string;
+
+    //#ifdef _CHESS_
+    if (nodeType == NodeType::piece && squareBB) {
+        s += "\n" + squareBB->toString();
     }
-    
+
     return s;
 }
 
+#ifdef _CHESS_
 static int coordinate2pos(const char* s)
 {
     auto c = s[0], d = s[1];
@@ -98,57 +100,148 @@ static int coordinate2pos(const char* s)
             return pos;
         }
     }
-    
+
     return -1;
 }
+#endif
+
+#ifdef _XIANGQI_
+static int xqCoordinate2pos(const char* s)
+{
+    auto c = s[0], d = s[1];
+    if (c >= 'a' && c <= 'i' && d >= '0' && d <= '9') {
+        auto pos = static_cast<int>('9' - d) * 9 + static_cast<int>(c - 'a');
+        if (pos >= 0 && pos < 90) {
+            return pos;
+        }
+    }
+
+    return -1;
+}
+#endif
+
 
 int Node::selectSquare(const char* s)
 {
-    if (!s || !*s) return 0;
-    
-    auto len = strlen(s);
-    if (len > 2) return -1;
-    
-    // column
-    if (isalpha(*s)) {
-        // row -> square
-        if (isdigit(*(s + 1))) {
-            auto pos = coordinate2pos(s);
-            if (pos >= 0) {
-                squareset |= bslib::ChessBoard::_posToBitboard[pos];
-                hassquareset = true;
-                return 1;
+#ifdef _CHESS_
+    if (banksia::isChessFamily(variant)) {
+        if (!s || !*s) return 0;
+
+        auto len = strlen(s);
+        if (len > 2) return -1;
+
+        // column
+        if (isalpha(*s)) {
+            // row -> square
+            if (isdigit(*(s + 1))) {
+                auto pos = coordinate2pos(s);
+                if (pos >= 0) {
+                    if (!squareBB) {
+                        squareBB = new banksia::ChessBB();
+                    }
+                    squareBB->setBit(pos); // |= banksia::ChessBoard::_posToBitboard[pos];
+                    locSet.insert(pos);
+                    return 1;
+                }
+                return -1;
             }
+
+            if (len == 1) {
+                auto c = static_cast<int>(*s - 'a');
+                if (c >= 0 && c < 8) {
+                    if (!squareBB) {
+                        squareBB = new banksia::ChessBB();
+                    }
+
+                    for (auto i = 0; i < 8; ++i) {
+                        auto x = i * 8 + c;
+                        squareBB->setBit(x); // |= banksia::ChessBoard::_posToBitboard[x];
+                        locSet.insert(x);
+                    }
+                    return 1;
+                }
+            }
+
             return -1;
         }
-        
-        if (len == 1) {
-            auto c = static_cast<int>(*s - 'a');
-            if (c >= 0 && c < 8) {
-                
-                for(auto i = 0; i < 8; ++i) {
-                    auto x = i * 8 + c;
-                    squareset |= bslib::ChessBoard::_posToBitboard[x];
-                }
-                hassquareset = true;
-                return 1;
+
+        // row
+        if (*s >= '1' && *s <= '8') {
+            auto r = static_cast<int>('8' - *s) * 8;
+
+            if (!squareBB) {
+                squareBB = new banksia::ChessBB();
             }
+            for (auto i = 0; i < 8; ++i) {
+                auto x = r + i;
+                squareBB->setBit(x); // |= banksia::ChessBoard::_posToBitboard[x];
+                locSet.insert(x);
+            }
+            return 1;
         }
-        
+
         return -1;
     }
+#endif
 
-    // row
-    if (*s >= '1' && *s <= '8') {
-        auto r = static_cast<int>('8' - *s) * 8;
+#ifdef _XIANGQI_
+    if (banksia::isXqFamily(variant)) {
+        if (!s || !*s) return 0;
 
-        for(auto i = 0; i < 8; ++i) {
-            auto x = r + i;
-            squareset |= bslib::ChessBoard::_posToBitboard[x];
+        auto len = strlen(s);
+        if (len > 2) return -1;
+
+        // column
+        if (isalpha(*s)) {
+            // row -> square
+            if (isdigit(*(s + 1))) {
+                auto pos = xqCoordinate2pos(s);
+                if (pos >= 0) {
+                    if (!squareBB) {
+                        squareBB = new banksia::XqBB();
+                    }
+                    squareBB->setBit(pos); // |= banksia::ChessBoard::_posToBitboard[pos];
+                    locSet.insert(pos);
+                    return 1;
+                }
+                return -1;
+            }
+
+            if (len == 1) {
+                auto c = static_cast<int>(*s - 'a');
+                if (c >= 0 && c < 9) {
+                    if (!squareBB) {
+                        squareBB = new banksia::XqBB();
+                    }
+
+                    for (auto i = 0; i < 9; ++i) {
+                        auto x = i * 9 + c;
+                        squareBB->setBit(x); // |= banksia::ChessBoard::_posToBitboard[x];
+                        locSet.insert(x);
+                    }
+                    return 1;
+                }
+            }
+
+            return -1;
         }
-        hassquareset = true;
-        return 1;
+
+        // row
+        if (*s >= '0' && *s <= '9') {
+            auto r = static_cast<int>('9' - *s) * 9;
+
+            if (!squareBB) {
+                squareBB = new banksia::XqBB();
+            }
+            for (auto i = 0; i < 9; ++i) {
+                auto x = r + i;
+                squareBB->setBit(x); // |= banksia::ChessBoard::_posToBitboard[x];
+                locSet.insert(x);
+            }
+            return 1;
+        }
     }
+#endif
 
     return -1;
 }
@@ -156,60 +249,140 @@ int Node::selectSquare(const char* s)
 int Node::selectSquare(const std::string& from, const std::string& to)
 {
     assert(!from.empty() && !to.empty());
-    
-    if (from.size() == 2 && to.size() == 2) {
-        auto fromPos = coordinate2pos(from.c_str());
-        auto toPos = coordinate2pos(to.c_str());
-        if (fromPos >= 0 && toPos >= 0 && fromPos != toPos) {
-            if (fromPos > toPos) {
-                std::swap(fromPos, toPos);
+
+#ifdef _CHESS_
+    if (banksia::isChessFamily(variant)) {
+        if (from.size() == 2 && to.size() == 2) {
+            auto fromPos = coordinate2pos(from.c_str());
+            auto toPos = coordinate2pos(to.c_str());
+            if (fromPos >= 0 && toPos >= 0 && fromPos != toPos) {
+                if (fromPos > toPos) {
+                    std::swap(fromPos, toPos);
+                }
+
+                if (!squareBB) {
+                    squareBB = new banksia::ChessBB();
+                }
+                for (auto i = fromPos; i <= toPos; ++i) {
+                    squareBB->setBit(i); // |= banksia::ChessBoard::_posToBitboard[i];
+                    locSet.insert(i);
+                }
+                return 1;
             }
-            
-            for(auto i = fromPos; i <= toPos; ++i) {
-                squareset |= bslib::ChessBoard::_posToBitboard[i];
+            return -1;
+        }
+
+        if (from.size() == 1 && to.size() == 1) {
+            auto fch = from[0], tch = to[0];
+
+            // column
+            if (isalpha(fch) && isalpha(tch)) {
+                if (fch > tch) std::swap(fch, tch);
+
+                if (!squareBB) {
+                    squareBB = new banksia::ChessBB();
+                }
+                for (auto t = fch; t <= tch; ++t) {
+                    auto c = static_cast<int>(t - 'a');
+                    for (auto i = 0; i < 8; ++i) {
+                        auto x = i * 8 + c;
+                        squareBB->setBit(x); // |= banksia::ChessBoard::_posToBitboard[x];
+                        locSet.insert(x);
+                    }
+                }
+                return 1;
             }
-            hassquareset = true;
-            return 1;
+
+            if (isdigit(fch) && isdigit(tch)) {
+                if (fch > tch) std::swap(fch, tch);
+
+                if (!squareBB) {
+                    squareBB = new banksia::ChessBB();
+                }
+
+                for (auto t = fch; t <= tch; ++t) {
+                    auto r = static_cast<int>('8' - t) * 8;
+                    for (auto i = 0; i < 8; ++i) {
+                        auto x = r + i;
+                        squareBB->setBit(x); // |= banksia::ChessBoard::_posToBitboard[x];
+                        locSet.insert(x);
+                    }
+                }
+                return 1;
+            }
         }
         return -1;
     }
 
-    if (from.size() == 1 && to.size() == 1) {
-        auto fch = from[0], tch = to[0];
+#endif
 
-        // column
-        if (isalpha(fch) && isalpha(tch)) {
-            if (fch > tch) std::swap(fch, tch);
-            
-            for(auto t = fch; t <= tch; ++t) {
-                auto c = static_cast<int>(t - 'a');
-                for(auto i = 0; i < 8; ++i) {
-                    auto x = i * 8 + c;
-                    squareset |= bslib::ChessBoard::_posToBitboard[x];
+#ifdef _XIANGQI_
+    if (banksia::isXqFamily(variant)) {
+        if (from.size() == 2 && to.size() == 2) {
+            auto fromPos = xqCoordinate2pos(from.c_str());
+            auto toPos = xqCoordinate2pos(to.c_str());
+            if (fromPos >= 0 && toPos >= 0 && fromPos != toPos) {
+                if (fromPos > toPos) {
+                    std::swap(fromPos, toPos);
                 }
+
+                if (!squareBB) {
+                    squareBB = new banksia::XqBB();
+                }
+                for (auto i = fromPos; i <= toPos; ++i) {
+                    squareBB->setBit(i); // |= banksia::ChessBoard::_posToBitboard[i];
+                    locSet.insert(i);
+                }
+                return 1;
             }
-            hassquareset = true;
-            return 1;
+            return -1;
         }
 
-        if (isdigit(fch) && isdigit(tch)) {
-            if (fch > tch) std::swap(fch, tch);
-            
-            for(auto t = fch; t <= tch; ++t) {
-                auto r = static_cast<int>('8' - t) * 8;
-                for(auto i = 0; i < 8; ++i) {
-                    auto x = r + i;
-                    squareset |= bslib::ChessBoard::_posToBitboard[x];
+        if (from.size() == 1 && to.size() == 1) {
+            auto fch = from[0], tch = to[0];
+
+            // column
+            if (isalpha(fch) && isalpha(tch)) {
+                if (fch > tch) std::swap(fch, tch);
+
+                if (!squareBB) {
+                    squareBB = new banksia::XqBB();
                 }
+                for (auto t = fch; t <= tch; ++t) {
+                    auto c = static_cast<int>(t - 'a');
+                    for (auto i = 0; i < 9; ++i) {
+                        auto x = i * 9 + c;
+                        squareBB->setBit(x); // |= banksia::ChessBoard::_posToBitboard[x];
+                        locSet.insert(x);
+                    }
+                }
+                return 1;
             }
-            hassquareset = true;
-            return 1;
+
+            if (isdigit(fch) && isdigit(tch)) {
+                if (fch > tch) std::swap(fch, tch);
+
+                if (!squareBB) {
+                    squareBB = new banksia::XqBB();
+                }
+
+                for (auto t = fch; t <= tch; ++t) {
+                    auto r = static_cast<int>('9' - t) * 9;
+                    for (auto i = 0; i < 9; ++i) {
+                        auto x = r + i;
+                        squareBB->setBit(x); // |= banksia::ChessBoard::_posToBitboard[x];
+                        locSet.insert(x);
+                    }
+                }
+                return 1;
+            }
         }
+        return -1;
     }
-    
+
+#endif
     return -1;
 }
-
 
 bool Node::isValid() const
 {
@@ -218,11 +391,23 @@ bool Node::isValid() const
             return !fenHashSet.empty();
 
         case NodeType::op:
+            if (op == Operator::op_not) {
+                return lhs && !rhs && lhs->isValid();
+            }
             return lhs && rhs && lhs->isValid() && rhs->isValid() && op < Operator::none;
-            
+
+        case NodeType::keyword:
+            return keyword != Keyword::none;
+
+        case NodeType::move:
+            return !moveSpecVec.empty();
+
+        case NodeType::line:
+            return !lineMoves.empty();
+
         case NodeType::piece:
             return !lhs && !rhs;
-            
+
         case NodeType::number:
             return !lhs && !rhs;
 
@@ -232,28 +417,38 @@ bool Node::isValid() const
         default:
             break;
     }
-    
+
     return false;
 }
 
-int Node::evaluate(const std::vector<uint64_t>& bitboardVec) const
+int Node::evaluate(const PqlContext& ctx) const
 {
+    auto bb = ctx.bb;
+    assert(bb);
+
     switch (nodeType) {
-        case NodeType::fen:
-        {
+        case NodeType::fen: {
             assert(!fenHashSet.empty());
-            auto hash = bitboardVec[static_cast<int>(bslib::BBIdx::hash)];
+            auto hash = bb->getHash();
             return isInFenHashSet(hash) ? 1 : 0;
         }
-        case NodeType::op:
-        {
-            assert(lhs && rhs);
-            auto l = lhs->evaluate(bitboardVec), r = rhs->evaluate(bitboardVec);
+        case NodeType::op: {
+            assert(lhs);
+            /// and, or, not: the right side only when it decides
             switch (op) {
                 case Operator::op_and:
-                    return (l && r) ? 1 : 0;
+                    return lhs->evaluate(ctx) && rhs->evaluate(ctx) ? 1 : 0;
                 case Operator::op_or:
-                    return (l || r) ? 1 : 0;
+                    return lhs->evaluate(ctx) || rhs->evaluate(ctx) ? 1 : 0;
+                case Operator::op_not:
+                    return lhs->evaluate(ctx) ? 0 : 1;
+                default:
+                    break;
+            }
+
+            assert(rhs);
+            auto l = lhs->evaluate(ctx), r = rhs->evaluate(ctx);
+            switch (op) {
                 case Operator::op_add:
                     return l + r;
                 case Operator::op_sub:
@@ -281,262 +476,172 @@ int Node::evaluate(const std::vector<uint64_t>& bitboardVec) const
             }
             break;
         }
-            
-        case NodeType::piece:
-            assert(!lhs && !rhs);
-            
-            int64_t bb;
-            switch (string.at(0)) {
-                case 'w':
-                    assert(string == "white");
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::white)];
-                    break;
 
-                case 'K':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::white)] & bitboardVec[static_cast<int>(bslib::BBIdx::kings)];
-                    break;
+        case NodeType::piece: {
+            return bb->getPieceCount(string, squareBB);
+        }
 
-                case 'Q':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::white)] & bitboardVec[static_cast<int>(bslib::BBIdx::queens)];
-                    break;
-                case 'R':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::white)] & bitboardVec[static_cast<int>(bslib::BBIdx::rooks)];
-                    break;
+        break;
 
-                case 'B':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::white)] & bitboardVec[static_cast<int>(bslib::BBIdx::bishops)];
-                    break;
-                case 'N':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::white)] & bitboardVec[static_cast<int>(bslib::BBIdx::knights)];
-                    break;
-                case 'P':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::white)] & bitboardVec[static_cast<int>(bslib::BBIdx::pawns)];
-                    break;
-
-                case 'k':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::black)] & bitboardVec[static_cast<int>(bslib::BBIdx::kings)];
-                    break;
-
-                case 'q':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::black)] & bitboardVec[static_cast<int>(bslib::BBIdx::queens)];
-                    break;
-                    
-                case 'r':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::black)] & bitboardVec[static_cast<int>(bslib::BBIdx::rooks)];
-                    break;
-
-                case 'b':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::black)];
-                    if (string == "b") {
-                        bb &= bitboardVec[static_cast<int>(bslib::BBIdx::bishops)];
-                    } else {
-                        assert(string == "black");
-                    }
-                    break;
-                case 'n':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::black)] & bitboardVec[static_cast<int>(bslib::BBIdx::knights)];
-                    break;
-                case 'p':
-                    bb = bitboardVec[static_cast<int>(bslib::BBIdx::black)] & bitboardVec[static_cast<int>(bslib::BBIdx::pawns)];
-                    break;
-
-                default:
-                    bb = 0;
-                    break;
-            }
-            
-            if (hassquareset) {
-                bb &= squareset;
-            }
-            return popCount(bb);
-            
         case NodeType::number:
-            assert(number == std::atoi(string.c_str()));
+            assert(number == std::stoi(string));
             return number;
-            
-        case NodeType::pattern:
-        {
+
+        case NodeType::pattern: {
             assert(!patternBitBoards.empty());
-            auto i = 0;
-            for(auto && patternVec : patternBitBoards) {
+            for (auto&& patternVec : patternBitBoards) {
                 if (patternOperand == PatternOperand::greaterthan) {
-                    if (evaluate_pattern(bitboardVec, patternVec, PatternOperand::lessthan, patternTolerance)) {
+                    if (evaluate_pattern(bb, patternVec, PatternOperand::lessthan, patternTolerance)) {
                         return 1;
                     }
                 }
-                if (evaluate_pattern(patternVec, bitboardVec, patternOperand, patternTolerance)) {
+                if (evaluate_pattern(patternVec, bb, patternOperand, patternTolerance)) {
                     return 1;
                 }
-                i++;
             }
             break;
         }
+
+        case NodeType::keyword:
+            return evaluate_keyword(ctx);
+
+        case NodeType::move:
+            return evaluate_move(ctx) ? 1 : 0;
+
+        case NodeType::line:
+            return evaluate_line(ctx) ? 1 : 0;
 
         default:
             break;
     }
-    
+
     return 0;
 }
 
-bool Node::evaluate_pattern(const std::vector<uint64_t>& bbSubVec, const std::vector<uint64_t>& bbSuperVec, PatternOperand operand, int tolerance) const
+/// the move that led to the position: the last of the board's history
+static const banksia::Hist* lastHist(const PqlContext& ctx)
 {
-    auto blackSb = bbSubVec[static_cast<int>(bslib::BBIdx::black)], whiteSb = bbSubVec[static_cast<int>(bslib::BBIdx::white)];
-    auto blackSp = bbSuperVec[static_cast<int>(bslib::BBIdx::black)], whiteSp = bbSuperVec[static_cast<int>(bslib::BBIdx::white)];
-
-    uint64_t blackDif, whiteDif;
-
-    if (operand == PatternOperand::equal) {
-        blackDif = (blackSb | blackSp) & ~(blackSb & blackSp);
-        whiteDif = (whiteSb | whiteSp) & ~(whiteSb & whiteSp);
-    } else {
-        blackDif = blackSb & ~(blackSb & blackSp);
-        whiteDif = whiteSb & ~(whiteSb & whiteSp);
-    }
-
-    auto cnt = popCount(blackDif | whiteDif);
-
-    if (cnt > tolerance) return false;
-
-    // check further, each position
-    uint64_t d = 0;
-    for(auto idx = static_cast<int>(bslib::BBIdx::kings); idx < static_cast<int>(bslib::BBIdx::max); ++idx) {
-        auto sb = bbSubVec[idx], sp = bbSuperVec[idx];
-
-        uint64_t dif;
-
-        if (operand == PatternOperand::equal) {
-            dif = (sb | sp) & ~(sb & sp);
-        } else {
-            dif = sb & ~(sb & sp);
-        }
-
-        d |= dif;
-    }
-
-    return popCount(d) <= tolerance;
+    return ctx.board ? ctx.board->_getHistPointerAt(ctx.board->getHistListSize() - 1) : nullptr;
 }
 
-void Node::pattern_shift()
+static bool isCapture(const banksia::Hist* hist)
 {
-    assert(patternBitBoards.size() == 1);
-
-    auto v = patternBitBoards.at(0);
-
-    while (pattern_shift_up(v)) {
-        patternBitBoards.push_back(v);
-        auto v2 = v;
-        while (pattern_shift_left(v2)) {
-            patternBitBoards.push_back(v2);
-        }
-        v2 = v;
-        while (pattern_shift_right(v2)) {
-            patternBitBoards.push_back(v2);
-        }
-    }
-
-    v = patternBitBoards.at(0);
-    while (pattern_shift_down(v)) {
-        patternBitBoards.push_back(v);
-        auto v2 = v;
-        while (pattern_shift_left(v2)) {
-            patternBitBoards.push_back(v2);
-        }
-        v2 = v;
-        while (pattern_shift_right(v2)) {
-            patternBitBoards.push_back(v2);
-        }
-    }
+    return !hist->cap.isEmpty() || (hist->flag & banksia::Hist::MoveFlag_CapEnpassant);
 }
 
-bool Node::pattern_shift_up(std::vector<uint64_t>& v)
+int Node::evaluate_keyword(const PqlContext& ctx) const
 {
-    assert(!v.empty());
-    auto bb = v[static_cast<int>(bslib::BBIdx::black)] | v[static_cast<int>(bslib::BBIdx::white)];
-    assert(bb);
+    auto board = ctx.board;
+    if (!board) {
+        return 0;
+    }
 
-    if (bb & bslib::ChessBoard::bb_edge_top)
+    /// the unlocked (_) calls: the board belongs to the thread searching with it, and
+    /// BoardCore::fromMoveList() holds its dataMutex while it calls back (isIncheck() deadlocked)
+    switch (keyword) {
+        case Keyword::ply:
+            return board->getHistListSize();
+
+        case Keyword::check:
+            return board->_isIncheck(board->side) ? 1 : 0;
+
+        case Keyword::mate: {
+            if (!board->_isIncheck(board->side)) {
+                return 0;
+            }
+            /// _genLegalOnly() makes and takes back each move: the board is as it was afterwards
+            std::vector<banksia::MoveFull> moves;
+            const_cast<banksia::BoardCore*>(board)->_genLegalOnly(moves, board->side);
+            return moves.empty() ? 1 : 0;
+        }
+
+        case Keyword::capture: {
+            auto hist = lastHist(ctx);
+            return hist && isCapture(hist) ? 1 : 0;
+        }
+
+        case Keyword::promotion: {
+            auto hist = lastHist(ctx);
+            return hist && hist->move.promotion != banksia::EMPTY ? 1 : 0;
+        }
+
+        case Keyword::wtm:
+            return board->side == banksia::Side::white ? 1 : 0;
+
+        case Keyword::btm:
+            return board->side == banksia::Side::black ? 1 : 0;
+
+        default:
+            break;
+    }
+    return 0;
+}
+
+bool Node::evaluate_move(const PqlContext& ctx) const
+{
+    auto hist = lastHist(ctx);
+    if (!hist) {
         return false;
+    }
 
-    for(int i = static_cast<int>(bslib::BBIdx::black); i < static_cast<int>(bslib::BBIdx::max); i++) {
-        v[i] <<= 8;
+    const auto& move = hist->move;
+    const auto columnCnt = banksia::isXqFamily(variant) ? 9 : 8;
 
-        // Pawn can't go to the top line
-        if (i == static_cast<int>(bslib::BBIdx::pawns) && (v[i] & bslib::ChessBoard::bb_edge_top)) {
+    for (auto&& spec : moveSpecVec) {
+        if (spec.castle) {
+#ifdef _CHESS_
+            if (hist->castled
+                == (spec.castle == 1 ? banksia::CastleRight_short : banksia::CastleRight_long)) {
+                return true;
+            }
+#endif
+            continue;
+        }
+        if ((spec.pieceType >= 0 && move.piece.type != spec.pieceType)
+            || (spec.side != banksia::Side::none && move.piece.side != spec.side)
+            || (spec.from >= 0 && move.from != spec.from)
+            || (spec.fromCol >= 0 && move.from % columnCnt != spec.fromCol)
+            || (spec.dest >= 0 && move.dest != spec.dest) || (spec.capture && !isCapture(hist))
+            || (spec.promotion >= 0 && move.promotion != spec.promotion)) {
+            continue;
+        }
+        return true;
+    }
+    return false;
+}
+
+/// true on the position reached by exactly the moves of line[...], from the variant's start position
+bool Node::evaluate_line(const PqlContext& ctx) const
+{
+    auto board = ctx.board;
+    if (!board || board->getHistListSize() != static_cast<int>(lineMoves.size())) {
+        return false;
+    }
+
+    for (size_t i = 0; i < lineMoves.size(); ++i) {
+        auto hist = board->_getHistPointerAt(static_cast<int>(i));
+        const auto& m = lineMoves.at(i);
+        if ((i == 0 && hist->hashKey != lineStartHash) || hist->move.from != m.from || hist->move.dest != m.dest
+            || hist->move.promotion != m.promotion) {
             return false;
         }
     }
-
-    v[static_cast<int>(bslib::BBIdx::blackkingsquare)] += 8;
-    v[static_cast<int>(bslib::BBIdx::whitekingsquare)] += 8;
-
     return true;
 }
 
-bool Node::pattern_shift_down(std::vector<uint64_t>& v)
+
+bool Node::evaluate_pattern(const banksia::BitboardBase* bbSubVec, const banksia::BitboardBase* bbSuperVec,
+                            PatternOperand operand, int tolerance) const
 {
-    assert(!v.empty());
-    auto bb = v[static_cast<int>(bslib::BBIdx::black)] | v[static_cast<int>(bslib::BBIdx::white)];
-    assert(bb);
+    return bbSubVec->evaluate_pattern(bbSuperVec, operand, tolerance);
 
-    if (bb & bslib::ChessBoard::bb_edge_bottom)
-        return false;
-
-    for(int i = static_cast<int>(bslib::BBIdx::black); i < static_cast<int>(bslib::BBIdx::max); i++) {
-        v[i] >>= 8;
-
-        // Pawn can't go to the bottom line
-        if (i == static_cast<int>(bslib::BBIdx::pawns) && (v[i] & bslib::ChessBoard::bb_edge_bottom)) {
-            return false;
-        }
-    }
-
-    v[static_cast<int>(bslib::BBIdx::blackkingsquare)] -= 8;
-    v[static_cast<int>(bslib::BBIdx::whitekingsquare)] -= 8;
-
-    return true;
 }
 
-bool Node::pattern_shift_left(std::vector<uint64_t>& v)
-{
-    assert(!v.empty());
-    auto bb = v[static_cast<int>(bslib::BBIdx::black)] | v[static_cast<int>(bslib::BBIdx::white)];
-    assert(bb);
-
-    if (bb & bslib::ChessBoard::bb_edge_left)
-        return false;
-
-    for(int i = static_cast<int>(bslib::BBIdx::black); i < static_cast<int>(bslib::BBIdx::max); i++) {
-        v[i] >>= 1;
-    }
-
-    v[static_cast<int>(bslib::BBIdx::blackkingsquare)]--;
-    v[static_cast<int>(bslib::BBIdx::whitekingsquare)]--;
-    return true;
-}
-
-bool Node::pattern_shift_right(std::vector<uint64_t>& v)
-{
-    assert(!v.empty());
-    auto bb = v[static_cast<int>(bslib::BBIdx::black)] | v[static_cast<int>(bslib::BBIdx::white)];
-    assert(bb);
-
-    if (bb & bslib::ChessBoard::bb_edge_right)
-        return false;
-
-    for(int i = static_cast<int>(bslib::BBIdx::black); i < static_cast<int>(bslib::BBIdx::max); i++) {
-        v[i] <<= 1;
-    }
-
-    v[static_cast<int>(bslib::BBIdx::blackkingsquare)]++;
-    v[static_cast<int>(bslib::BBIdx::whitekingsquare)]++;
-    return true;
-}
 
 ////////////////////////////////////
-Parser::Parser()
-{
-}
+/// The parser reads "a - b - c" as (a - b) - c and "A and B or C" as (A and B) or C, brackets
+/// conditions, rejects whatever follows a complete query and never reads past the last token.
+Parser::Parser() { }
 
 Parser::~Parser()
 {
@@ -548,7 +653,10 @@ Parser::~Parser()
 
 void Parser::deleteTree()
 {
-    deleteTree(root);
+    for (auto&& node : stages) {
+        deleteTree(node);
+    }
+    stages.clear();
     root = nullptr;
 }
 
@@ -562,15 +670,9 @@ void Parser::deleteTree(Node* node) const
 }
 
 static const std::string errorStrings[] = {
-    "none",
-    "no input",
-    "wrong lexical",
-    "missing condition",
-    "missing comparison",
-    "missing term",
-    "missing factor",
-    "missing close bracket",
-    "input invalid",
+    "none",         "no input",       "wrong lexical",         "missing condition", "missing comparison",
+    "missing term", "missing factor", "missing close bracket", "input invalid",     "unexpected",
+    "unknown word", "wrong move",
 };
 
 std::string Parser::getErrorString(ParseError error)
@@ -581,7 +683,19 @@ std::string Parser::getErrorString(ParseError error)
 
 std::string Parser::getErrorString() const
 {
-    return getErrorString(error);
+    auto s = getErrorString(error);
+    if (error != ParseError::none && !errorNear.empty()) {
+        s += " near \"" + errorNear + "\"";
+    }
+    return s;
+}
+
+void Parser::setError(ParseError e, size_t at)
+{
+    if (error == ParseError::none) {
+        error = e;
+        errorNear = at < lexVec.size() ? lexVec.at(at).string : "the end";
+    }
 }
 
 void Parser::printError() const
@@ -591,38 +705,61 @@ void Parser::printError() const
 
 void Parser::printTree() const
 {
-    printTree(root, "");
+    for (size_t i = 0; i < stages.size(); ++i) {
+        if (i) std::cout << "then" << std::endl;
+        printTree(stages.at(i), "");
+    }
 }
 
 void Parser::printTree(const Node* node, std::string prefix) const
 {
     if (!node) return;
-    
+
     std::cout << prefix << node->toString() << std::endl;
-    
+
     prefix += "   ";
     printTree(node->lhs, prefix);
     printTree(node->rhs, prefix);
 }
 
-int Parser::evaluate(const std::vector<uint64_t>& bitboardVec) const
+int Parser::evaluate(const PqlContext& ctx) const
 {
-    return root && root->evaluate(bitboardVec);
+    return root && root->evaluate(ctx) ? 1 : 0;
 }
 
-bool Parser::parse(bslib::ChessVariant _variant, const char* s)
+bool Parser::match(const PqlContext& ctx, int& stage) const
+{
+    if (stages.empty()) {
+        return false;
+    }
+    if (stages.size() == 1) {
+        return stages.front()->evaluate(ctx) != 0;
+    }
+
+    if (stage < 0) stage = 0;
+    if (stage >= static_cast<int>(stages.size())) {
+        return true;
+    }
+    if (stages.at(stage)->evaluate(ctx)) {
+        ++stage;
+        return stage == static_cast<int>(stages.size());
+    }
+    return false;
+}
+
+bool Parser::parse(banksia::ChessVariant _variant, const char* s)
 {
     assert(s);
     deleteTree();
     error = ParseError::none;
+    errorNear.clear();
     variant = _variant;
 
     if (board) delete board;
     if (board2) delete board2;
 
-    board = bslib::Funcs::createBoard(variant);
-    board2 = bslib::Funcs::createBoard(variant);
-
+    board = ocgdb::createBoard(variant);
+    board2 = ocgdb::createBoard(variant);
 
     lexVec = lexParse(s);
     if (error == ParseError::none && lexVec.empty()) {
@@ -632,109 +769,274 @@ bool Parser::parse(bslib::ChessVariant _variant, const char* s)
         return false;
     }
 
-    Node* r = nullptr, *w = nullptr;
-    
-    // there is only one fen clause
+    /// query := condition { "then" condition }
     size_t from = 0;
-    while (from < lexVec.size()) {
-        auto node = parse_condition(from);
+    while (error == ParseError::none) {
+        auto node = parse_or(from);
         if (!node) {
-            node = parse_fenstring(from);
-        }
-        if (!node) {
-            node = parse_pattern(from);
-        }
-        if (!node) {
+            setError(ParseError::missing_condition, from);
             break;
         }
-        
-        auto stop = from >= lexVec.size();
-        if (!stop) {
-            auto lex = lexVec.at(from).lex;
-            stop = lex != Lex::operator_and && lex != Lex::operator_or;
+        stages.push_back(node);
+
+        if (from < lexVec.size() && lexVec.at(from).lex == Lex::operator_then) {
+            ++from;
+            continue;
         }
-        if (stop) {
-            if (r) {
-                assert(w && !w->rhs);
-                w->rhs = node;
-            } else {
-                r = node;
+        break;
+    }
+
+    if (error == ParseError::none && from < lexVec.size()) {
+        setError(ParseError::unexpected, from);
+    }
+
+    if (error == ParseError::none) {
+        for (auto&& node : stages) {
+            if (!node->isValid()) {
+                setError(ParseError::invalid, lexVec.size());
+                break;
             }
-            break;
-        }
-        
-        auto word = lexVec.at(from);
-        assert(word.lex == Lex::operator_and || word.lex == Lex::operator_or);
-
-        auto op = new Node(word);
-        op->lhs = node;
-
-        if (!r) {
-            r = op;
-        }
-        if (w) {
-            assert(!w->rhs);
-            w->rhs = op;
-        }
-        w = op;
-        ++from;
-        if (from >= lexVec.size()) {
-            // wrong
-            error = ParseError::missing_condition;
-            break;
         }
     }
 
-    root = r;
-    
-    if (!root) {
+    if (error != ParseError::none) {
+        deleteTree();
         return false;
     }
-    
-    if (error == ParseError::none) {
-        if (!root || !root->isValid()) {
-            error = ParseError::invalid;
-        }
-    }
-    
-    return error == ParseError::none;
+
+    root = stages.front();
+    return true;
 }
 
-//
+Node* Parser::newOperator(const LexWord& word, Node* lhs, Node* rhs)
+{
+    auto op = new Node(variant, word);
+    op->lhs = lhs;
+    op->rhs = rhs;
+    return op;
+}
+
+/// condition := and_condition { "or" and_condition }
+Node* Parser::parse_or(size_t& from)
+{
+    auto node = parse_and(from);
+    while (node && from < lexVec.size() && lexVec.at(from).lex == Lex::operator_or) {
+        auto word = lexVec.at(from++);
+        auto rhs = parse_and(from);
+        if (!rhs) {
+            setError(ParseError::missing_condition, from);
+            deleteTree(node);
+            return nullptr;
+        }
+        node = newOperator(word, node, rhs);
+    }
+    return node;
+}
+
+/// and_condition := not_condition { "and" not_condition }
+Node* Parser::parse_and(size_t& from)
+{
+    auto node = parse_not(from);
+    while (node && from < lexVec.size() && lexVec.at(from).lex == Lex::operator_and) {
+        auto word = lexVec.at(from++);
+        auto rhs = parse_not(from);
+        if (!rhs) {
+            setError(ParseError::missing_condition, from);
+            deleteTree(node);
+            return nullptr;
+        }
+        node = newOperator(word, node, rhs);
+    }
+    return node;
+}
+
+/// not_condition := "not" not_condition | comparison
+Node* Parser::parse_not(size_t& from)
+{
+    if (from < lexVec.size() && lexVec.at(from).lex == Lex::operator_not) {
+        auto word = lexVec.at(from++);
+        auto operand = parse_not(from);
+        if (!operand) {
+            setError(ParseError::missing_condition, from);
+            return nullptr;
+        }
+        return newOperator(word, operand, nullptr);
+    }
+    return parse_comparison(from);
+}
+
+/// comparison := expression { comparison_operator expression }
+Node* Parser::parse_comparison(size_t& from)
+{
+    auto node = parse_sum(from);
+    while (node && from < lexVec.size() && lexVec.at(from).lex == Lex::operator_comparison) {
+        auto word = lexVec.at(from++);
+        auto rhs = parse_sum(from);
+        if (!rhs) {
+            setError(ParseError::missing_term, from);
+            deleteTree(node);
+            return nullptr;
+        }
+        node = newOperator(word, node, rhs);
+    }
+    return node;
+}
+
+/// expression := term { ("+" | "-") term }
+Node* Parser::parse_sum(size_t& from)
+{
+    auto node = parse_product(from);
+    while (node && from < lexVec.size()
+           && (lexVec.at(from).lex == Lex::operator_add || lexVec.at(from).lex == Lex::operator_sub)) {
+        auto word = lexVec.at(from++);
+        auto rhs = parse_product(from);
+        if (!rhs) {
+            setError(ParseError::missing_term, from);
+            deleteTree(node);
+            return nullptr;
+        }
+        node = newOperator(word, node, rhs);
+    }
+    return node;
+}
+
+/// term := factor { ("*" | "/") factor }
+Node* Parser::parse_product(size_t& from)
+{
+    auto node = parse_primary(from);
+    while (node && from < lexVec.size()
+           && (lexVec.at(from).lex == Lex::operator_multi || lexVec.at(from).lex == Lex::operator_div)) {
+        auto word = lexVec.at(from++);
+        auto rhs = parse_primary(from);
+        if (!rhs) {
+            setError(ParseError::missing_factor, from);
+            deleteTree(node);
+            return nullptr;
+        }
+        node = newOperator(word, node, rhs);
+    }
+    return node;
+}
+
+static const std::unordered_map<std::string, Keyword> keywordMap {
+    { "ply", Keyword::ply },          { "check", Keyword::check }, { "mate", Keyword::mate },
+    { "capture", Keyword::capture },  { "promotion", Keyword::promotion },
+    { "wtm", Keyword::wtm },          { "btm", Keyword::btm },
+};
+
+/// factor := number | piece | fen | pattern | keyword | move[...] | line[...] | "(" condition ")"
+Node* Parser::parse_primary(size_t& from)
+{
+    if (error != ParseError::none || from >= lexVec.size()) {
+        return nullptr;
+    }
+
+    auto word = lexVec.at(from);
+    switch (word.lex) {
+        case Lex::number:
+            ++from;
+            return new Node(variant, word);
+
+        case Lex::fen:
+            return parse_fenstring(from);
+
+        case Lex::bracket:
+            if (word.string == "(") {
+                ++from;
+                auto node = parse_or(from);
+                if (!node) {
+                    setError(ParseError::missing_condition, from);
+                    return nullptr;
+                }
+                if (from < lexVec.size() && lexVec.at(from).string == ")") {
+                    ++from;
+                    return node;
+                }
+                setError(ParseError::missing_close, from);
+                deleteTree(node);
+                return nullptr;
+            }
+            if (word.string == "{") {
+                return parse_pattern(from);
+            }
+            return nullptr;
+
+        case Lex::string: {
+            if (word.string == "fen") {
+                return parse_fenclause(from);
+            }
+            if (word.string == "move") {
+                return parse_move(from);
+            }
+            if (word.string == "line") {
+                return parse_line(from);
+            }
+            auto it = keywordMap.find(word.string);
+            if (it != keywordMap.end()) {
+                ++from;
+                auto node = new Node(variant);
+                node->nodeType = NodeType::keyword;
+                node->string = word.string;
+                node->keyword = it->second;
+                return node;
+            }
+
+            auto node = parse_piece(from);
+            if (!node) {
+                setError(ParseError::unknown_word, from);
+            }
+            return node;
+        }
+
+        default:
+            break;
+    }
+    return nullptr;
+}
+
+/// fen[fen, fen, ...]
 Node* Parser::parse_fenclause(size_t& from)
 {
-    assert(from <= lexVec.size());
-    if (lexVec.at(from).string != "fen") {
+    assert(from < lexVec.size() && lexVec.at(from).string == "fen");
+    auto start = from;
+
+    if (from + 2 >= lexVec.size() || lexVec.at(from + 1).string != "[") {
+        setError(ParseError::invalid, from);
         return nullptr;
     }
 
-    if (lexVec.size() < 4 || lexVec.at(from + 1).string != "[" || lexVec.at(from + 2).lex != Lex::fen) {
-        error = ParseError::invalid;
-        return nullptr;
-    }
-    
-    auto node = new Node();
+    auto node = new Node(variant);
     node->nodeType = NodeType::fen;
 
-    auto board = bslib::Funcs::createBoard(bslib::ChessVariant::standard);
-    for(from += 2; from < lexVec.size(); ++from) {
+    for (from += 2;; ++from) {
+        if (from >= lexVec.size()) {
+            setError(ParseError::missing_close, from);
+            delete node;
+            return nullptr;
+        }
         auto lex = lexVec.at(from);
         if (lex.lex == Lex::fen) {
             board->newGame(lex.string);
             node->fenHashSet.insert(board->hashKey);
             continue;
         }
-
-        if (lex.string == ",") {
+        if (lex.lex == Lex::comma) {
             continue;
         }
         if (lex.string == "]") {
             from++;
             break;
         }
+        setError(ParseError::wrong_lexical, from);
+        delete node;
+        return nullptr;
     }
 
-    delete board;
+    if (node->fenHashSet.empty()) {
+        setError(ParseError::invalid, start);
+        delete node;
+        return nullptr;
+    }
     return node;
 }
 
@@ -745,7 +1047,7 @@ Node* Parser::parse_fenstring(size_t& from)
         from++;
 
         board->newGame(lex.string);
-        auto node = new Node();
+        auto node = new Node(variant);
         node->nodeType = NodeType::fen;
         node->fenHashSet.insert(board->hashKey);
         return node;
@@ -753,79 +1055,100 @@ Node* Parser::parse_fenstring(size_t& from)
     return nullptr;
 }
 
-const std::map<std::string, ocgdb::PatternOperand> patternOperandMap {
-    {"=", PatternOperand::equal},
-    { "==", PatternOperand::equal},
-    { "<", PatternOperand::lessthan},
-    { ">", PatternOperand::greaterthan},
-    { "#", PatternOperand::shift}
-};
+const std::map<std::string, PatternOperand> patternOperandMap { { "=", PatternOperand::equal },
+                                                                { "==", PatternOperand::equal },
+                                                                { "<", PatternOperand::lessthan },
+                                                                { ">", PatternOperand::greaterthan },
+                                                                { "#", PatternOperand::shift } };
 
+/// pattern := "{" pattern_term { "," pattern_term } [ "," operand [ "," tolerance ] ] "}"
 Node* Parser::parse_pattern(size_t& from)
 {
-    assert(from <= lexVec.size());
-    if (lexVec.at(from).string != "{") {
-        return nullptr;
-    }
+    assert(from < lexVec.size() && lexVec.at(from).string == "{");
+    auto start = from;
 
     auto patternOperand = PatternOperand::equal;
     auto patternOperandDelta = 0;
     board->_clear();
 
-    auto cnt = 0;
-    for(++from; from < lexVec.size(); ++from) {
+    auto closed = false;
+    for (++from; from < lexVec.size();) {
         auto lex = lexVec.at(from);
         if (lex.lex == Lex::fen) {
             board2->newGame(lex.string);
 
-            for(auto i = 0; i < board2->size(); ++i) {
+            for (auto i = 0; i < board2->size(); ++i) {
                 auto piece = board2->getPiece(i);
                 if (piece.isEmpty()) continue;
                 board->_setPiece(i, piece);
             }
+            ++from;
             continue;
         }
 
-        if (lex.string == ",") {
-            cnt++;
+        if (lex.lex == Lex::comma) {
+            ++from;
             continue;
         }
         if (lex.string == "}") {
             from++;
+            closed = true;
             break;
         }
 
         auto it = patternOperandMap.find(lex.string);
         if (it != patternOperandMap.end()) {
             patternOperand = it->second;
+            ++from;
             continue;
         }
 
-        auto node = parse_piece(from);
-        if (node) {
-            if (!node->locSet.empty() && node->pieceSide != bslib::Side::none) {
-                bslib::Piece piece(node->pieceType, node->pieceSide);
-                for(auto && sq : node->locSet) {
-                    board->_setPiece(sq, piece);
-                }
-            }
-
-            delete node;
-            continue;
-        }
-
-        if (std::isdigit(lex.string.at(0))) {
+        if (lex.lex == Lex::number) {
             patternOperandDelta = std::stoi(lex.string);
+            ++from;
             continue;
         }
-    }
 
-    if (board->_isEmpty()) {
+        if (lex.lex == Lex::string) {
+            auto node = parse_piece(from);
+            if (!node) {
+                setError(ParseError::unknown_word, from);
+                return nullptr;
+            }
+            /// a pattern places pieces: "white"/"black" or a piece without squares places nothing
+            if (node->locSet.empty() || node->pieceSide == banksia::Side::none) {
+                delete node;
+                setError(ParseError::invalid, from - 1);
+                return nullptr;
+            }
+            banksia::Piece piece(node->pieceType, node->pieceSide);
+            for (auto&& sq : node->locSet) {
+                board->_setPiece(sq, piece);
+            }
+            delete node;
+            if (error != ParseError::none) {
+                return nullptr;
+            }
+            continue;
+        }
+
+        setError(ParseError::wrong_lexical, from);
         return nullptr;
     }
 
-    auto node = new Node();
+    if (!closed) {
+        setError(ParseError::missing_close, from);
+        return nullptr;
+    }
+
+    if (board->_isEmpty()) {
+        setError(ParseError::invalid, start);
+        return nullptr;
+    }
+
+    auto node = new Node(variant);
     node->nodeType = NodeType::pattern;
+
     node->patternBitBoards.push_back(board->posToBitboards());
 
     node->patternOperand = patternOperand;
@@ -833,208 +1156,217 @@ Node* Parser::parse_pattern(size_t& from)
 
     // shift
     if (patternOperand == PatternOperand::shift) {
-        node->pattern_shift();
+#ifdef _CHESS_
+        if (banksia::isChessFamily(variant)) {
+            banksia::ChessBoard::pattern_shift(node->patternBitBoards);
+        }
+#endif
     }
 
     return node;
 }
 
-Node* Parser::parse_condition(size_t& from)
+/// "a1" (chess) or "a0" (xiangqi) as a board position; -1 when it is not one
+static int squareToPos(banksia::ChessVariant variant, const char* s)
 {
-    assert(from <= lexVec.size());
-    
-    auto node = parse_fenclause(from);
-    if (node) {
-        return node;
+#ifdef _CHESS_
+    if (banksia::isChessFamily(variant)) {
+        return coordinate2pos(s);
     }
-    
-    if (error != ParseError::none) {
+#endif
+#ifdef _XIANGQI_
+    if (banksia::isXqFamily(variant)) {
+        return xqCoordinate2pos(s);
+    }
+#endif
+    (void)variant;
+    (void)s;
+    return -1;
+}
+
+static std::string trimmed(const std::string& s)
+{
+    auto a = s.find_first_not_of(" \t\r\n");
+    if (a == std::string::npos) return "";
+    auto b = s.find_last_not_of(" \t\r\n");
+    return s.substr(a, b - a + 1);
+}
+
+/// One move pattern:
+///   [piece] [from square | from file] ["x"] [to square] ["=" promotion | promotion]   or O-O, O-O-O
+/// The piece letter's case is the side, as everywhere in PQL (N a White knight, n a Black one); a
+/// letter followed by a digit is a square. Everything left out matches anything: "N" any White
+/// knight move, "x" any capture, "e4" any move to e4, "Pe7e8=Q" a White promotion to a queen.
+bool Parser::parse_movespec(const std::string& str, MoveSpec& spec) const
+{
+    auto s = trimmed(str);
+    if (s.empty()) {
+        return false;
+    }
+
+    if (banksia::isChessFamily(variant)) {
+        if (s == "O-O" || s == "0-0") {
+            spec.castle = 1;
+            return true;
+        }
+        if (s == "O-O-O" || s == "0-0-0") {
+            spec.castle = 2;
+            return true;
+        }
+    }
+
+    const char* pieceLetters = banksia::isXqFamily(variant) ? "KAERCHP" : "KQRBNP";
+    const int columnCnt = banksia::isXqFamily(variant) ? 9 : 8;
+    const auto len = s.size();
+
+    auto squareAt = [&](size_t k) -> int {
+        if (k + 1 < len && isalpha(s[k]) && isdigit(s[k + 1])) {
+            return squareToPos(variant, s.c_str() + k);
+        }
+        return -1;
+    };
+    auto pieceTypeOf = [&](char ch) -> int {
+        auto p = strchr(pieceLetters, toupper(ch));
+        return p && *p ? banksia::KING + static_cast<int>(p - pieceLetters) : -1;
+    };
+    auto isColumn = [&](char ch) { return ch >= 'a' && ch < 'a' + columnCnt; };
+
+    size_t k = 0;
+    if (isalpha(s[0]) && squareAt(0) < 0) {
+        auto type = pieceTypeOf(s[0]);
+        if (type >= 0) {
+            spec.pieceType = type;
+            spec.side = isupper(s[0]) ? banksia::Side::white : banksia::Side::black;
+            k = 1;
+        }
+    }
+
+    std::vector<int> squares;
+    while (k < len) {
+        auto ch = s[k];
+        auto pos = squareAt(k);
+        if (pos >= 0) {
+            squares.push_back(pos);
+            k += 2;
+        } else if (ch == 'x' || ch == ':') {
+            spec.capture = true;
+            ++k;
+        } else if (ch == '-' || ch == '+' || ch == '#' || ch == '!' || ch == '?') {
+            ++k;
+        } else if (ch == '=') {
+            if (k + 1 >= len || (spec.promotion = pieceTypeOf(s[k + 1])) < 0) {
+                return false;
+            }
+            k += 2;
+        } else if (isColumn(ch) && squares.empty() && spec.fromCol < 0) {
+            spec.fromCol = ch - 'a';
+            ++k;
+        } else if (!squares.empty() && pieceTypeOf(ch) >= 0) {
+            spec.promotion = pieceTypeOf(ch);
+            ++k;
+        } else {
+            return false;
+        }
+    }
+
+    if (squares.size() > 2) {
+        return false;
+    }
+    if (squares.size() == 2) {
+        spec.from = squares.front();
+    }
+    if (!squares.empty()) {
+        spec.dest = squares.back();
+    }
+    return true;
+}
+
+/// move[spec, spec, ...]: the move that led to the position matches one of them
+Node* Parser::parse_move(size_t& from)
+{
+    if (from + 1 >= lexVec.size() || lexVec.at(from + 1).lex != Lex::raw) {
+        setError(ParseError::invalid, from);
         return nullptr;
     }
+    auto raw = lexVec.at(from + 1).string;
+    from += 2;
 
-    Node* r = nullptr, *w = nullptr;
-    while (from < lexVec.size()) {
-        auto node = parse_expression(from);
-        if (!node) {
-            break;
-        }
-        auto stop = from >= lexVec.size();
-        if (!stop) {
-            auto lex = lexVec.at(from).lex;
-            stop = lex != Lex::operator_comparison;
-        }
-        if (stop) {
-            if (r) {
-                assert(w && !w->rhs);
-                w->rhs = node;
-            } else {
-                r = node;
-            }
-            break;
-        }
-        
-        auto word = lexVec.at(from);
-        assert(word.lex == Lex::operator_comparison);
-        
-        auto op = new Node(word);
-        op->lhs = node;
+    auto node = new Node(variant);
+    node->nodeType = NodeType::move;
+    node->string = "move[" + raw + "]";
 
-        if (!r) {
-            r = op;
-        }
-        if (w) {
-            assert(!w->rhs);
-            w->rhs = op;
-        }
-        w = op;
-        ++from;
-        if (from >= lexVec.size()) {
-            // wrong
-            error = ParseError::missing_op_comparison;
-            break;
-        }
-    }
-
-    return r;
-}
-
-Node* Parser::parse_expression(size_t& from)
-{
-    assert(from <= lexVec.size());
-
-    Node* r = nullptr, *w = nullptr;
-
-    while (from < lexVec.size()) {
-        auto node = parse_term(from);
-        if (!node) {
-            break;
-        }
-        
-        auto stop = from >= lexVec.size();
-        if (!stop) {
-            auto lex = lexVec.at(from).lex;
-            stop = lex != Lex::operator_add && lex != Lex::operator_sub;
-        }
-        if (stop) {
-            if (r) {
-                assert(w && !w->rhs);
-                w->rhs = node;
-            } else {
-                r = node;
-            }
-            break;
-        }
-
-        auto word = lexVec.at(from);
-        assert(word.lex == Lex::operator_add || word.lex == Lex::operator_sub);
-        
-        auto op = new Node(word);
-        op->lhs = node;
-
-        if (!r) {
-            r = op;
-        }
-        if (w) {
-            assert(!w->rhs);
-            w->rhs = op;
-        }
-        w = op;
-
-        ++from;
-        if (from >= lexVec.size()) {
-            // wrong
-            error = ParseError::missing_term;
-            break;
-        }
-    }
-
-    return r;
-}
-
-Node* Parser::parse_term(size_t& from)
-{
-    assert(from <= lexVec.size());
-    Node* r = nullptr, *w = nullptr;
-    while (from < lexVec.size()) {
-        auto node = parse_factor(from);
-        if (!node) {
-            break;
-        }
-        
-        auto stop = from >= lexVec.size();
-        if (!stop) {
-            auto lex = lexVec.at(from).lex;
-            stop = lex != Lex::operator_multi && lex != Lex::operator_div;
-        }
-        if (stop) {
-            if (r) {
-                assert(w && !w->rhs);
-                w->rhs = node;
-            } else {
-                r = node;
-            }
-            break;
-        }
-
-        auto word = lexVec.at(from);
-        assert(word.lex == Lex::operator_multi || word.lex == Lex::operator_div);
-
-        auto op = new Node(word);
-        op->lhs = node;
-
-        if (!r) {
-            r = op;
-        }
-        if (w) {
-            assert(!w->rhs);
-            w->rhs = op;
-        }
-        w = op;
-        ++from;
-        if (from >= lexVec.size()) {
-            // wrong
-            error = ParseError::missing_factor;
-            break;
-        }
-    }
-
-    return r;
-}
-
-Node* Parser::parse_factor(size_t& from)
-{
-    assert(from <= lexVec.size());
-
-    auto word = lexVec.at(from);
-    if (word.lex == Lex::number) {
-        ++from;
-        return new Node(word);
-    }
-
-    if (word.string == "(") {
-        assert(word.lex == Lex::bracket);
-        ++from;
-        auto node = parse_expression(from);
-        auto word2 = lexVec.at(from);
-        if (word2.string == ")") {
-            assert(word2.lex == Lex::bracket);
-            from++;
-            return node;
-        } else {
+    std::stringstream ss(raw);
+    std::string item;
+    while (std::getline(ss, item, ',')) {
+        MoveSpec spec;
+        if (!parse_movespec(item, spec)) {
             delete node;
-            // wrong
-            error = ParseError::missing_close;
+            setError(ParseError::wrong_move, from - 1);
+            errorNear = trimmed(item);
+            return nullptr;
         }
-    }
-    else
-    if (word.lex == Lex::string) {
-        return parse_piece(from);
+        node->moveSpecVec.push_back(spec);
     }
 
-    // wrong
-    return nullptr;
+    if (node->moveSpecVec.empty()) {
+        delete node;
+        setError(ParseError::invalid, from - 1);
+        return nullptr;
+    }
+    return node;
 }
 
+/// line[1. e4 e5 2. Nf3]: the position reached by exactly these moves from the start position
+Node* Parser::parse_line(size_t& from)
+{
+    if (from + 1 >= lexVec.size() || lexVec.at(from + 1).lex != Lex::raw) {
+        setError(ParseError::invalid, from);
+        return nullptr;
+    }
+    auto raw = lexVec.at(from + 1).string;
+    from += 2;
+
+    auto node = new Node(variant);
+    node->nodeType = NodeType::line;
+    node->string = "line[" + raw + "]";
+
+    board->newGame();
+    node->lineStartHash = board->hashKey;
+
+    std::stringstream ss(raw);
+    std::string token;
+    while (ss >> token) {
+        /// move numbers ("1.", "1...", "12.e4") and a result are not moves
+        auto k = token.find_first_not_of("0123456789");
+        if (k != std::string::npos && k > 0 && token[k] == '.') {
+            token = token.substr(token.find_first_not_of('.', k) == std::string::npos
+                                         ? token.size()
+                                         : token.find_first_not_of('.', k));
+        }
+        if (token.empty() || token == "*" || token == "1-0" || token == "0-1" || token == "1/2-1/2") {
+            continue;
+        }
+
+        auto move = board->moveFromString_san(token, banksia::moveFormat);
+        if (!board->isValid(move)) {
+            move = board->moveFromString_coordinate(token, banksia::moveFormat);
+        }
+        if (!board->isValid(move) || !board->checkMake(move.from, move.dest, move.promotion)) {
+            delete node;
+            setError(ParseError::wrong_move, from - 1);
+            errorNear = token;
+            return nullptr;
+        }
+        node->lineMoves.push_back(banksia::Move(move.from, move.dest, move.promotion));
+    }
+
+    if (node->lineMoves.empty()) {
+        delete node;
+        setError(ParseError::invalid, from - 1);
+        return nullptr;
+    }
+    return node;
+}
 
 Node* Parser::parse_piece(size_t& from)
 {
@@ -1052,71 +1384,91 @@ Node* Parser::parse_piece(size_t& from)
 void Parser::parse_squareset(Node* node, size_t& from)
 {
     assert(node);
-    auto word = lexVec.at(from);
-    if (word.string != "[") {
+    if (from >= lexVec.size() || lexVec.at(from).string != "[") {
         return;
     }
-    assert(word.lex == Lex::bracket);
     ++from;
-    while(from < lexVec.size()) {
+    while (from < lexVec.size()) {
+        auto at = from;
         auto word = lexVec.at(from++);
         if (word.lex == Lex::comma) {
             continue;
         }
         if (word.string == "]") {
-            assert(word.lex == Lex::bracket);
             return;
         }
-        
+
+        /// a range: a-c, 1-3, a2-a4
         if (from + 1 < lexVec.size() && lexVec.at(from).string == "-") {
             from++;
             if (node->selectSquare(word.string, lexVec.at(from++).string) < 0) {
-                error = ParseError::wrong_lexical;
+                setError(ParseError::wrong_lexical, at);
                 return;
             }
             continue;
         }
-        if (word.lex == Lex::string || word.lex == Lex::number) {
-            if (node->selectSquare(word.string.c_str()) < 0) {
-                error = ParseError::wrong_lexical;
-                return;
-            }
+        if ((word.lex != Lex::string && word.lex != Lex::number) || node->selectSquare(word.string.c_str()) < 0) {
+            setError(ParseError::wrong_lexical, at);
+            return;
         }
     }
 
-    error = ParseError::missing_close;
+    setError(ParseError::missing_close, from);
 }
 
-// R rc b8
 Node* Parser::parse_piecename(size_t& from)
 {
     assert(from <= lexVec.size());
+
+    const char* pieceNames = nullptr;
+
+#ifdef _CHESS_
+    if (banksia::isChessFamily(variant)) {
+        pieceNames = "KQRBNPkqrbnpw"; // w-b for white/black/bishop
+    }
+#endif
+
+#ifdef _XIANGQI_
+    if (banksia::isXqFamily(variant)) {
+        pieceNames = "KAERCHPkaerchpwb"; // w-b for white/black
+    }
+#endif
+
+    if (!pieceNames || from >= lexVec.size()) {
+        return nullptr;
+    }
 
     auto word = lexVec.at(from);
     if (word.lex == Lex::string) {
         assert(!word.string.empty());
         auto ch = word.string.at(0);
-        auto len = 1;
-        if (strchr("KQRBNPkqrbnpw", ch)) {
-            auto node = new Node;
+        size_t len = 1;
+        auto t = strchr(pieceNames, ch);
+        if (t) {
+            /// "white", "black": all pieces of a side; a lone "w" (or, in xiangqi, "b") is no piece
+            auto isWhite = word.string.compare(0, 5, "white") == 0;
+            auto isBlack = word.string.compare(0, 5, "black") == 0;
+            if ((ch == 'w' && !isWhite) || (ch == 'b' && !isBlack && banksia::isXqFamily(variant))) {
+                return nullptr;
+            }
+
+            auto node = new Node(variant);
             node->nodeType = NodeType::piece;
             node->string = ch;
-            if (ch == 'w') {
-                if (memcmp(word.string.c_str(), "white", 5) == 0) {
-                    node->string = "white";
-                    len = 5;
-                }
-            } else
-            if (ch == 'b') {
-                if (memcmp(word.string.c_str(), "black", 5) == 0) {
-                    node->string = "black";
-                    len = 5;
-                }
+            if (isWhite || isBlack) {
+                node->string = isWhite ? "white" : "black";
+                len = 5;
+            } else {
+                /// KQRBNP / KAERCHP, in the order of the piece types (xiangqi has 7: this was % 6,
+                /// which made every xiangqi pattern piece after the advisor the wrong type)
+                auto typeCnt = banksia::isXqFamily(variant) ? 7 : 6;
+                node->pieceType = banksia::KING + ((t - pieceNames) % typeCnt);
+                node->pieceSide = isupper(ch) ? banksia::Side::white : banksia::Side::black;
             }
-            
+
             if (len < word.string.size()) {
                 if (node->selectSquare(word.string.c_str() + len) < 0) {
-                    error = ParseError::wrong_lexical;
+                    setError(ParseError::wrong_lexical, from);
                 }
             }
 
@@ -1128,184 +1480,177 @@ Node* Parser::parse_piecename(size_t& from)
     return nullptr;
 }
 
+/// Splits a query into words: a FEN ends with its own fields, so "<fen> and q = 1" is not one long
+/// FEN; "8-2" is a subtraction, not a FEN; "&&", "||", "!" and the words "not", "then" are operators;
+/// move[...] and line[...] keep their text whole (Lex::raw); an unknown character is an error, not
+/// skipped.
 std::vector<LexWord> Parser::lexParse(const char* s)
 {
     assert(s && error == ParseError::none);
 
-    enum class State {
-        none, text, number, comparison, fen
+    std::vector<LexWord> words;
+    const std::string str(s);
+    const auto n = str.size();
+
+    auto push = [&](Lex lex, const std::string& text) {
+        LexWord word;
+        word.lex = lex;
+        word.string = text;
+        words.push_back(word);
+    };
+    auto fail = [&](size_t at) {
+        error = ParseError::wrong_lexical;
+        errorNear = str.substr(at, 10);
     };
 
-    std::vector<LexWord> words;
-
-    std::string text;
-    auto state = State::none;
-    auto ok = true;
-
     static const char* comparisonChars = "=<>!";
-    for(auto p = s; ok && error == ParseError::none; ++p) {
-        switch (state) {
-            case State::none:
-            {
-                if (!*p) {
-                    ok = false;
-                    break;
-                }
 
-                if (isalpha(*p)) {
-                    state = State::text;
-                    text = *p;
-                    break;
-                }
-                if (isdigit(*p)) {
-                    state = State::number;
-                    text = *p;
-                    break;
-                }
+    for (size_t i = 0; i < n && error == ParseError::none;) {
+        auto c = str[i];
+        if (isspace(static_cast<unsigned char>(c))) {
+            ++i;
+            continue;
+        }
 
-                if (strchr(comparisonChars, *p)) {
-                    state = State::comparison;
-                    text = *p;
-                    break;
-                }
+        if (isalnum(static_cast<unsigned char>(c))) {
+            auto j = i;
+            while (j < n && (isalnum(static_cast<unsigned char>(str[j])) || str[j] == '/')) ++j;
+            auto word = str.substr(i, j - i);
 
-                LexWord word;
-                switch (*p) {
-                    case '+':
-                        word.lex = Lex::operator_add;
-                        break;
-                    case '-':
-                        word.lex = Lex::operator_sub;
-                        break;
-                    case '*':
-                        word.lex = Lex::operator_multi;
-                        break;
-                    case '/':
-                        word.lex = Lex::operator_div;
-                        break;
-                    case '#':
-                        word.lex = Lex::operator_pattern_shift;
-                        break;
-                    case '{':
-                    case '}':
-                    case '(':
-                    case ')':
-                    case '[':
-                    case ']':
-                        word.lex = Lex::bracket;
-                        break;
-                    case ',':
-                        word.lex = Lex::comma;
-                        break;
-
-                    default:
-                        if (!*p) {
-                            ok = false;
+            /// a FEN: its board has '/'; then up to five more fields that look like FEN fields
+            if (word.find('/') != std::string::npos) {
+                std::string fen = word;
+                for (auto field = 1; field < 6; ++field) {
+                    auto k = j;
+                    while (k < n && str[k] == ' ') ++k;
+                    auto e = k;
+                    while (e < n && (isalnum(static_cast<unsigned char>(str[e])) || str[e] == '-')) ++e;
+                    if (e == k) break;
+                    auto f = str.substr(k, e - k);
+                    auto ok = false;
+                    switch (field) {
+                        case 1:
+                            ok = f == "w" || f == "b" || f == "r";
                             break;
-                        }
-                        break;
+                        case 2:
+                            ok = f.find_first_not_of("KQkqABCDEFGHabcdefgh-") == std::string::npos;
+                            break;
+                        case 3:
+                            ok = f == "-" || (f.size() == 2 && isalpha(f[0]) && isdigit(f[1]));
+                            break;
+                        default:
+                            ok = f.find_first_not_of("0123456789") == std::string::npos;
+                            break;
+                    }
+                    if (!ok) break;
+                    fen += " " + f;
+                    j = e;
                 }
-
-                if (word.lex != Lex::none) {
-                    word.string += *p;
-                    words.push_back(word);
-                    break;
-                }
-                break;
+                push(Lex::fen, fen);
+                i = j;
+                continue;
             }
 
-            case State::text:
-                if (!isalnum(*p)) {
-                    if (*p == '/') { //  || *p == '-'
-                        state = State::fen;
-                        --p;
-                        break;
-                    }
-
-                    state = State::none;
-                    --p;
-
-                    LexWord word;
-                    word.lex = Lex::string;
-                    word.string = text;
-
-                    if (text == "and") {
-                        word.lex = Lex::operator_and;
-                    } else if (text == "or") {
-                        word.lex = Lex::operator_or;
-                    }
-                    words.push_back(word);
+            if (isdigit(static_cast<unsigned char>(c))) {
+                auto e = i;
+                while (e < n && isdigit(static_cast<unsigned char>(str[e]))) ++e;
+                if (e < n && isalpha(static_cast<unsigned char>(str[e]))) {
+                    fail(i); // "4white"
                     break;
                 }
-                text += *p;
-                break;
-
-            case State::fen:
-                if (!isalnum(*p) && *p != '/' && *p != '-' && *p != ' ') {
-                    state = State::none;
-                    --p;
-
-                    LexWord word;
-                    word.lex = Lex::fen;
-                    word.string = text;
-
-                    words.push_back(word);
-                    break;
-                }
-                text += *p;
-                break;
-
-            case State::comparison:
-            {
-                if (strchr(comparisonChars, *p)) {
-                    text += *p;
-                    break;
-                }
-
-                state = State::none;
-                --p;
-
-                if (string2operator(text) >= Operator::none) {
-                    // wrong
-                    error = ParseError::wrong_lexical;
-                    break;
-                }
-                LexWord word;
-                word.lex = Lex::operator_comparison;
-                word.string = text;
-                words.push_back(word);
-                break;
+                push(Lex::number, str.substr(i, e - i));
+                i = e;
+                continue;
             }
 
-            case State::number:
-                if (!isdigit(*p)) {
-                    if (isalnum(*p) || *p == '/' || *p == '-') {
-                        state = State::fen;
-                        --p;
-                        break;
-                    }
-
-                    state = State::none;
-
-                    if (isalpha(*p)) {
-                        // wrong
-                        error = ParseError::wrong_lexical;
-                        break;
-                    }
-                    --p;
-
-                    LexWord word;
-                    word.lex = Lex::number;
-                    word.string = text;
-                    words.push_back(word);
+            /// move[...], line[...]: the text up to "]" is read by the parser
+            if ((word == "move" || word == "line") && j < n && str[j] == '[') {
+                auto close = str.find(']', j + 1);
+                if (close == std::string::npos) {
+                    error = ParseError::missing_close;
+                    errorNear = word + "[";
                     break;
                 }
-                text += *p;
-                break;
+                push(Lex::string, word);
+                push(Lex::raw, str.substr(j + 1, close - j - 1));
+                i = close + 1;
+                continue;
+            }
 
+            auto lex = Lex::string;
+            if (word == "and") {
+                lex = Lex::operator_and;
+            } else if (word == "or") {
+                lex = Lex::operator_or;
+            } else if (word == "not") {
+                lex = Lex::operator_not;
+            } else if (word == "then") {
+                lex = Lex::operator_then;
+            }
+            push(lex, word);
+            i = j;
+            continue;
+        }
+
+        if (strchr(comparisonChars, c)) {
+            auto j = i;
+            while (j < n && strchr(comparisonChars, str[j])) ++j;
+            auto text = str.substr(i, j - i);
+            if (text == "!") {
+                push(Lex::operator_not, text);
+            } else if (string2operator(text) >= Operator::none) {
+                fail(i);
+                break;
+            } else {
+                push(Lex::operator_comparison, text);
+            }
+            i = j;
+            continue;
+        }
+
+        if ((c == '&' || c == '|') && i + 1 < n && str[i + 1] == c) {
+            push(c == '&' ? Lex::operator_and : Lex::operator_or, str.substr(i, 2));
+            i += 2;
+            continue;
+        }
+
+        auto lex = Lex::none;
+        switch (c) {
+            case '+':
+                lex = Lex::operator_add;
+                break;
+            case '-':
+                lex = Lex::operator_sub;
+                break;
+            case '*':
+                lex = Lex::operator_multi;
+                break;
+            case '/':
+                lex = Lex::operator_div;
+                break;
+            case '#':
+                lex = Lex::operator_pattern_shift;
+                break;
+            case '{':
+            case '}':
+            case '(':
+            case ')':
+            case '[':
+            case ']':
+                lex = Lex::bracket;
+                break;
+            case ',':
+                lex = Lex::comma;
+                break;
             default:
                 break;
         }
+        if (lex == Lex::none) {
+            fail(i);
+            break;
+        }
+        push(lex, std::string(1, c));
+        ++i;
     }
 
     return words;

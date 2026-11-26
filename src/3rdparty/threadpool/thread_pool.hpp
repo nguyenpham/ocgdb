@@ -16,6 +16,7 @@
 
 #include <atomic>      // std::atomic
 #include <chrono>      // std::chrono
+#include <condition_variable> // std::condition_variable (OOBS change, see worker())
 #include <cstdint>     // std::int_fast64_t, std::uint_fast32_t
 #include <functional>  // std::function
 #include <future>      // std::future, std::promise
@@ -176,6 +177,7 @@ public:
             const std::scoped_lock lock(queue_mutex);
             tasks.push(std::function<void()>(task));
         }
+        task_available_cv.notify_one();
     }
 
     /**
@@ -288,6 +290,15 @@ public:
      */
     void wait_for_tasks()
     {
+        /// OOBS change (2026-10-03): woken by the last task rather than polling every
+        /// sleep_duration (1 ms); the timeout only guards against a missed wake-up.
+        if (!paused)
+        {
+            std::unique_lock lock(queue_mutex);
+            while (tasks_total != 0)
+                tasks_done_cv.wait_for(lock, std::chrono::milliseconds(50));
+            return;
+        }
         while (true)
         {
             if (!paused)
@@ -339,6 +350,10 @@ private:
      */
     void destroy_threads()
     {
+        {
+            const std::scoped_lock lock(queue_mutex);
+        }
+        task_available_cv.notify_all();
         for (ui32 i = 0; i < thread_count; i++)
         {
             threads[i].join();
@@ -381,17 +396,31 @@ private:
      */
     void worker()
     {
+        /// OOBS change (2026-10-03): an idle worker waits on a condition variable that
+        /// push_task() signals, instead of sleeping sleep_duration (1 ms) between looks at the
+        /// queue. With games arriving in small batches the sleeps left every worker idle about a
+        /// third of the time (docs/XqGames.md §14). The timeout covers `paused`, which is set
+        /// without a signal.
         while (running)
         {
             std::function<void()> task;
-            if (!paused && pop_task(task))
             {
-                task();
-                tasks_total--;
+                std::unique_lock lock(queue_mutex);
+                if (paused || tasks.empty())
+                {
+                    task_available_cv.wait_for(lock, std::chrono::milliseconds(50),
+                                               [this] { return !running || (!paused && !tasks.empty()); });
+                }
+                if (!running || paused || tasks.empty())
+                    continue;
+                task = std::move(tasks.front());
+                tasks.pop();
             }
-            else
+            task();
+            if (--tasks_total == 0)
             {
-                sleep_or_yield();
+                const std::scoped_lock lock(queue_mutex);
+                tasks_done_cv.notify_all();
             }
         }
     }
@@ -404,6 +433,9 @@ private:
      * @brief A mutex to synchronize access to the task queue by different threads.
      */
     mutable std::mutex queue_mutex = {};
+
+    /// signalled by push_task() (a task to run) and by the last task to finish (OOBS change)
+    std::condition_variable task_available_cv, tasks_done_cv;
 
     /**
      * @brief An atomic variable indicating to the workers to keep running. When set to false, the workers permanently stop working.

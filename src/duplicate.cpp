@@ -1,317 +1,265 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021-2022 Developers
+ * Copyright (c) 2019-2026 Nguyen Hong Pham (github@nguyenpham)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
  */
 
+#include <iostream>
+#include <functional>
+#include <map>
+#include <set>
+
 #include "duplicate.h"
+#include "report.h"
 
 using namespace ocgdb;
 
-void Duplicate::runTask()
+bool Duplicate::runTask()
 {
-    for(auto && dbPath : paraRecord.dbPaths) {
-        std::cout   << "Finding duplicate games...\n"
-                    << "DB path : " << dbPath
-                    << std::endl;
-
-        startTime = getNow();
-
-        mDb = new SQLite::Database(dbPath, (paraRecord.optionFlag & dup_flag_remove) ? SQLite::OPEN_READWRITE : SQLite::OPEN_READONLY);
-        if (!mDb) {
-            std::cerr << "Error: can't open database " << dbPath << std::endl;
-            continue;
-        }
-
-        searchField = DbRead::getMoveField(mDb);
-        if (searchField == SearchField::none) {
-            std::cerr << "Error: database " << dbPath << " has not any move field" << std::endl;
-            continue;
-        }
-
-        hashGameIDMap.clear();
-
-        // query for GameCount for setting reserve
-        if (paraRecord.optionFlag & query_flag_print_all) {
-            SQLite::Statement statement(*mDb, "SELECT * FROM Info WHERE Name = 'GameCount'");
-            
-            if (statement.executeStep()) {
-                auto s = statement.getColumn("Value").getText();
-                auto gameCount = std::stoi(s);
-                
-                // Just a large number to avoid rubish data
-                if (gameCount > 0 && gameCount < 1024 * 1024 * 1024) {
-                    hashGameIDMap.reserve(gameCount + 16);
-                }
-            }
-        }
-
-        if (paraRecord.optionFlag & dup_flag_remove) {
-            mDb->exec("PRAGMA journal_mode=OFF");
-            mDb->exec("BEGIN");
-        }
-        
-        for(auto && t : threadMap) {
-            t.second.resetStats();
-        }
-
-        std::string moveName = searchFieldNames[static_cast<int>(searchField)];
-        assert(!moveName.empty());
-        
-        int flag = bslib::BoardCore::ParseMoveListFlag_quick_check | bslib::BoardCore::ParseMoveListFlag_discardComment;
-        if (searchField == SearchField::moves1) {
-            flag |= bslib::BoardCore::ParseMoveListFlag_move_size_1_byte;
-        }
-
-        std::string sqlString = "SELECT ID, FEN, PlyCount, " + moveName + " FROM Games";
-
-        // sort games by lengths thus the longer games can check back sorter ones for embeded games
-        if (paraRecord.optionFlag & dup_flag_embededgames) {
-            sqlString += " ORDER BY PlyCount ASC";
-        }
-        
-        readADb(dbPath, sqlString);
+    auto ok = true;
+    for (auto&& dbPath : paraRecord.dbPaths) {
+        if (!working) break;
+        ok = checkADatabase(dbPath) && ok;
     }
+    return ok;
 }
 
-void Duplicate::printStats() const
+void Duplicate::printStats(bool completed) const
 {
-    int64_t dupCnt = 0, delCnt = 0;
-    for(auto && t : threadMap) {
-        dupCnt += t.second.dupCnt;
-        delCnt += t.second.delCnt;
+    auto elapsed = elapsedMs();
+    std::lock_guard<std::mutex> dolock(printMutex);
+    std::cout << "#games checked: " << processedCnt << ", elapsed: " << elapsed << " ms, speed: "
+              << processedCnt * 1000LL / elapsed << " games/s";
+    if (completed) {
+        std::cout << ", duplicates: " << dupPairCnt << ", removed: " << delCnt;
     }
-
-    DbCore::printStats();
-    std::cout << ", #duplicates: " << dupCnt << ", #removed: " << delCnt;
     std::cout << std::endl;
 }
 
+bool Duplicate::checkADatabase(const std::string& dbPath)
+{
+    std::cout << "Finding duplicate games: " << dbPath << std::endl;
 
-void Duplicate::processAGameWithAThread(ThreadRecord* t, const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
+    startTime = getNow();
+    processedCnt = 0;
+    delCnt = dupPairCnt = 0;
+    samePairVec.clear();
+    embededPairVec.clear();
+    hashGameIDMap.clear();
+
+    if (!openOCGDB(dbPath, (paraRecord.optionFlag & dup_flag_remove) == 0)) {
+        return false;
+    }
+
+    if (searchField == SearchField::none) {
+        std::cerr << "Error: database " << dbPath << " has no column for moves" << std::endl;
+        return false;
+    }
+
+    moveName = searchFieldNames[static_cast<int>(searchField)];
+
+    auto sqlString = "SELECT g.ID, g.FEN, g." + moveName + " FROM Games g";
+    std::string cond;
+    if (!paraRecord.where.empty()) {
+        /// the condition may name the players, the event and the site (w.Name, e.Name...)
+        sqlString = fullGameQueryString;
+        cond = "(" + paraRecord.where + ")";
+    }
+    if (paraRecord.limitLen > 0 && gameFieldSet.count("PlyCount")) {
+        if (!cond.empty()) cond += " AND ";
+        cond += "g.PlyCount >= " + std::to_string(paraRecord.limitLen);
+    }
+    if (!cond.empty()) {
+        sqlString += " WHERE " + cond;
+    }
+
+    // sort games by lengths thus the longer games can check back the shorter ones for embedded games
+    if ((paraRecord.optionFlag & dup_flag_embededgames) && gameFieldSet.count("PlyCount")) {
+        sqlString += " ORDER BY g.PlyCount ASC";
+    }
+
+    if (debugMode) {
+        std::cout << "SQL: " << sqlString << std::endl;
+    }
+
+    mainLineOnly = true;
+    try {
+        readGames(sqlString);
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return false;
+    }
+
+    reportRemove();
+    printStats(true);
+    closeDb();
+    return true;
+}
+
+void Duplicate::processAGameWithAThread(ThreadRecord* t, const banksia::PgnRecord& record,
+                                        const std::vector<int8_t>& moveVec)
 {
     assert(t);
 
-    if (!t->board) {
-        t->board = bslib::Funcs::createBoard(bslib::ChessVariant::standard);
-    }
-    assert(t->board);
+    t->initGetGameStatement(mDb, variant, moveName);
+    assert(t->board && t->board2);
 
-    t->board->newGame(record.fenText);
-
-    int flag = bslib::BoardCore::ParseMoveListFlag_quick_check;
-    if (searchField == SearchField::moves) { // there is a text move only
-        t->board->fromMoveList(&record, bslib::Notation::san, flag, nullptr);
-    } else {
-        if (searchField == SearchField::moves1) {
-            flag |= bslib::BoardCore::ParseMoveListFlag_move_size_1_byte;
-        }
-
-        t->board->fromMoveList(&record, moveVec, flag, nullptr);
-    }
-
+    extractBoard(t->board, record, moveVec, true);
     t->gameCnt++;
 
-    // Check again game length
-    auto plyCount = t->board->getHistListSize();
+    auto plyCount = t->board->getMainLineSize();
     if (plyCount < paraRecord.limitLen) {
         return;
     }
 
-    auto embeded = paraRecord.optionFlag & dup_flag_embededgames;
+    const bool embeded = paraRecord.optionFlag & dup_flag_embededgames;
 
-    std::vector<int> gameIDVec;
-    auto hashKey = t->board->getHashKeyForCheckingDuplicates();
+    /// Check hashKeys
+    std::vector<IDInteger> gameIDVec;
+    auto dupHashKey = t->board->getHashKeyForCheckingDuplicates();
 
     {
         std::lock_guard<std::mutex> dolock(dupHashKeyMutex);
 
         // last position
-        auto it = hashGameIDMap.find(hashKey);
+        auto it = hashGameIDMap.find(dupHashKey);
         if (it == hashGameIDMap.end()) {
-            hashGameIDMap[hashKey] = std::vector<int>{ record.gameID };
-            if (!embeded) {
-                return;
-            }
+            hashGameIDMap[dupHashKey] = std::vector<IDInteger> { record.gameID };
         } else {
             gameIDVec = it->second;
-            // Have to add the gameID here thus other threads can check it too
+            /// added here so that other threads check against it too
             it->second.push_back(record.gameID);
         }
 
         if (embeded) {
-            for(int i = std::max(paraRecord.limitLen, 1); i < plyCount; ++i) {
+            for (int i = std::max(paraRecord.limitLen, 1); i < plyCount; ++i) {
                 auto hk = t->board->getHashKeyForCheckingDuplicates(i);
                 auto it = hashGameIDMap.find(hk);
                 if (it != hashGameIDMap.end()) {
                     gameIDVec.insert(gameIDVec.end(), it->second.begin(), it->second.end());
                 }
             }
-
-            if (gameIDVec.empty()) {
-                return;
-            }
         }
     }
 
-    assert(gameIDVec.size() > 0);
-    auto moveName = searchFieldNames[static_cast<int>(searchField)];
-
-    // Prepare for next check
-    if (!t->getGameStatement) {
-        std::string sqlString = "SELECT FEN, " + moveName + " FROM Games WHERE ID = ?";
-        t->getGameStatement = new SQLite::Statement(*mDb, sqlString);
-    }
-
-    if (!t->board2) {
-        t->board2 = bslib::Funcs::createBoard(bslib::ChessVariant::standard);
-    }
-
-    std::set<int> deletingSet;
-    
-    // Next check, match all moves of all games in the list
-    for(auto && dupID : gameIDVec) {
-        if (dupID == record.gameID) {
-            continue;
-        }
-        t->getGameStatement->reset();
-        t->getGameStatement->bind(1, dupID);
-
-        // that game may be deleted by other threads
-        if (!t->getGameStatement->executeStep()) {
-            continue;
-        }
-        {
-            bslib::PgnRecord record2;
-            record2.fenText = t->getGameStatement->getColumn("FEN").getText();
-
-            if (record2.fenText != record.fenText) {
-                continue;
-            }
-
-            record2.gameID = dupID;
-            t->board2->newGame(record2.fenText);
-
-            if (searchField == SearchField::moves) {
-                record2.moveString = t->getGameStatement->getColumn("Moves").getText();
-                if (record2.moveString.empty()) {
-                    continue;
-                }
-
-                t->board2->fromMoveList(&record2, bslib::Notation::san, flag, nullptr);
-            } else {
-                std::vector<int8_t> moveVec;
-
-                auto c = t->getGameStatement->getColumn(moveName.c_str());
-                auto moveBlob = static_cast<const int8_t*>(c.getBlob());
-
-                if (moveBlob) {
-                    auto sz = c.size();
-                    for(auto i = 0; i < sz; ++i) {
-                        moveVec.push_back(moveBlob[i]);
-                    }
-                }
-
-                t->board2->fromMoveList(&record2, moveVec, flag, nullptr);
-            }
-        }
-
-        auto plyCount2 = t->board2->getHistListSize();
-        if (plyCount2 < paraRecord.limitLen || (!embeded && plyCount != plyCount2)) {
+    for (auto&& checkingID : gameIDVec) {
+        if (checkingID == record.gameID) {
             continue;
         }
 
-        if (t->board->equalMoveLists(t->board2, embeded)) {
-            if (paraRecord.optionFlag & dup_flag_remove) {
-                auto theID = plyCount2 <= plyCount ? dupID : record.gameID;
-                deletingSet.insert(theID);
-            }
-
+        if (t->isBoardDuplication(checkingID, embeded)) {
             t->dupCnt++;
-            printDuplicates(t, record, dupID, hashKey);
-        }
-    }
-    
-    if (deletingSet.empty()) {
-        return;
-    }
-    
-    if (!t->removeGameStatement) {
-        assert(mDb);
-        t->removeGameStatement = new SQLite::Statement(*mDb, "DELETE FROM Games WHERE ID = ?");
-    }
+            auto sameLength = t->board2->getMainLineSize() == plyCount;
 
-    for(auto && removingGameID : deletingSet) {
-        {
-            std::lock_guard<std::mutex> dolock(dupHashKeyMutex);
-    
-            auto it = hashGameIDMap.find(hashKey);
-            assert(it != hashGameIDMap.end());
-            for(size_t i = 0; i < it->second.size(); ++i) {
-                if (it->second.at(i) == removingGameID) {
-                    it->second.erase(it->second.begin() + i);
-                    break;
-                }
+            std::lock_guard<std::mutex> dolock(dupVecMutex);
+            if (sameLength) {
+                samePairVec.emplace_back(record.gameID, checkingID);
+            } else {
+                embededPairVec.emplace_back(record.gameID, checkingID);
             }
-        }
-    
-        t->removeGameStatement->reset();
-        t->removeGameStatement->bind(1, removingGameID);
-    
-        try {
-            if (t->removeGameStatement->exec()) {
-                t->delCnt++;
-                
-                if (printOut.isOn()) {
-                    std::string str = ";>>>>> Deleted ID: " + std::to_string(removingGameID) + "\n\n";
-                    printOut.printOut(str);
-                }
-            }
-        } catch (std::exception& e) {
-            std::cout << "SQLite exception: " << e.what() << std::endl;
-            t->errCnt++;
+            break;
         }
     }
 }
 
-void Duplicate::printDuplicates(ThreadRecord* t, const bslib::PgnRecord& record, int theDupID, uint64_t hashKey)
+/// The pairs found, reported and/or removed: each duplicate once; deleted in one transaction,
+/// with their comments; the Info counts recounted; Banksia GUI's opening tree (table Tree), whose
+/// counts include the duplicates, dropped (as Banksia GUI's Duplicate::reportRemove).
+void Duplicate::reportRemove()
 {
-    if (theDupID < 0) {
+    /// Copies of one game make a group, whichever pairs of them the threads compared: of each
+    /// group the game with the smallest ID stays -- it was in the database first. (Pairs taken one
+    /// by one, as (smaller, larger), could name as the copy kept a game already marked as a copy,
+    /// and one of four copies stayed, depending on how the threads ran.)
+    std::map<IDInteger, IDInteger> parent;
+    std::function<IDInteger(IDInteger)> find = [&](IDInteger x) {
+        auto it = parent.find(x);
+        if (it == parent.end() || it->second == x) {
+            return x;
+        }
+        auto r = find(it->second);
+        parent[x] = r;
+        return r;
+    };
+    for (auto&& [a, b] : samePairVec) {
+        auto ra = find(a), rb = find(b);
+        if (ra != rb) {
+            /// the smaller ID is the root
+            parent[std::max(ra, rb)] = std::min(ra, rb);
+            parent.emplace(std::min(ra, rb), std::min(ra, rb));
+        }
+    }
+
+    std::map<IDInteger, IDInteger> dupOf; // duplicate -> kept
+    for (auto&& it : parent) {
+        auto root = find(it.first);
+        if (it.first != root) {
+            dupOf[it.first] = root;
+        }
+    }
+    /// a game that is the start of a longer one goes, the longer one stays
+    for (auto&& [longer, shorter] : embededPairVec) {
+        if (!dupOf.count(shorter)) {
+            dupOf[shorter] = longer;
+        }
+    }
+    dupPairCnt = static_cast<int64_t>(dupOf.size());
+
+    if (dupOf.empty() || !working) {
         return;
     }
 
-    auto plyCount = t->board->getHistListSize();
-    
     if (paraRecord.optionFlag & query_flag_print_all) {
-        std::lock_guard<std::mutex> dolock(printMutex);
-
-        std::cerr << "Duplicate games detected between IDs " << theDupID << " and " << record.gameID
-        << ", game length: " << plyCount
-        << std::endl;
-    }
-
-    if (printOut.isOn()) {
-        if (!t->qgr) {
-            t->qgr = new QueryGameRecord(*mDb, searchField);
+        QueryGameRecord* qgr = nullptr;
+        if (paraRecord.optionFlag & query_flag_print_pgn) {
+            qgr = new QueryGameRecord(*mDb, searchField, fullGameQueryString, variant);
         }
 
-        bslib::PgnRecord record2;
-        record2.gameID = theDupID;
-        auto toPgnString0 = t->qgr->queryAndCreatePGNByGameID(record2);
-        record2.gameID = record.gameID;
-        auto toPgnString1 = t->qgr->queryAndCreatePGNByGameID(record2);
-
-        {
-            std::string str = ";>>>>> Duplicate: " + std::to_string(theDupID) + " vs " + std::to_string(record.gameID)
-                + "\n\n;ID: " + std::to_string(theDupID) + "\n" + toPgnString0
-                + "\n\n;ID: " + std::to_string(record.gameID) + "\n" + toPgnString1
-                + "\n\n";
-
+        for (auto&& [dup, kept] : dupOf) {
+            std::string str = ">>>>> Duplicate: " + std::to_string(dup) + " of " + std::to_string(kept);
+            if (qgr) {
+                banksia::PgnRecord record0, record1;
+                record0.gameID = kept;
+                record1.gameID = dup;
+                str += "\n\n" + qgr->queryAndCreatePGNByGameID(record0) + "\n" + qgr->queryAndCreatePGNByGameID(record1);
+            }
             printOut.printOut(str);
         }
+        delete qgr;
     }
+
+    if ((paraRecord.optionFlag & dup_flag_remove) == 0 || !working) {
+        return;
+    }
+
+    threadMap.clear(); // their statements
+
+    const auto hasComments = hasTable(*mDb, "Comments");
+
+    SQLite::Statement removeGame(*mDb, "DELETE FROM Games WHERE ID = ?");
+    SQLite::Statement* removeComments = hasComments ? new SQLite::Statement(*mDb, "DELETE FROM Comments WHERE GameID = ?") : nullptr;
+
+    mDb->exec("BEGIN");
+    for (auto&& it : dupOf) {
+        removeGame.reset();
+        removeGame.bind(1, it.first);
+        delCnt += removeGame.exec();
+        if (removeComments) {
+            removeComments->reset();
+            removeComments->bind(1, it.first);
+            removeComments->exec();
+        }
+    }
+    delete removeComments;
+
+    if (delCnt > 0 && hasTable(*mDb, "Tree")) {
+        mDb->exec("DROP TABLE Tree");
+        mDb->exec("DELETE FROM Info WHERE Name = 'TreeNodeCount'");
+        std::cout << "The opening tree (table Tree) included the duplicates and was dropped" << std::endl;
+    }
+    refreshInfoCounts(*mDb);
+    mDb->exec("COMMIT");
 }

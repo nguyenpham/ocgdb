@@ -1,0 +1,87 @@
+[Event "Test \"quoted\" event \\ backslash"]
+[Site "Test site"]
+[Date "2026.10.06"]
+[Round "1"]
+[White "White, A."]
+[Black "Black, B."]
+[Result "1-0"]
+[WhiteElo "2500"]
+[BlackElo "2400"]
+
+{A first comment before the moves.} 1. e4 e5 2. Nf3 Nc6 (2... d6 {Philidor (an old defence)} 3. d4 (3. Bc4 Be7) exd4) 3. Bb5 a6 {The Morphy defence; (comment with brackets)} 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 (9... Na5 10. Bc2 c5 (10... c6) 11. d4) 10. d4 Nbd7 $1 11. Nbd2 Bb7!? 12. Bc2 Re8 13. Nf1 Bf8 14. Ng3 g6 15. a4 c5 16. d5 c4 17. Bg5 h6 18. Be3 Nc5 19. Qd2 h5 20. Bg5 Be7 21. Qe3 1-0
+
+[Event "Promotions"]
+[Site "Test site"]
+[Date "2026.10.06"]
+[Round "2"]
+[White "Promoter"]
+[Black "Defender"]
+[Result "*"]
+[FEN "4k3/1PP3P1/8/8/8/8/1p3pp1/4K3 w - - 0 1"]
+[SetUp "1"]
+
+1. Kxf2 b1=R 2. b8=N g1=Q+ 3. Kf3 Rb2 4. c8=B Qg2+ 5. Kf4 Kd8 6. Be6 Qc6 7. Bg4 Qd7 8. Kg3 Ke8 9. g8=Q+ Ke7 10. Qg7+ Kd8 11. Qe7+ Kc7 12. Qe1 Kb6 13. Qb1 Qg7 14. Qe4 Qe7 15. Qb1 Qb4 16. Bf3 Rc2 17. Ba8 Rb2 18. Qf1 Rb3+ 19. Qf3 Qb5 20. Nd7+ Ka6 *
+
+[Event "From a FEN, Black to move"]
+[Site "Test site"]
+[Date "2026.??.??"]
+[Round "3"]
+[White "E. Passant"]
+[Black "Q. Side"]
+[Result "1/2-1/2"]
+[FEN "r3k2r/pppq1ppp/2npbn2/4p3/2B1P1P1/2NP1N2/PPP2P1P/R2QK2R b KQkq g3 0 9"]
+[SetUp "1"]
+
+9... O-O-O (9... h5 10. g5 Ng4) 10. g5 Ng4 11. Bxe6 Qxe6 12. h3 Nf6 13. gxf6 Qxf6 14. Qd2 g5 15. O-O-O h5 16. Nd5 Qe6 17. Kb1 f5 18. exf5 Qxf5 19. Rhg1 g4 1/2-1/2
+
+[Event "En passant"]
+[Site "Test site"]
+[Date "2026.01.02"]
+[Round "4"]
+[White "Pawn"]
+[Black "Mover"]
+[Result "*"]
+
+1. e4 Nf6 2. e5 d5 3. exd6 cxd6 4. d4 g5 5. Nf3 g4 6. Nfd2 e5 7. h4 gxh3 8. Rxh3 exd4 9. c4 dxc3 10. Nxc3 *
+
+[Event "Copy of game 1"]
+[Site "Test site"]
+[Date "2026.10.06"]
+[Round "5"]
+[White "Copier"]
+[Black "Copied"]
+[Result "1-0"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 11. Nbd2 Bb7 12. Bc2 Re8 13. Nf1 Bf8 14. Ng3 g6 15. a4 c5 16. d5 c4 17. Bg5 h6 18. Be3 Nc5 19. Qd2 h5 20. Bg5 Be7 21. Qe3 1-0
+
+[Event "The start of game 1"]
+[Site "Test site"]
+[Date "2026.10.06"]
+[Round "6"]
+[White "Short"]
+[Black "Game"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 *
+
+[Event "Scholar's mate"]
+[Site "Test site"]
+[Date "2026.10.06"]
+[Round "7"]
+[White "Quick"]
+[Black "Victim"]
+[Result "1-0"]
+[ECO "C20"]
+[Annotator "Test"]
+
+1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6?? 4. Qxf7# 1-0
+
+[Event "Smothered"]
+[Site "Test site"]
+[Date "2026.10.06"]
+[Round "8"]
+[White "Knight"]
+[Black "King"]
+[Result "1-0"]
+
+1. e4 c6 2. d4 d5 3. Nc3 dxe4 4. Nxe4 Nd7 5. Qe2 Ngf6 6. Nd6# 1-0

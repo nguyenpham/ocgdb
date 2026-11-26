@@ -1,8 +1,7 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021-2022 Developers
+ * Copyright (c) 2019-2026 Nguyen Hong Pham (github@nguyenpham)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -14,242 +13,231 @@
 #include <vector>
 #include <unordered_map>
 #include <fstream>
+#include <mutex>
 
 #include "3rdparty/SQLiteCpp/SQLiteCpp.h"
 #include "3rdparty/threadpool/thread_pool.hpp"
 
-#include "board/types.h"
-#include "board/base.h"
+#include "base/types.h"
+#include "base/base.h"
 
+
+/// -debug: print more (the options, the SQL of the tasks)
+extern bool debugMode;
 
 namespace ocgdb {
 
-class QueryGameRecord;
+    class QueryGameRecord;
 
-// Developer may change this string
-const std::string VersionUserDatabaseString = "0.1";
+    /// The program's version: the Makefile passes it (VERSION), so `ocgdb -version` and the
+    /// database's Info table say the same as the build.
+#ifdef APP_VERSION
+    const std::string VersionString = APP_VERSION;
+#else
+    const std::string VersionString = "2.0.0";
+#endif
 
-const std::string VersionString = "Beta 8";
-const std::string VersionDatabaseString = "0.6";
+    /// The structure of the databases. Banksia GUI writes the same (ui/ocgdb/records.h), so
+    /// databases go from one program to the other.
+    const std::string VersionDatabaseString = "0.6";
 
-// Current limit is about 4 billion, we can change later by changing this define
-#define IDInteger uint32_t
+    /// The user's version of the data. Developers may change this string.
+    const std::string VersionUserDatabaseString = "0.1";
 
-enum class Task
-{
-    create,
-    export_,
-    merge,
-    query,
-    bench,
-    getgame,
-    dup,
-    none,
-};
+    /// IDs of games, players, events, sites. Signed: -1 is "none".
+    using IDInteger = int32_t;
 
-enum {
-    TagIdx_GameID,
-    TagIdx_Event, TagIdx_Site, TagIdx_Date,
-    TagIdx_Round,
-    TagIdx_White, TagIdx_WhiteElo, TagIdx_Black, TagIdx_BlackElo,
-    TagIdx_Result, TagIdx_TimeControl, TagIdx_ECO, TagIdx_PlyCount,
-    TagIdx_FEN,
+    enum class Task {
+        create,
+        merge,
+        export_,
+        query,
+        sql,
+        getgame,
+        dup,
+        bench,
+        info,
+        none,
+    };
 
-    TagIdx_Max
-};
+    enum {
+        TagIdx_GameID,
+        TagIdx_Event,
+        TagIdx_Site,
+        TagIdx_Date,
+        TagIdx_Round,
+        TagIdx_White,
+        TagIdx_WhiteElo,
+        TagIdx_Black,
+        TagIdx_BlackElo,
+        TagIdx_Result,
+        TagIdx_TimeControl,
+        TagIdx_ECO,
+        TagIdx_PlyCount,
+        TagIdx_FEN,
 
-extern const std::vector<std::string> knownPgnTagVec;
+        TagIdx_Max
+    };
 
-enum {
-    create_flag_moves                   = 1 << 0,
-    create_flag_moves1                  = 1 << 1,
-    create_flag_moves2                  = 1 << 2,
-    create_flag_accept_new_tags         = 1 << 3,
-    create_flag_discard_comments        = 1 << 4,
-    create_flag_discard_sites           = 1 << 5,
-    create_flag_discard_no_elo          = 1 << 6,
-    create_flag_discard_fen             = 1 << 7,
-    create_flag_reset_eco               = 1 << 8,
+    /// same order and meaning as TagIdx_
+    extern const std::vector<std::string> knownPgnTagVec;
 
-    query_flag_print_all                = 1 << 10,
-    query_flag_print_fen                = 1 << 11,
-    query_flag_print_pgn                = 1 << 12,
+    enum class SearchField {
+        none,
+        moves,  // text only
+        moves1, // 1 byte per move, 2 for queen moves (xiangqi: rook, cannon)
+        moves2, // 2 bytes per move
+    };
 
-    dup_flag_remove                     = 1 << 15,
-    dup_flag_embededgames               = 1 << 16,
-    
-    lichess_flag_nobot                  = 1 << 20,
-    lichess_flag_bot                    = 1 << 21,
+    extern const std::vector<std::string> searchFieldNames; // "", "Moves", "Moves1", "Moves2"
 
-};
+    enum {
+        create_flag_moves = 1 << 0,
+        create_flag_moves1 = 1 << 1,
+        create_flag_moves2 = 1 << 2,
+        create_flag_accept_new_tags = 1 << 3,
+        create_flag_discard_comments = 1 << 4,
+        create_flag_discard_sites = 1 << 5,
+        create_flag_discard_no_elo = 1 << 6,
+        create_flag_discard_fen = 1 << 7,
+        create_flag_discard_error_games = 1 << 8,
+        create_flag_reset_eco = 1 << 9,
+        create_flag_discard_variations = 1 << 10,
 
-class ParaRecord
-{
-public:
-    std::vector<std::string> pgnPaths, dbPaths;
-    std::string reportPath, desc;
+        query_flag_print_all = 1 << 12,
+        query_flag_print_fen = 1 << 13,
+        query_flag_print_pgn = 1 << 14,
 
-    std::vector<std::string> queries;
-    int optionFlag = 0;
+        dup_flag_remove = 1 << 15,
+        dup_flag_embededgames = 1 << 16,
 
-    Task task = Task::none;
-    int cpuNumber = -1, limitElo = 0, limitLen = 0;
-    std::vector<int> gameIDVec;
-    
-    int64_t gameNumberLimit = 0xffffffffffffULL; // stop when the number of games reached that limit
-    int64_t resultNumberLimit = 0xffffffffffffULL; // stop when the number of results reached that limit
+        lichess_flag_nobot = 1 << 20,
+        lichess_flag_bot = 1 << 21,
+        lichess_keep_site = 1 << 22,
 
-    mutable std::string errorString;
-    
-    std::string getErrorString() const {
-        return errorString;
-    }
+        create_flag_no_dup = 1 << 23,
+    };
 
-    static std::string toString(Task task);
-    std::string toString() const;
-    bool isValid() const;
-    
-    void setupOptions(const std::string& optionString);
-};
+    /// Everything the command line says (main.cpp).
+    class ParaRecord
+    {
+    public:
+        std::vector<std::string> pgnPaths, dbPaths, queries, sqls;
+        std::string reportPath, desc, password;
+        /// an SQL condition on the table Games (alias g): which games -export, -q, -dup read
+        std::string where;
 
-class ThreadRecord
-{
-public:
-    ~ThreadRecord();
-    void init(SQLite::Database* mDb, bslib::ChessVariant);
-    bool initForBoards(bslib::ChessVariant);
+        int optionFlag = 0;
 
-    bool createInsertGameStatement(SQLite::Database* mDb, const std::vector<std::string>&);
-    
-    void deleteAllStatements();
+        Task task = Task::none;
+        banksia::ChessVariant variant = banksia::ChessVariant::none;
+        int cpuNumber = -1, limitElo = 0, limitLen = 0;
+        std::vector<int> gameIDVec;
 
-    void resetStats();
-    
-public:
-    int64_t errCnt = 0, gameCnt = 0, hdpLen = 0, dupCnt = 0, delCnt = 0;
-    int insertGameStatementIdxSz = -1;
+        int64_t gameNumberLimit = 0;   // stop after this many games (0: all)
+        int64_t resultNumberLimit = 0; // stop querying after this many results (0: all)
 
-    bslib::BoardCore *board = nullptr, *board2 = nullptr;
-    int8_t* buf = nullptr;
-    SQLite::Statement *insertGameStatement = nullptr;
-    SQLite::Statement *insertCommentStatement = nullptr;
-    SQLite::Statement *removeGameStatement = nullptr;
-    SQLite::Statement *getGameStatement = nullptr;
-    SQLite::Statement *queryComments = nullptr;
-    
-    QueryGameRecord* qgr = nullptr;
-};
+        mutable std::string errorString;
 
+        std::string getErrorString() const { return errorString; }
 
-class GameRecord {
-public:
-    int plyCount = 0, whiteElo = 0, blackElo = 0, round = -1;
-    bslib::ResultType resultType = bslib::ResultType::noresult;
-    const char *eventName, *whiteName, *blackName;
-    const char *siteName = nullptr, *timer = nullptr, *dateString = nullptr, *eco = nullptr;
-    const char *fen = nullptr, *moveString;
-};
+        static std::string toString(Task task);
+        std::string toString() const;
+        bool isValid() const;
 
-enum class SearchField
-{
-    none,
-    moves,          // text only
-    moves1,         // 1.5 byte per move
-    moves2,         // 2 bytes per move
-};
+        bool setupOptions(const std::string& optionString);
+    };
 
 
-class QueryGameRecord {
-public:
-    QueryGameRecord(SQLite::Database& db, SearchField searchField);
+    //////////////////////////
+    /// What a thread of the pool keeps: its boards and its prepared statements. A statement is
+    /// used by the thread that prepared it only; the connection itself is shared (SQLite is
+    /// compiled serialized, SQLITE_THREADSAFE=1).
+    class ThreadRecord
+    {
+    public:
+        ~ThreadRecord();
 
-    ~QueryGameRecord() {
-        if (queryGameByID) delete queryGameByID;
-        if (queryComments) delete queryComments;
-        if (board) delete board;
-    }
-    
-    std::string queryAndCreatePGNByGameID(bslib::PgnRecord& record);
-    
-public:
+        bool initForBoards(banksia::ChessVariant variant);
+        void initForInserting(SQLite::Database* db, banksia::ChessVariant variant);
+        bool createInsertGameStatement(SQLite::Database* db, const std::vector<std::string>& fieldVec);
+        void initGetGameStatement(SQLite::Database* db, banksia::ChessVariant variant, const std::string& moveName);
 
-    SQLite::Statement* queryGameByID = nullptr, *queryComments = nullptr;
-    bslib::BoardCore* board = nullptr;
-    SearchField searchField;
-    
-private:
-    std::mutex queryMutex;
-};
+        void deleteAllStatements();
+        void resetStats();
 
-class EPDOperation
-{
-public:
-    std::string opcode, stringOperand, sanMove, numberOperand;
+        /// Compare move by move the game in board with the game checkingGameID of the database;
+        /// with `embeded`, also true when one game is the start of the other
+        bool isBoardDuplication(IDInteger checkingGameID, bool embeded = false);
 
-    void reset() {
-        opcode = stringOperand = sanMove = numberOperand = "";
-    }
+    public:
+        int64_t errCnt = 0, gameCnt = 0, hdpLen = 0, dupCnt = 0, delCnt = 0;
+        size_t insertGameStatementIdxSz = 0;
 
-    bool isValid() const {
-        if (!opcode.empty()) {
-            auto cnt = 0;
-            if (!stringOperand.empty()) {
-                cnt++;
-            }
-            if (!sanMove.empty()) {
-                cnt++;
-            }
-            if (!numberOperand.empty()) {
-                cnt++;
-            }
+        banksia::BoardCore *board = nullptr, *board2 = nullptr;
+        std::vector<uint8_t> buf;
 
-            return cnt == 1;
-        }
-        return false;
-    }
+        /// the columns of insertGameStatement, in order
+        std::vector<std::string> usedFieldList;
 
-    std::string toString() const {
-        std::string s = opcode + " ";
-        if (!stringOperand.empty()) {
-            s += stringOperand;
-        } else if (!sanMove.empty()) {
-            s += sanMove;
-        } else if (!numberOperand.empty()) {
-            s += numberOperand;
-        }
+        SQLite::Statement* insertGameStatement = nullptr;
+        SQLite::Statement* insertCommentStatement = nullptr;
+        SQLite::Statement *playerInsertStatement = nullptr, *eventInsertStatement = nullptr,
+                          *siteInsertStatement = nullptr;
+        SQLite::Statement* getGameByIdStatement = nullptr;
+        SQLite::Statement* removeGameByIdStatement = nullptr;
 
-        return s;
-    }
-};
+        QueryGameRecord* qgr = nullptr;
 
-class EPDRecord
-{
-public:
-    std::string epdString;
-    std::vector<EPDOperation> vec;
+    private:
+        std::string moveName;
+    };
 
-    bool isValid() const {
-        if (epdString.size() > 10) {
-            for(auto && v : vec) {
-                if (!v.isValid()) {
-                    return false;
-                }
-            }
-            return true;
-        }
-        return false;
-    }
 
-    std::string toString() const {
-        std::string s = epdString;
-        for(auto && v : vec) {
-            s += "; " + v.toString();
-        }
-        return s;
-    }
+    /// Reads whole games (tags, moves, comments) by their IDs, for printing them as PGN.
+    class QueryGameRecord
+    {
+    public:
+        QueryGameRecord(SQLite::Database& db, SearchField searchField, const std::string& fullGameQueryString,
+                        banksia::ChessVariant variant);
+        ~QueryGameRecord();
 
-};
+        /// the game as PGN, or "" when there is no such game
+        std::string queryAndCreatePGNByGameID(banksia::PgnRecord& record);
 
-}
+    public:
+        SQLite::Statement *queryGameByID = nullptr, *queryComments = nullptr;
+        banksia::BoardCore* board = nullptr;
+        SearchField searchField;
+        banksia::ChessVariant variant;
+
+    private:
+        std::mutex queryMutex;
+    };
+
+
+    /// A new board of the variant, or null if this program does not play it (the chess program
+    /// plays standard chess and chess960, the xiangqi one xiangqi and jieqi).
+    banksia::BoardCore* createBoard(banksia::ChessVariant variant);
+
+    /// The variant this program plays when nothing else says: standard chess or xiangqi.
+    banksia::ChessVariant defaultVariant();
+
+    /// Whether this program can play the variant.
+    bool isVariantSupported(banksia::ChessVariant variant);
+
+    /// A game as PGN: the Seven Tag Roster first in its order (Event, Site, Date, Round, White,
+    /// Black, Result), then the other tags by name, then the moves with variations and comments.
+    std::string toPgnString(const banksia::BoardCore* board, const banksia::PgnRecord& record);
+
+    /// "2022.02.21", "2022-02-21" -> "2022-02-21" (the database form, ISO 8601); each "?" becomes
+    /// "1" ("1950.??.??" -> "1950-11-11", as Banksia GUI does); "" when
+    /// it is not a date. Two-digit years: 31-99 are 1931-1999, 0-30 2000-2030.
+    std::string validDateString(std::string str);
+
+    /// "2022-02-21" -> "2022.02.21" (the PGN form)
+    std::string date2PgnString(std::string str);
+
+} // namespace ocgdb
 
 #endif /* OCGDB_RECORDS_H */

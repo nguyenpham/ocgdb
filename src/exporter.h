@@ -1,8 +1,7 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021-2022 Developers
+ * Copyright (c) 2019-2026 Nguyen Hong Pham (github@nguyenpham)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -15,23 +14,23 @@
 
 namespace ocgdb {
 
+    /// -export: the games of a database (all, or those of -where) to a PGN file, in the order of
+    /// their IDs, with variations and comments
+    class Exporter : virtual public DbRead
+    {
+    protected:
+        virtual bool runTask() override;
+        virtual bool needsPool() const override { return false; }
+    };
 
-class Exporter : public DbRead
-{
-public:
-    virtual void processAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec) override;
+    /// -g: games by their IDs, printed as PGN
+    class Extract : virtual public DbRead
+    {
+    protected:
+        virtual bool runTask() override;
+        virtual bool needsPool() const override { return false; }
+    };
 
-private:
-    virtual bool openDB(const std::string& dbPath) override;
-    virtual void runTask() override;
-//    virtual void printStats() const override;
-    
-private:
-    int flag;
-    mutable std::mutex pgnOfsMutex;
-    std::ofstream pgnOfs;
-};
-
-} // namespace ocdb
+} // namespace ocgdb
 
 #endif /* OCGDB_EXPORTER_H */

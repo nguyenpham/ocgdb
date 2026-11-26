@@ -1,6 +1,11 @@
 # Open Chess Game Database Standard (OCGDB)
 
-Version Beta
+Version 2.0.0: chess, chess960, xiangqi and jieqi. The full user guide is
+[docs/user-guide.md](docs/user-guide.md); all documentation starts at [docs/README.md](docs/README.md).
+
+To try it at once, download one of the free databases of [BanksiaChessHub](https://github.com/nguyenpham/BanksiaChessHub)
+(Banksia Masters: 8,008,264 chess games) or [MoonRiverChineseChessHub](https://github.com/nguyenpham/MoonRiverChineseChessHub)
+(MoonRiver Masters: 135,030 xiangqi games), see [Sample databases](#sample-databases).
 
 
 ## Brief of main ideas/techniques
@@ -131,7 +136,7 @@ All moves of a game could be stored in some forms in some specific fields as the
 
 - Moves: type TEXT; all moves including all other information such as comments are stored as a single string. For example:
   ```1.c4 e5 2.Nc3 Bb4 {A21: English, Kramnik-Shirov counterattack} 3.Nd5 Be7 4.Nxe7 Nxe7 5.d4 exd4 6.Qxd4 O-O 1/2-1/2```
-- Moves2: type BLOB; each move is encoded as 2 bytes. The encode for chess: ```from | dest << 6 | promotion << 12```
+- Moves2: type BLOB; each move is encoded as 2 bytes. The encode for chess: ```from | dest << 6 | promotion << 12``` (squares numbered a1 = 0 ... h8 = 63, as Stockfish numbers them; promotion 2 knight, 3 bishop, 4 rook, 5 queen). Since version 2 the variations are stored too, between two marks; xiangqi and jieqi have their own encodings. All details: [docs/user-guide.md](docs/user-guide.md) §9.4
 - Moves1: type BLOB; each move (except Queen move) is encoded as a 1 byte when a Queen move is encoded as 2 bytes
 
 All moves (of a game) in Moves1/Moves2 are stored as a binary array and then saved into the database as a blob.
@@ -143,18 +148,22 @@ In contrast, the algorithm of Moves1 is quite complicated, deeply integrated int
 Even though Moves1 can create the smallest databases, users should consider using Moves and/or Moves2 instead, just for being easy to use by other libraries.
 
 ## Date fields
-Dates in PGN have format YYYY.MM.DD (such as "2022.02.21"). They are must be converted into SQLite's date standard (IS0-8601) as YYYY-MM-DD (such as "2022-02-21"). Dates are stored as text fields.
+Dates in PGN have format YYYY.MM.DD (such as "2022.02.21"). They are must be converted into SQLite's date standard (IS0-8601) as YYYY-MM-DD (such as "2022-02-21"). Dates are stored as text fields, with two digits for the month and the day (2010-01-08).
 
 Some details of PGN dates may be missing and displayed as question (?) marks. The program simply replace each question mark by '1'. E.g., from "1950.??.??" to be "1950.11.11".
 
 ## Info Table
 ### Variant
-Store chess variant information.
+Store chess variant information: standard, chess960, xiangqi or jieqi.
 
 ### GameCount
 Store number of records in Games table. It is useful for quickly retracting that number since querying by statement "SELECT COUNT" could take a while for huge database
 
 ## Converting speed
+Measured with version 2.0.0 (Apple M1 Pro, 8 cores, a busy machine): 3,456,399 games (MillionBase, 2.1 GB of PGN) into a database with Moves2 in 195 seconds, 17,700 games/s; searching them with PQL, about 100,000 games/s. The 135,030 xiangqi games of MoonRiver Masters are exported to PGN in 5.4 seconds and made into a database again in 4.5 seconds. Details: [docs/testing.md](docs/testing.md).
+
+The numbers of the first versions follow.
+
 We tested on an iMac 3.6 GHz Quad-Core i7, 16 GB RAM (the year 2017), converting a PGN file with 3.45 million games, size 2.42 GB.
 
 Convert into a db3 file (.db3, stored on the hard disk), required 29 seconds:
@@ -196,25 +205,35 @@ for auto cnt = 0; statement.executeStep(); cnt++) {
 ```
 
 ## Position Query Language (PQL)
-The EBNF (Extended Backus Naur Form) of the language is as the below:
+The EBNF (Extended Backus Naur Form) of the language is as the below (version 2; the grammar of the Beta versions had no moves, no `then`, no `not`, and brackets around numbers only):
 
 ```
-clause = condition { ("and" | "or" | "&&" | "||") condition }
-condition = expression { ( "=" | "<" | "<="| " >" | ">=" | "==“ | "!=" | "<>" ) expression } | "fen" "[" fenset "]"
-fenset = fenstring {"," fenstring }
-expression = term  {( "+" | "-" ) term }
-term = factor {( "*" | "/" ) factor} 
-factor = number | piece | "(" expression ")"
-piece = piecename (<empty> | square | squareset)
-piecename = "K" | "Q" | "R" | "B" | "N" | "P" | "k" | "q" | "r" | "b" | "n" | "p" | "white" | "black"
-squareset = column | row | "[" (square | squarerange | columnrange | rowrange) { "," (square | squarerange | columnrange | rowrange) } "]"
+query       = clause { "then" clause }
+clause      = and_clause { ("or" | "||") and_clause }
+and_clause  = not_clause { ("and" | "&&") not_clause }
+not_clause  = ("not" | "!") not_clause | condition
+condition   = expression { ( "=" | "==" | "!=" | "<>" | "<" | "<=" | ">" | ">=" ) expression }
+expression  = term { ( "+" | "-" ) term }
+term        = factor { ( "*" | "/" ) factor }
+factor      = number | piece | fenclause | fenstring | pattern | keyword | move | line | "(" clause ")"
+keyword     = "ply" | "check" | "mate" | "capture" | "promotion" | "wtm" | "btm"
+move        = "move" "[" movespec { "," movespec } "]"
+movespec    = "O-O" | "O-O-O" | [piecename] [square | column] ["x"] [square] ["=" piecename | piecename]
+line        = "line" "[" moves in SAN or coordinates "]"
+piece       = piecename (<empty> | square | column | row | squareset)
+piecename   = "K" | "Q" | "R" | "B" | "N" | "P" | "k" | "q" | "r" | "b" | "n" | "p" | "white" | "black"
+squareset   = "[" (square | squarerange | column | columnrange | row | rowrange) { "," ... } "]"
 squarerange = square "-" square
 columnrange = column "-" column
-rowrange = row "-" row
-square = column row 
-column = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h"
-row = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8"
+rowrange    = row "-" row
+square      = column row
+column      = "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h"
+row         = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8"
+fenclause   = "fen" "[" fenstring { "," fenstring } "]"
+pattern     = "{" pattern_term { "," pattern_term } [ "," ("=" | "<" | ">" | "#") [ "," tolerance ] ] "}"
 ```
+
+In xiangqi the piece names are K A E R C H P (k a e r c h p for Black), columns a to i and rows 0 to 9. `or` is the weakest operator, then `and`, `not`, the comparisons, `+ -`, and `* /` the strongest.
 
 Some symbols are mixed between SQL style and C/C++ style (such as users can use both <> and != for not-equal comparison) just for convenience.
 
@@ -289,6 +308,38 @@ fen[rnbqkbnr/pp2pppp/2p5/3pP3/3P4/8/PPP2PPP/RNBQKBNR b KQkq - 0 3, rn1qkbnr/pp2p
 
 ```
 
+Since version 2 a query can also look at the move that led to the position and at the order of
+positions in a game, and use patterns:
+
+```
+// checkmate by a knight move
+mate and move[N, n]
+
+// underpromotion to a knight
+move[P=N, p=n]
+
+// queenside castling before move 10
+move[O-O-O] and ply < 20
+
+// the position after an opening line
+line[1. e4 e5 2. Nf3 Nc6 3. Bb5]
+
+// a White knight on e5, and later Black has no queen
+N[e5] then q = 0
+
+// no queens, at least three rooks
+not (Q + q > 0) and R + r >= 3
+
+// two White rooks one above the other, anywhere on the board
+{R[d2], R[d3], #}
+
+// xiangqi (ocgdb-xq): the central cannon opening, a mate by a horse
+line[h2e2]
+mate and move[H, h]
+```
+
+Everything about the language: [docs/user-guide.md](docs/user-guide.md) §8.
+
 
 ### The Parser
 Because the language is very simple and input strings are typically so short, we implement its parser in a simple, straightforward way, using the recursive method. From an input string (query), the parser will create an evaluation tree. That tree will be evaluated at every chess position with the parameters as a set of bitboards of that position. The position and its game will be picked up as the result of the evaluation of the tree is true (not zero).
@@ -296,31 +347,46 @@ Because the language is very simple and input strings are typically so short, we
 
 
 ## Sample databases
-There are two sample databases in the samples project at:
-https://github.com/nguyenpham/ocgdb-samples
+Large, free databases in this format are published as releases of two data repositories:
+
+| Database | Release | Games | Download |
+|---|---|---:|---:|
+| Banksia Masters: chess games between human players, Moves2 | [BanksiaChessHub](https://github.com/nguyenpham/BanksiaChessHub) `banksiamasters-db` | 8,008,264 | 855 MB (.7z), 1.87 GB unpacked |
+| Lichess Puzzles: the Lichess puzzles as games, ratings and themes as comments | [BanksiaChessHub](https://github.com/nguyenpham/BanksiaChessHub) `lichess-puzzles` | 2,440,210 | 148 MB (.zip) |
+| MoonRiver Masters: xiangqi games between human players, Moves2 | [MoonRiverChineseChessHub](https://github.com/nguyenpham/MoonRiverChineseChessHub) `moonrivermasters-db` | 135,030 | 14.8 MB (.7z), 31.3 MB unpacked |
+
+```
+gh release download moonrivermasters-db -R nguyenpham/MoonRiverChineseChessHub
+7z x moonrivermasters.ocgdb.db3.7z
+ocgdb-xq -info -db moonrivermasters.ocgdb.db3
+ocgdb-xq -db moonrivermasters.ocgdb.db3 -q "mate and move[H, h]"
+```
+
+The older samples project https://github.com/nguyenpham/ocgdb-samples has two more:
 
 - carlsen.ocgdc.db3 with over 2000 games, moves keeps as text and stored in Moves
 - mb-3.45.ocgdb.db3 the MillionBase database (by Ed Schröder) of 3.45 million games, encoded moves as two bytes (Moves2)
 
-You may open it with any SQLite browsers/tools and make some queries to understand its structures, speed, advantages, and disadvantages.
+You may open them with any SQLite browsers/tools and make some queries to understand their structures, speed, advantages, and disadvantages.
 
 
 ## SQL commands
-The file SqlCmd.md contains some SQL commands to create databases and tables, examples to insert, and query tables.
+The tables, the SQL the programs use and examples of queries are in [docs/user-guide.md](docs/user-guide.md) §9.
 
 
 ## Code
-All samples, tools are C++ 17.
+All samples, tools are C++ 17. Since version 2.0.0 the code is C++ 20 and its chess and xiangqi code is the board core of the Banksia programs, with what a database needs: [docs/core.md](docs/core.md).
 
 ## Compile
 Run make file in the subfolder ```src```:
 
 ```
-cd src
+git clone https://github.com/nguyenpham/ocgdb.git
+cd ocgdb/src
 make
 ```
 
-In macOS, Windows, you can run and compile with Xcode/Visual Studio with the project files in the folder ```projects```.
+It makes two programs: ```ocgdb``` for chess and chess960, ```ocgdb-xq``` for xiangqi and jieqi. Nothing needs to be installed but a C++ 20 compiler and make. The Xcode and Visual Studio project files of the folder ```projects``` were removed in version 2.0.0 (they no longer matched the sources). Details: [docs/building.md](docs/building.md). The tests: ```tests/run-tests.sh```.
 
 
 ## Usage
@@ -328,30 +394,50 @@ In macOS, Windows, you can run and compile with Xcode/Visual Studio with the pro
 Users may run the program:
 - for creating SQLite databases from PGN files:
 ```
-ocgdb -pgn c:\games\big.png -db c:\db\big.ocgdb.db3 -cpu 4 -o moves
+ocgdb -create -pgn c:\games\big.pgn -db c:\db\big.ocgdb.db3 -cpu 4 -o moves2
+```
+
+- for exporting the games of one player of Banksia Masters:
+```
+ocgdb -export -db banksiamasters.ocgdb.db3 -pgn fischer.pgn -where "w.Name = 'Fischer, Robert' OR b.Name = 'Fischer, Robert'"
 ```
 
 - for exporting a SQLite database into a PGN file:
 ```
-ocgdb -pgn c:\games\big.png -db c:\db\big.ocgdb.db3 -cpu 4 -export
+ocgdb -export -db c:\db\big.ocgdb.db3 -pgn c:\games\big.pgn
 ```
 
 - for checking duplicate games of a SQLite database:
 ```
-ocgdb -db c:\db\big.ocgdb.db3 -cpu 4 -dup o printall;remove
+ocgdb -db c:\db\big.ocgdb.db3 -cpu 4 -dup -o printall,remove
 ```
 
 - for querying positions:
 ```
-ocgdb -db c:\db\big.ocgdb.db3 -cpu 4 -q "Q=3" -q"P[d4, e5, f4, g4] = 4 and kb7"
+ocgdb -db c:\db\big.ocgdb.db3 -cpu 4 -q "Q=3" -q "P[d4, e5, f4, g4] = 4 and kb7"
 ```
 
 - for extracting a game with ID number:
 ```
-ocgdb -db c:\db\big.ocgdb.db3 -g 1321"
+ocgdb -db c:\db\big.ocgdb.db3 -g 1321
 ```
 
+- for running SQL:
+```
+ocgdb -db c:\db\big.ocgdb.db3 -sql "SELECT Result, COUNT(*) FROM Games GROUP BY Result"
+```
+
+- for xiangqi, the same with ocgdb-xq:
+```
+ocgdb-xq -create -pgn xq.pgn -db xq.ocgdb.db3
+ocgdb-xq -db moonrivermasters.ocgdb.db3 -q "line[h2e2]"
+```
+
+All tasks and parameters: [docs/user-guide.md](docs/user-guide.md).
+
 ## History
+What is new in version 2.0.0 (xiangqi and jieqi with ocgdb-xq, chess960, PQL with moves, then and not, variations and comments, SQLite 3.53.4 with encryption, the tasks -sql and -info): [docs/user-guide.md](docs/user-guide.md) §13.
+
 * 25/01/2022: Version Beta
 * 23/01/2022: Version Alpha
 * 20/11/2021: Improve/clean code, improve speed for benchmark

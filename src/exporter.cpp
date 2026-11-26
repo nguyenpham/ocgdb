@@ -1,93 +1,84 @@
 /**
  * This file is part of Open Chess Game Database Standard.
  *
- * Copyright (c) 2021-2022 Nguyen Pham (github@nguyenpham)
- * Copyright (c) 2021-2022 Developers
+ * Copyright (c) 2019-2026 Nguyen Hong Pham (github@nguyenpham)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
  */
 
+#include <fstream>
+#include <iostream>
+
 #include "exporter.h"
+#include "report.h"
 
 using namespace ocgdb;
 
-bool Exporter::openDB(const std::string& dbPath)
+bool Exporter::runTask()
 {
-    if (!DbRead::openDB(dbPath)) {
+    auto dbPath = paraRecord.dbPaths.front();
+    auto pgnPath = paraRecord.pgnPaths.front();
+
+    if (!openOCGDB(dbPath, true)) {
         return false;
     }
-    
-    flag = bslib::BoardCore::ParseMoveListFlag_create_san;
+    if (searchField == SearchField::none) {
+        std::cerr << "Error: database " << dbPath << " has no column for moves" << std::endl;
+        return false;
+    }
 
-    if (searchField == SearchField::moves1) {
-        flag |= bslib::BoardCore::ParseMoveListFlag_move_size_1_byte;
+    std::ofstream ofs(pgnPath, std::ios::out | std::ios::trunc | std::ios::binary);
+    if (!ofs.is_open()) {
+        std::cerr << "Error: can't write " << pgnPath << std::endl;
+        return false;
     }
-    
-    if (searchField != SearchField::moves) {
-        for(auto && t : threadMap) {
-            t.second.queryComments = new SQLite::Statement(*mDb, "SELECT * FROM Comments WHERE GameID = ?");
-        }
+
+    std::cout << "Exporting " << dbPath << " to " << pgnPath << std::endl;
+
+    startTime = getNow();
+    gameCnt = 0;
+    try {
+        forEachGameAsPgn([&](const std::string& pgn) {
+            ofs << pgn << "\n";
+            ++gameCnt;
+            if ((gameCnt & 0xfff) == 0) {
+                printProgress();
+            }
+            return paraRecord.gameNumberLimit <= 0 || gameCnt < paraRecord.gameNumberLimit;
+        });
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return false;
     }
+
+    ofs.close();
+    printStats(true);
     return true;
 }
 
-void Exporter::runTask()
+bool Extract::runTask()
 {
-    startTime = getNow();
-
-    auto pgnPath = paraRecord.pgnPaths.front();
-    pgnOfs = bslib::Funcs::openOfstream2write(pgnPath);
-
-    paraRecord.optionFlag |= query_flag_print_pgn;
-    
-    for(auto && dbPath : paraRecord.dbPaths) {
-        std::cout   << "Convert a database into a PGN file...\n"
-                    << "DB path : " << dbPath
-                    << "\nPGN path: " << pgnPath
-                    << std::endl;
-
-        readADb(dbPath, DbRead::fullGameQueryString);
+    auto dbPath = paraRecord.dbPaths.front();
+    if (!openOCGDB(dbPath, true)) {
+        return false;
     }
-    
-    pgnOfs.close();
-}
 
-void Exporter::processAGame(const bslib::PgnRecord& record, const std::vector<int8_t>& moveVec)
-{
-    assert(!record.moveString.empty() || record.moveText || !moveVec.empty());
-    assert(record.gameID > 0);
-
-    auto t = getThreadRecord(); assert(t);
-
-    if (!t->board) {
-        t->board = bslib::Funcs::createBoard(bslib::ChessVariant::standard);
-    }
-    assert(t->board);
-    
-    t->board->newGame(record.fenText);
-    t->board->fromMoveList(&record, moveVec, flag, nullptr);
-
-    if (t->queryComments) {
-        t->queryComments->reset();
-        t->queryComments->bind(1, record.gameID);
-        while (t->queryComments->executeStep()) {
-            auto comment = t->queryComments->getColumn("Comment").getString();
-            if (comment.empty()) continue;
-
-            auto ply = t->queryComments->getColumn("Ply").getInt();
-            if (ply >= 0 && ply < t->board->getHistListSize()) {
-                t->board->_getHistPointerAt(ply)->comment = comment;
-            } else {
-                t->board->setFirstComment(comment);
-            }
+    QueryGameRecord qgr(*mDb, searchField, fullGameQueryString, variant);
+    for (auto&& gameID : paraRecord.gameIDVec) {
+        banksia::PgnRecord record;
+        record.gameID = gameID;
+        auto pgn = qgr.queryAndCreatePGNByGameID(record);
+        if (pgn.empty()) {
+            std::cerr << "Error: there is no game with ID " << gameID << std::endl;
+            continue;
         }
-    }
 
-    auto toPgnString = t->board->toPgn(&record);
-    if (!toPgnString.empty()) {
-        std::lock_guard<std::mutex> dolock(pgnOfsMutex);
-        pgnOfs << toPgnString << "\n" << std::endl;
+        std::string str = "; ID: " + std::to_string(gameID) + "\n" + pgn;
+        if (paraRecord.optionFlag & query_flag_print_fen) {
+            str += "; FEN of the last position: " + qgr.board->getFen() + "\n";
+        }
+        printOut.printOut(str);
     }
-
+    return true;
 }

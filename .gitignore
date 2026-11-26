@@ -35,6 +35,11 @@
 *.ilk
 *.dSYM/*.*
 src/ocgdb
+src/ocgdb-xq
+src/ocgdb-debug
+src/ocgdb-xq-debug
+src/build/
+src/build-debug/
 
 */x64*
 */.vs*
@@ -61,4 +66,6 @@ build/
 /.project
 /.settings
 
-
+# databases made while testing: data never goes into the repository
+*.db3
+*.db3-journal
