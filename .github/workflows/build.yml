@@ -1,0 +1,55 @@
+# Builds ocgdb and ocgdb-xq for Linux (x86-64) and Windows (x86-64) and runs tests/run-tests.sh on
+# each. Started by hand (Actions > Build > Run workflow); the programs are kept as artifacts of the run.
+name: Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    # the oldest Ubuntu runner: its glibc (2.35) is what the programs need at least
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        working-directory: src
+        # the C++ runtime linked in, so the programs need only glibc
+        run: make -j4 CXX=g++-12 CC=gcc-12 LDLIBS="-pthread -ldl -lm -static-libstdc++ -static-libgcc"
+      - name: Test
+        run: bash tests/run-tests.sh
+      - name: Package
+        run: |
+          mkdir ocgdb-linux-x64
+          cp src/ocgdb src/ocgdb-xq LICENSE README.md ocgdb-linux-x64/
+          ldd ocgdb-linux-x64/ocgdb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ocgdb-linux-x64
+          path: ocgdb-linux-x64
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: make mingw-w64-x86_64-gcc
+      - name: Build
+        working-directory: src
+        # -static: the GCC runtime linked in (no libstdc++-6.dll etc. needed), docs/building.md §5
+        run: make -j4 LDLIBS="-pthread -static"
+      - name: Test
+        run: bash tests/run-tests.sh
+      - name: Package
+        run: |
+          mkdir ocgdb-windows-x64
+          cp src/ocgdb.exe src/ocgdb-xq.exe LICENSE README.md ocgdb-windows-x64/
+          ldd ocgdb-windows-x64/ocgdb.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ocgdb-windows-x64
+          path: ocgdb-windows-x64
